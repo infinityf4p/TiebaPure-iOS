@@ -1,0 +1,65 @@
+name: TiebaPure
+options:
+  minimumXcodeGenVersion: 2.45.0
+  bundleIdPrefix: dev.kevinchen
+  deploymentTarget:
+    iOS: "16.0"
+packages:
+  SwiftProtobuf:
+    url: https://github.com/apple/swift-protobuf.git
+    exactVersion: 1.38.1
+settings:
+  base:
+    SWIFT_VERSION: 5.9
+    IPHONEOS_DEPLOYMENT_TARGET: 16.0
+targets:
+  TiebaPure:
+    type: application
+    platform: iOS
+    sources:
+      - TiebaPure
+    resources:
+      - TiebaPure/Resources/Assets.xcassets
+      - TiebaPure/Resources/Emoticons
+      - TiebaPure/Resources/PrivacyInfo.xcprivacy
+    dependencies:
+      - package: SwiftProtobuf
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.kevinchen.tiebapure
+        INFOPLIST_FILE: TiebaPure/Resources/Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        MARKETING_VERSION: 1.0.0
+        CURRENT_PROJECT_VERSION: 1
+  TiebaPureTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - TiebaPureTests
+    dependencies:
+      - target: TiebaPure
+      - package: SwiftProtobuf
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+  TiebaPureUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - TiebaPureUITests
+    dependencies:
+      - target: TiebaPure
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  TiebaPure:
+    build:
+      targets:
+        TiebaPure: all
+        TiebaPureTests: [test]
+        TiebaPureUITests: [test]
+    test:
+      targets:
+        - TiebaPureTests
+        - TiebaPureUITests

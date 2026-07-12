@@ -1,0 +1,228 @@
+name: iOS CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-build:
+    runs-on: macos-26
+    timeout-minutes: 120
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.1.1.app/Contents/Developer
+      DERIVED_DATA: /tmp/TiebaPureDerivedData
+
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Select toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+          test "$(xcodebuild -version | sed -n '1p')" = "Xcode 26.1.1"
+
+      - name: Install exact iOS 26.1 simulator runtime
+        run: |
+          RUNTIME_BUILD="23B86"
+          command -v jq >/dev/null
+
+          refresh_core_simulator() {
+            local poll
+            launchctl kickstart -k "gui/$(id -u)/com.apple.CoreSimulator.CoreSimulatorService" 2>/dev/null ||
+              killall -9 com.apple.CoreSimulator.CoreSimulatorService 2>/dev/null || true
+            for poll in {1..30}; do
+              if xcrun simctl list runtimes -j | jq -e --arg build "$RUNTIME_BUILD" '.runtimes[] | select(.buildversion == $build and .isAvailable == true)' >/dev/null; then
+                return 0
+              fi
+              sleep 2
+            done
+            return 1
+          }
+
+          boot_verified_simulator() {
+            local candidate_udid="$1" boot_output boot_rc=0 device_dir
+            device_dir="$HOME/Library/Developer/CoreSimulator/Devices/$candidate_udid"
+            mkdir -p "$device_dir/data/Media/Photos/Videos"
+            xcrun simctl boot "$candidate_udid" || return 1
+            boot_output="$(xcrun simctl bootstatus "$candidate_udid" -b 2>&1)" || boot_rc=$?
+            printf '%s\n' "$boot_output"
+            test "$boot_rc" -eq 0 || return 1
+            ! grep -Fq 'Data Migration Failed' <<<"$boot_output" || return 1
+            xcrun simctl list devices -j | jq -e --arg udid "$candidate_udid" '.devices[][] | select(.udid == $udid and .isAvailable == true and .state == "Booted")' >/dev/null || return 1
+            xcrun simctl spawn "$candidate_udid" launchctl print system >/dev/null
+          }
+
+          if ! xcrun simctl list runtimes -j | jq -e --arg build "$RUNTIME_BUILD" '.runtimes[] | select(.buildversion == $build and .isAvailable == true)' >/dev/null; then
+            xcodebuild -downloadPlatform iOS -buildVersion "$RUNTIME_BUILD" -architectureVariant arm64
+          fi
+          refresh_core_simulator
+          RUNTIME_ID="$(xcrun simctl list runtimes -j | jq -r --arg build "$RUNTIME_BUILD" '.runtimes[] | select(.buildversion == $build and .isAvailable == true) | .identifier' | head -n 1)"
+          test -n "$RUNTIME_ID"
+
+          create_verified_simulator() {
+            local attempt candidate_udid
+            for attempt in 1 2 3; do
+              candidate_udid="$(xcrun simctl create "TiebaPure CI iPhone 17 ($attempt)" 'com.apple.CoreSimulator.SimDeviceType.iPhone-17' "$RUNTIME_ID")"
+              if boot_verified_simulator "$candidate_udid"; then
+                SIMULATOR_UDID="$candidate_udid"
+                return 0
+              fi
+              xcrun simctl shutdown "$candidate_udid" 2>/dev/null || true
+              xcrun simctl delete "$candidate_udid" 2>/dev/null || true
+              refresh_core_simulator
+            done
+            return 1
+          }
+
+          create_verified_simulator
+          echo "SIMULATOR_UDID=$SIMULATOR_UDID" >> "$GITHUB_ENV"
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Regenerate canonical project
+        run: |
+          xcodegen generate --spec project.yml
+          git diff --exit-code -- TiebaPure.xcodeproj
+
+      - name: Verify source and attribution manifests
+        run: |
+          test "$(find Protos -type f -name '*.proto' | wc -l | tr -d ' ')" = "302"
+          grep -Fq '4.0-dev@2885b2aabbbf47aba7bf12b1cd7cbc03b1f5ec15' README.md
+          grep -Fq '4.0-dev@2885b2aabbbf47aba7bf12b1cd7cbc03b1f5ec15' THIRD_PARTY_NOTICES.md
+          grep -Fq '2885b2aabbbf47aba7bf12b1cd7cbc03b1f5ec15' Protos/README.md
+          grep -Fq 'https://github.com/infinityf4p/TiebaPure-iOS' TiebaPure/Features/Profile/AboutView.swift
+          ./scripts/generate-asset-manifest.sh
+          git diff --exit-code -- ASSET_MANIFEST.sha256
+          test "$(grep -c '^tiebalite-exact  ' ASSET_MANIFEST.sha256)" = "51"
+          test "$(grep -c '^unknown-license  ' ASSET_MANIFEST.sha256)" = "54"
+
+      - name: Unit tests
+        run: |
+          xcodebuild -project TiebaPure.xcodeproj -scheme TiebaPure \
+            -configuration Debug \
+            -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" \
+            -derivedDataPath "$DERIVED_DATA" \
+            -parallel-testing-enabled NO \
+            test -only-testing:TiebaPureTests \
+            -skip-testing:TiebaPureTests/AnonymousLiveSmokeTests
+
+      - name: Fixture UI tests
+        run: |
+          RUNTIME_BUILD="23B86"
+          RUNTIME_ID="$(xcrun simctl list runtimes -j | jq -r --arg build "$RUNTIME_BUILD" '.runtimes[] | select(.buildversion == $build and .isAvailable == true) | .identifier' | head -n 1)"
+          test -n "$RUNTIME_ID"
+
+          refresh_core_simulator() {
+            local poll
+            launchctl kickstart -k "gui/$(id -u)/com.apple.CoreSimulator.CoreSimulatorService" 2>/dev/null ||
+              killall -9 com.apple.CoreSimulator.CoreSimulatorService 2>/dev/null || true
+            for poll in {1..30}; do
+              if xcrun simctl list runtimes -j | jq -e --arg build "$RUNTIME_BUILD" '.runtimes[] | select(.buildversion == $build and .isAvailable == true)' >/dev/null; then
+                return 0
+              fi
+              sleep 2
+            done
+            return 1
+          }
+
+          boot_verified_simulator() {
+            local candidate_udid="$1" boot_output boot_rc=0 device_dir
+            device_dir="$HOME/Library/Developer/CoreSimulator/Devices/$candidate_udid"
+            mkdir -p "$device_dir/data/Media/Photos/Videos"
+            xcrun simctl boot "$candidate_udid" || return 1
+            boot_output="$(xcrun simctl bootstatus "$candidate_udid" -b 2>&1)" || boot_rc=$?
+            printf '%s\n' "$boot_output"
+            test "$boot_rc" -eq 0 || return 1
+            ! grep -Fq 'Data Migration Failed' <<<"$boot_output" || return 1
+            xcrun simctl list devices -j | jq -e --arg udid "$candidate_udid" '.devices[][] | select(.udid == $udid and .isAvailable == true and .state == "Booted")' >/dev/null || return 1
+            xcrun simctl spawn "$candidate_udid" launchctl print system >/dev/null
+          }
+
+          reset_simulator() {
+            local attempt candidate_udid
+            xcrun simctl shutdown "$SIMULATOR_UDID" 2>/dev/null || true
+            xcrun simctl delete "$SIMULATOR_UDID" 2>/dev/null || true
+            for attempt in 1 2 3; do
+              candidate_udid="$(xcrun simctl create "TiebaPure CI UI reset ($attempt)" 'com.apple.CoreSimulator.SimDeviceType.iPhone-17' "$RUNTIME_ID")"
+              if boot_verified_simulator "$candidate_udid"; then
+                SIMULATOR_UDID="$candidate_udid"
+                return 0
+              fi
+              xcrun simctl shutdown "$candidate_udid" 2>/dev/null || true
+              xcrun simctl delete "$candidate_udid" 2>/dev/null || true
+              refresh_core_simulator
+            done
+            return 1
+          }
+
+          run_ui_group() {
+            xcodebuild test-without-building \
+              -project TiebaPure.xcodeproj -scheme TiebaPure \
+              -configuration Debug \
+              -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" \
+              -derivedDataPath "$DERIVED_DATA" \
+              -parallel-testing-enabled NO "$@"
+          }
+
+          xcodebuild build-for-testing \
+            -project TiebaPure.xcodeproj -scheme TiebaPure \
+            -configuration Debug \
+            -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" \
+            -derivedDataPath "$DERIVED_DATA" \
+            -parallel-testing-enabled NO \
+            -only-testing:TiebaPureUITests
+
+          reset_simulator
+          run_ui_group \
+            -only-testing:TiebaPureUITests/TiebaPureUITests/testHomeTabReselectAfterScrollingShowsRefreshAnimation
+
+          reset_simulator
+          run_ui_group \
+            -only-testing:TiebaPureUITests/TiebaPureUITests/testAboutShowsTiebaLiteAttributionAndGPL \
+            -only-testing:TiebaPureUITests/TiebaPureUITests/testEmptyFilteredSearchKeepsControlsAvailable \
+            -only-testing:TiebaPureUITests/TiebaPureUITests/testFailedInlineImageRetryDoesNotOpenOrClosePreview \
+            -only-testing:TiebaPureUITests/TiebaPureUITests/testFixtureEmptyStateIsDeterministic \
+            -only-testing:TiebaPureUITests/TiebaPureUITests/testFixtureErrorStateOffersAccessibleRetry \
+            -only-testing:TiebaPureUITests/TiebaPureUITests/testFixtureMediaCountMatrixIsAccessible \
+            -only-testing:TiebaPureUITests/TiebaPureUITests/testFollowedForumWholeRowNavigatesWithoutGestureConflict \
+            -only-testing:TiebaPureUITests/TiebaPureUITests/testForegroundBackgroundKeepsFixtureContent \
+            -only-testing:TiebaPureUITests/TiebaPureUITests/testForumHubAndMeKeepLoginOutOfHome \
+            -only-testing:TiebaPureUITests/TiebaPureUITests/testForumListMediaIsDecorativeAndWholeRowOpensThread \
+            -only-testing:TiebaPureUITests/TiebaPureUITests/testIPadHomeThreadTitleAndSummaryBothOpenDetail
+
+          reset_simulator
+          run_ui_group \
+            -only-testing:TiebaPureUITests/TiebaPureUITests/testIPadTabBarBlankSpaceDoesNotSelectOrRefreshHome \
+            -only-testing:TiebaPureUITests/TiebaPureUITests/testLandscapeHomeAndSearchLayout \
+            -only-testing:TiebaPureUITests/TiebaPureUITests/testLaunchShowsHomeWithoutLoginAndRootTabs \
+            -only-testing:TiebaPureUITests/TiebaPureUITests/testPaginationFailureKeepsContentAndRetriesSamePage \
+            -only-testing:TiebaPureUITests/TiebaPureUITests/testPostHTTPSLinkExposesNativeLinkTrait \
+            -only-testing:TiebaPureUITests/TiebaPureUITests/testPullingHomeFeedShowsRefreshAnimation \
+            -only-testing:TiebaPureUITests/TiebaPureUITests/testReduceMotionSuppressesCustomRefreshAnimation \
+            -only-testing:TiebaPureUITests/TiebaPureUITests/testSearchResultRoutesToMatchedReply \
+            -only-testing:TiebaPureUITests/TiebaPureUITests/testSwitchingToHomeDoesNotTriggerReselectRefresh \
+            -only-testing:TiebaPureUITests/TiebaPureUITests/testSyntheticScreenshotMatrix \
+            -only-testing:TiebaPureUITests/TiebaPureUITests/testTallInlineImageOffersOriginalEntry \
+            -only-testing:TiebaPureUITests/TiebaPureUITests/testThreadDetailShowsReplyControls
+
+      - name: Static analysis
+        run: |
+          xcodebuild -project TiebaPure.xcodeproj -scheme TiebaPure \
+            -configuration Debug -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$DERIVED_DATA" analyze CODE_SIGNING_ALLOWED=NO
+
+      - name: Release build and privacy manifest
+        run: |
+          xcodebuild -project TiebaPure.xcodeproj -scheme TiebaPure \
+            -configuration Release -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath "$DERIVED_DATA" build CODE_SIGNING_ALLOWED=NO
+          APP="$DERIVED_DATA/Build/Products/Release-iphoneos/TiebaPure.app"
+          test -f "$APP/PrivacyInfo.xcprivacy"
+          plutil -lint "$APP/PrivacyInfo.xcprivacy"
