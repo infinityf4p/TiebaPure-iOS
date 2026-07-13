@@ -1,17 +1,38 @@
 import SwiftUI
 import UIKit
 
+enum ThreadContentDisplayPolicy {
+    static let detailLineLimit = 0
+    static let summaryLineLimit = 2
+    static let paragraphLineBreakMode: NSLineBreakMode = .byWordWrapping
+
+    static func maximumNumberOfLines(for lineLimit: Int) -> Int {
+        max(lineLimit, 0)
+    }
+
+    static func lineBreakMode(for lineLimit: Int) -> NSLineBreakMode {
+        maximumNumberOfLines(for: lineLimit) == 0 ? .byWordWrapping : .byTruncatingTail
+    }
+}
+
 struct ContentBlocksView: View {
     let blocks: [ContentBlock]
     var textStyle: InlineContentText.Style = .body
-    var lineLimit: Int = 0
+    var lineLimit: Int = ThreadContentDisplayPolicy.detailLineLimit
+    var inlineAccessibilityIdentifier: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: TiebaPureTheme.Spacing.sm) {
             ForEach(InlineContentGroup.groups(from: blocks)) { group in
                 switch group.kind {
                 case let .inline(inlineBlocks):
-                    InlineContentText(blocks: inlineBlocks, style: textStyle, lineLimit: lineLimit)
+                    InlineContentText(
+                        blocks: inlineBlocks,
+                        style: textStyle,
+                        lineLimit: lineLimit,
+                        accessibilityIdentifier: inlineAccessibilityIdentifier
+                    )
+                    .fixedSize(horizontal: false, vertical: true)
                 case let .media(mediaBlocks):
                     MediaBlocksView(blocks: mediaBlocks)
                 }
@@ -203,11 +224,12 @@ struct InlineContentText: UIViewRepresentable {
 
     let blocks: [ContentBlock]
     var style: Style = .body
-    var lineLimit: Int = 0
+    var lineLimit: Int = ThreadContentDisplayPolicy.detailLineLimit
     var prefix: String?
     var prefixParts: [PrefixPart] = []
     var highlightKeyword: String?
     var allowsLinkInteraction = true
+    var accessibilityIdentifier: String?
 
     func makeCoordinator() -> Coordinator {
         Coordinator()
@@ -221,7 +243,10 @@ struct InlineContentText: UIViewRepresentable {
         textView.adjustsFontForContentSizeCategory = true
         textView.textContainerInset = .zero
         textView.textContainer.lineFragmentPadding = 0
+        textView.textContainer.widthTracksTextView = true
         textView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        textView.setContentCompressionResistancePriority(.required, for: .vertical)
+        textView.setContentHuggingPriority(.defaultHigh, for: .vertical)
         textView.linkTextAttributes = [
             .foregroundColor: UIColor.link,
             .underlineStyle: NSUnderlineStyle.single.rawValue
@@ -231,11 +256,14 @@ struct InlineContentText: UIViewRepresentable {
     }
 
     func updateUIView(_ textView: UITextView, context: Context) {
-        textView.textContainer.maximumNumberOfLines = lineLimit
-        textView.textContainer.lineBreakMode = lineLimit > 0 ? .byTruncatingTail : .byWordWrapping
+        textView.accessibilityIdentifier = accessibilityIdentifier
+        textView.textContainer.maximumNumberOfLines =
+            ThreadContentDisplayPolicy.maximumNumberOfLines(for: lineLimit)
+        textView.textContainer.lineBreakMode =
+            ThreadContentDisplayPolicy.lineBreakMode(for: lineLimit)
         textView.attributedText = attributedString()
-        textView.isSelectable = allowsLinkInteraction && containsInteractiveLink
-        textView.isUserInteractionEnabled = textView.isSelectable
+        textView.isSelectable = allowsLinkInteraction
+        textView.isUserInteractionEnabled = allowsLinkInteraction
     }
 
     func sizeThatFits(_ proposal: ProposedViewSize, uiView: UITextView, context: Context) -> CGSize? {
@@ -243,7 +271,7 @@ struct InlineContentText: UIViewRepresentable {
             return nil
         }
         let size = uiView.sizeThatFits(CGSize(width: width, height: CGFloat.greatestFiniteMagnitude))
-        return CGSize(width: width, height: size.height)
+        return CGSize(width: width, height: ceil(size.height))
     }
 
     final class Coordinator: NSObject, UITextViewDelegate {
@@ -264,7 +292,7 @@ struct InlineContentText: UIViewRepresentable {
         let font = style.font
         let paragraph = NSMutableParagraphStyle()
         paragraph.lineSpacing = style == .subpost ? 2 : 4
-        paragraph.lineBreakMode = .byTruncatingTail
+        paragraph.lineBreakMode = ThreadContentDisplayPolicy.paragraphLineBreakMode
 
         let baseAttributes: [NSAttributedString.Key: Any] = [
             .font: font,
@@ -380,12 +408,6 @@ struct InlineContentText: UIViewRepresentable {
         return NSAttributedString(string: " 楼主 ", attributes: attributes)
     }
 
-    private var containsInteractiveLink: Bool {
-        blocks.contains { block in
-            guard case let .link(_, url) = block, let url else { return false }
-            return TiebaURL.webpage(url.absoluteString) != nil
-        }
-    }
 }
 
 private struct InlineContentGroup: Identifiable {

@@ -42,8 +42,12 @@ enum TiebaImageSourcePolicy {
 
     static func urls(primary: URL?, fallback: URL? = nil) -> [URL] {
         var result: [URL] = []
-        for url in [primary, fallback].compactMap({ $0 }) where result.contains(url) == false {
-            result.append(url)
+        for candidate in [primary, fallback].compactMap({ $0 }) {
+            guard let safeURL = TiebaURL.image(candidate.absoluteString),
+                  result.contains(safeURL) == false else {
+                continue
+            }
+            result.append(safeURL)
         }
         return result
     }
@@ -72,6 +76,7 @@ enum TiebaImageDecodePolicy {
 }
 
 private enum TiebaImagePipelineError: Error {
+    case invalidURL
     case invalidResponse
     case badStatus(Int)
     case invalidImageData
@@ -131,6 +136,9 @@ actor TiebaImagePipeline {
     }
 
     private func image(from url: URL) async throws -> UIImage {
+        guard TiebaURL.image(url.absoluteString) != nil else {
+            throw TiebaImagePipelineError.invalidURL
+        }
         guard TiebaImageSourcePolicy.isSyntheticFailureURL(url) == false else {
             throw TiebaImagePipelineError.invalidImageData
         }

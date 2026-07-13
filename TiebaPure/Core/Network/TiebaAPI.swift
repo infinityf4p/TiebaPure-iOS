@@ -5,6 +5,9 @@ struct TiebaAPI {
     var requestBuilder = TiebaRequestBuilder.live()
 
     func validateLogin(cookies: BaiduCookies) async throws -> Account {
+        guard BaiduCredentialPolicy.isValid(cookies) else {
+            throw AuthSessionError.untrustedCookie
+        }
         let loginResponse: LoginResponseDTO?
         do {
             loginResponse = try await login(bduss: cookies.bduss, stoken: cookies.stoken)
@@ -251,11 +254,12 @@ private extension String {
 
 extension TiebaAPI {
     func personalizedThreads(account: Account?, page: Int, loadType: Int) async throws -> [ThreadSummary] {
+        let requestPage = try TiebaRequestValuePolicy.unsignedPage(page)
         var requestData = Tieba_PersonalizedRequestData()
         requestData.appPos = Tieba_AppPosInfo()
         requestData.common = requestBuilder.common(account: account)
         requestData.loadType = UInt32(loadType)
-        requestData.pn = UInt32(page)
+        requestData.pn = requestPage
         requestData.needTags = 0
         requestData.pageThreadCount = 11
         requestData.preAdThreadCount = 0
@@ -312,6 +316,7 @@ extension TiebaAPI {
     }
 
     func forumThreads(account: Account?, forumName: String, page: Int, sortType: Int = 0) async throws -> [ThreadSummary] {
+        _ = try TiebaRequestValuePolicy.signedPage(page)
         guard let account else {
             return try await forumThreadsForm(forumName: forumName, page: page, sortType: sortType)
         }
@@ -333,7 +338,7 @@ extension TiebaAPI {
         requestData.common = requestBuilder.common(account: account)
         requestData.kw = forumName
         requestData.loadType = page == 1 ? 1 : 2
-        requestData.pn = Int32(page)
+        requestData.pn = try TiebaRequestValuePolicy.signedPage(page)
         requestData.qType = 2
         requestData.rn = 90
         requestData.rnNeed = 30
@@ -397,9 +402,7 @@ extension TiebaAPI {
             as: MiniForumPageDTO.self
         )
 
-        if response.errorCode != 0 {
-            throw TiebaAPIError.response(code: response.errorCode, message: response.errorMessage)
-        }
+        try validateResponseCode(response.errorCode, message: response.errorMessage)
 
         return response.threadList
             .filter(\.shouldKeep)
@@ -417,13 +420,14 @@ extension TiebaAPI {
         seeLz: Bool = false,
         sortType: ThreadReplySort = .ascending
     ) async throws -> ThreadPage {
+        let requestPage = try TiebaRequestValuePolicy.signedPage(page)
         var requestData = Tieba_PbPage_PbPageRequestData()
         requestData.common = requestBuilder.common(account: account)
         requestData.kz = threadID
-        requestData.pn = Int32(page)
+        requestData.pn = requestPage
         requestData.r = Int32(sortType.rawValue)
         if let postID {
-            requestData.pid = Int64(postID)
+            requestData.pid = try TiebaRequestValuePolicy.signedIdentifier(postID)
         }
         requestData.lz = seeLz ? 1 : 0
         requestData.forumID = forumID ?? 0
@@ -460,13 +464,16 @@ extension TiebaAPI {
         page: Int,
         subpostID: UInt64 = 0
     ) async throws -> [Subpost] {
+        let requestPage = try TiebaRequestValuePolicy.signedPage(page)
+        let requestPostID = try TiebaRequestValuePolicy.signedIdentifier(postID)
+        let requestSubpostID = try TiebaRequestValuePolicy.signedIdentifier(subpostID)
         var requestData = Tieba_PbFloor_PbFloorRequestData()
         requestData.common = requestBuilder.common(account: account)
         requestData.forumID = forumID
         requestData.kz = threadID
-        requestData.pid = Int64(postID)
-        requestData.pn = Int32(page)
-        requestData.spid = Int64(subpostID)
+        requestData.pid = requestPostID
+        requestData.pn = requestPage
+        requestData.spid = requestSubpostID
         requestData.scrDip = requestBuilder.screenScale
         requestData.scrH = Int32(requestBuilder.screenHeight)
         requestData.scrW = Int32(requestBuilder.screenWidth)
@@ -824,6 +831,42 @@ enum TiebaResponseValidator {
             throw TiebaAPIError.sessionExpired(code: code, message: message)
         }
         throw TiebaAPIError.response(code: code, message: message)
+    }
+}
+
+enum TiebaRequestValidationError: Error, Equatable {
+    case invalidPage(Int)
+    case invalidIdentifier(UInt64)
+}
+
+enum TiebaRequestValuePolicy {
+    static func signedPage(_ page: Int) throws -> Int32 {
+        guard page > 0, let value = Int32(exactly: page) else {
+            throw TiebaRequestValidationError.invalidPage(page)
+        }
+        return value
+    }
+
+    static func unsignedPage(_ page: Int) throws -> UInt32 {
+        guard page > 0, let value = UInt32(exactly: page) else {
+            throw TiebaRequestValidationError.invalidPage(page)
+        }
+        return value
+    }
+
+    static func signedIdentifier(_ identifier: UInt64) throws -> Int64 {
+        guard let value = Int64(exactly: identifier) else {
+            throw TiebaRequestValidationError.invalidIdentifier(identifier)
+        }
+        return value
+    }
+}
+
+enum TiebaPaginationPolicy {
+    static func nextPage(requestedPage: Int, responseCurrentPage: Int) -> Int? {
+        let currentPage = max(requestedPage, responseCurrentPage)
+        guard currentPage > 0, currentPage < Int(Int32.max) else { return nil }
+        return currentPage + 1
     }
 }
 

@@ -210,6 +210,7 @@ struct HomeView: View {
                 pendingPaginationRequest = false
                 paginationRequestScheduled = false
                 errorMessage = nil
+                showsInlineRefreshAnimation = false
                 navigationPath = []
                 Task { await reload(trigger: .initial) }
             }
@@ -235,6 +236,7 @@ struct HomeView: View {
                 loadTask?.cancel()
                 requestGeneration += 1
                 isLoading = false
+                showsInlineRefreshAnimation = false
                 pendingPaginationRequest = false
                 paginationRequestScheduled = false
             }
@@ -282,6 +284,7 @@ struct HomeView: View {
         }
         loadTask?.cancel()
         requestGeneration += 1
+        let generation = requestGeneration
         isLoading = false
         pendingPaginationRequest = false
         paginationRequestScheduled = false
@@ -291,13 +294,7 @@ struct HomeView: View {
             reduceMotion: reduceMotion
         )
         if showsInlineAnimation && reduceMotion == false {
-            if disablesUITestAnimations {
-                showsInlineRefreshAnimation = true
-            } else {
-                withAnimation(.easeInOut(duration: 0.18)) {
-                    showsInlineRefreshAnimation = true
-                }
-            }
+            setInlineRefreshAnimation(visible: true)
         }
         let animationStart = DispatchTime.now().uptimeNanoseconds
         page = 1
@@ -306,7 +303,7 @@ struct HomeView: View {
         if threads.isEmpty {
             didLoad = false
         }
-        await loadMore(generation: requestGeneration)
+        await loadMore(generation: generation)
         if showsInlineAnimation && reduceMotion == false {
             let minimumVisibleDuration = HomeRefreshAnimationPolicy.minimumVisibleDurationNanoseconds
             let elapsed = DispatchTime.now().uptimeNanoseconds - animationStart
@@ -315,14 +312,25 @@ struct HomeView: View {
                 elapsed: elapsed
             )
             if remaining > 0 {
-                do { try await Task.sleep(nanoseconds: remaining) } catch { return }
-            }
-            if disablesUITestAnimations {
-                showsInlineRefreshAnimation = false
-            } else {
-                withAnimation(.easeInOut(duration: 0.18)) {
-                    showsInlineRefreshAnimation = false
+                // Do not inherit cancellation from SwiftUI's gesture task. The
+                // request generation remains the authority for whether this
+                // refresh is still current.
+                let minimumVisibilityTask = Task.detached {
+                    try? await Task.sleep(nanoseconds: remaining)
                 }
+                await minimumVisibilityTask.value
+            }
+            guard generation == requestGeneration else { return }
+            setInlineRefreshAnimation(visible: false)
+        }
+    }
+
+    private func setInlineRefreshAnimation(visible: Bool) {
+        if disablesUITestAnimations {
+            showsInlineRefreshAnimation = visible
+        } else {
+            withAnimation(.easeInOut(duration: 0.18)) {
+                showsInlineRefreshAnimation = visible
             }
         }
     }
@@ -366,16 +374,20 @@ struct HomeView: View {
             loadTask = task
             let next = try await task.value
             guard generation == requestGeneration,
-                  requestedAccountID == account?.id,
-                  Task.isCancelled == false else { return }
+                  requestedAccountID == account?.id else { return }
             if requestedPage == 1 {
-                threads = next
+                threads = HomeFeedMerge.refresh(existing: threads, incoming: next)
             } else {
                 threads = HomeFeedMerge.append(existing: threads, incoming: next)
             }
             hasMore = next.isEmpty == false
             page = requestedPage + 1
         } catch is CancellationError {
+            guard generation == requestGeneration else { return }
+            loadTask = nil
+            isLoading = false
+            pendingPaginationRequest = false
+            paginationRequestScheduled = false
             return
         } catch {
             guard generation == requestGeneration, requestedAccountID == account?.id else { return }

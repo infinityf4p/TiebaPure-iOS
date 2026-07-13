@@ -122,6 +122,38 @@ final class SearchAPITests: XCTestCase {
         XCTAssertEqual(threads.first?.blocks, [.text("正文"), .emoticon(code: "滑稽")])
     }
 
+    func testForumFormMapsExpiredSessionBusinessCode() async throws {
+        let api = makeAPI { _ in
+            #"{"error_code":"110001","error_msg":"登录失效","thread_list":[],"user_list":[]}"#.data(using: .utf8)!
+        }
+
+        do {
+            _ = try await api.forumThreads(account: nil, forumName: "显卡", page: 1)
+            XCTFail("Expected expired session business error")
+        } catch {
+            XCTAssertEqual(
+                error as? TiebaAPIError,
+                .sessionExpired(code: 110001, message: "登录失效")
+            )
+        }
+    }
+
+    func testSearchMapsExpiredSessionBusinessCode() async throws {
+        let api = makeAPI { _ in
+            #"{"no":110001,"error":"登录失效","data":{}}"#.data(using: .utf8)!
+        }
+
+        do {
+            _ = try await api.searchThreads(keyword: "测试", page: 1)
+            XCTFail("Expected expired session business error")
+        } catch {
+            XCTAssertEqual(
+                error as? TiebaAPIError,
+                .sessionExpired(code: 110001, message: "登录失效")
+            )
+        }
+    }
+
     private func makeAPI(handler: @escaping (URLRequest) throws -> Data) -> TiebaAPI {
         SearchMockURLProtocol.handler = handler
         let configuration = URLSessionConfiguration.ephemeral

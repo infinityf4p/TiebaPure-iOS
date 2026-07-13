@@ -22,7 +22,11 @@ struct SubpostPreviewView: View {
         if subposts.isEmpty == false {
             VStack(alignment: .leading, spacing: TiebaPureTheme.Spacing.xs) {
                 ForEach(subposts) { subpost in
-                    SubpostInlineRow(subpost: subpost, threadAuthorID: threadAuthorID, lineLimit: 2)
+                    SubpostInlineRow(
+                        subpost: subpost,
+                        threadAuthorID: threadAuthorID,
+                        lineLimit: ThreadContentDisplayPolicy.detailLineLimit
+                    )
                 }
 
                 if totalCount > subposts.count, let onOpenAll {
@@ -57,7 +61,7 @@ struct SubpostPreviewView: View {
 struct SubpostInlineRow: View {
     let subpost: Subpost
     let threadAuthorID: Int64?
-    var lineLimit: Int = 0
+    var lineLimit: Int = ThreadContentDisplayPolicy.detailLineLimit
 
     var body: some View {
         InlineContentText(
@@ -67,8 +71,10 @@ struct SubpostInlineRow: View {
             prefixParts: SubpostInlinePrefix.parts(
                 authorName: subpost.author.displayNameResolved,
                 isThreadAuthor: isThreadAuthor
-            )
+            ),
+            accessibilityIdentifier: "thread-subpost-preview-text"
         )
+        .fixedSize(horizontal: false, vertical: true)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 

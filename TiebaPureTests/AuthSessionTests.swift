@@ -30,6 +30,40 @@ final class AuthSessionTests: XCTestCase {
         XCTAssertNil(clearedAccount)
     }
 
+    func testAccountStoreRejectsPersistedCookieHeaderInjection() async throws {
+        var account = Self.makeAccount()
+        account.bduss = "safe\r\nX-Injected: true"
+        let service = MemoryAccountStoreService(data: try JSONEncoder().encode(account))
+        let store = AccountStore(service: service)
+
+        do {
+            _ = try await store.load()
+            XCTFail("Expected unsafe persisted credentials to be rejected")
+        } catch {
+            XCTAssertEqual(error as? AccountStoreError, .invalidCredentials)
+        }
+        let remainingData = try await service.loadData()
+        XCTAssertNil(remainingData)
+    }
+
+    func testLoginValidationRejectsUnsafeCookieBeforeNetworkRequest() async throws {
+        let api = makeAPI { _ in
+            XCTFail("Unsafe cookies must be rejected before starting a request")
+            return Data()
+        }
+
+        do {
+            _ = try await api.validateLogin(cookies: BaiduCookies(
+                bduss: "bduss; EXTRA=leak",
+                stoken: "stoken",
+                baiduID: nil
+            ))
+            XCTFail("Expected unsafe cookie rejection")
+        } catch {
+            XCTAssertEqual(error as? AuthSessionError, .untrustedCookie)
+        }
+    }
+
     func testLegacyAccountMigratesOnlyAfterKeychainWriteAndDeletesPlaintext() async throws {
         let account = Self.makeAccount()
         var legacyJSON = try XCTUnwrap(

@@ -42,7 +42,14 @@ struct PostRowView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
-                ContentBlocksView(blocks: post.blocks, textStyle: isMainPost ? .body : .reply)
+                ContentBlocksView(
+                    blocks: post.blocks,
+                    textStyle: isMainPost ? .body : .reply,
+                    lineLimit: ThreadContentDisplayPolicy.detailLineLimit,
+                    inlineAccessibilityIdentifier: isMainPost
+                        ? "thread-main-text"
+                        : "thread-reply-text"
+                )
 
                 if post.previewSubposts.isEmpty == false {
                     SubpostPreviewView(

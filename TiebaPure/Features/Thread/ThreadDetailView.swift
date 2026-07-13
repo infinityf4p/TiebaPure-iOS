@@ -38,11 +38,15 @@ struct ThreadDetailView: View {
             if isLoading && didLoad == false {
                 ReaderStateView.loading("正在加载帖子")
             } else if let errorMessage, posts.isEmpty {
-                ReaderStateView.error(message: errorMessage) {
-                    Task { await reload() }
+                ReaderStateScrollView(refresh: { await reload() }) {
+                    ReaderStateView.error(message: errorMessage) {
+                        Task { await reload() }
+                    }
                 }
             } else if posts.isEmpty {
-                ReaderStateView.empty(title: "暂无内容", message: "下拉即可刷新帖子。")
+                ReaderStateScrollView(refresh: { await reload() }) {
+                    ReaderStateView.empty(title: "暂无内容", message: "下拉即可刷新帖子。")
+                }
             } else {
                 ScrollView {
                     LazyVStack(spacing: 0) {
@@ -297,8 +301,7 @@ struct ThreadDetailView: View {
             guard generation == requestGeneration,
                   requestedAccountID == account?.id,
                   requestedSeeLz == seeLz,
-                  requestedSort == sortType,
-                  Task.isCancelled == false else { return }
+                  requestedSort == sortType else { return }
             threadPage = loaded
             if requestedPage == 1 {
                 posts = loaded.posts
@@ -308,8 +311,18 @@ struct ThreadDetailView: View {
                 posts.append(contentsOf: loaded.posts.filter { knownIDs.contains($0.id) == false })
             }
             hasMore = loaded.hasMore
-            nextPage = requestedPage + 1
+            if let followingPage = TiebaPaginationPolicy.nextPage(
+                requestedPage: requestedPage,
+                responseCurrentPage: loaded.currentPage
+            ) {
+                nextPage = followingPage
+            } else {
+                hasMore = false
+            }
         } catch is CancellationError {
+            guard generation == requestGeneration else { return }
+            loadTask = nil
+            isLoading = false
             return
         } catch {
             guard generation == requestGeneration,
@@ -486,8 +499,10 @@ private struct SubpostListSheet: View {
                 if isLoading && didLoad == false {
                     ReaderStateView.loading("加载回复")
                 } else if let errorMessage, subposts.isEmpty {
-                    ReaderStateView.error(message: errorMessage) {
-                        Task { await reload() }
+                    ReaderStateScrollView(refresh: { await reload() }) {
+                        ReaderStateView.error(message: errorMessage) {
+                            Task { await reload() }
+                        }
                     }
                 } else {
                     ScrollView {
@@ -502,7 +517,12 @@ private struct SubpostListSheet: View {
                                         isThreadAuthor: post.author.id == threadAuthorID,
                                         trailingLikeCount: post.likeCount
                                     )
-                                    ContentBlocksView(blocks: post.blocks, textStyle: .reply, lineLimit: 4)
+                                    ContentBlocksView(
+                                        blocks: post.blocks,
+                                        textStyle: .reply,
+                                        lineLimit: ThreadContentDisplayPolicy.detailLineLimit,
+                                        inlineAccessibilityIdentifier: "thread-subpost-parent-text"
+                                    )
                                 }
                             }
 
@@ -592,7 +612,7 @@ private struct SubpostListSheet: View {
             ) }
             loadTask = task
             let loaded = try await task.value
-            guard generation == requestGeneration, Task.isCancelled == false else { return }
+            guard generation == requestGeneration else { return }
             if requestedPage == 1 {
                 subposts = loaded
             } else {
@@ -602,6 +622,9 @@ private struct SubpostListSheet: View {
             hasMore = loaded.isEmpty == false && subposts.count < post.subpostCount
             nextPage = requestedPage + 1
         } catch is CancellationError {
+            guard generation == requestGeneration else { return }
+            loadTask = nil
+            isLoading = false
             return
         } catch {
             guard generation == requestGeneration else { return }
@@ -631,7 +654,12 @@ private struct SubpostRowView: View {
                     trailingLikeCount: subpost.likeCount
                 )
 
-                ContentBlocksView(blocks: subpost.blocks, textStyle: .reply)
+                ContentBlocksView(
+                    blocks: subpost.blocks,
+                    textStyle: .reply,
+                    lineLimit: ThreadContentDisplayPolicy.detailLineLimit,
+                    inlineAccessibilityIdentifier: "thread-subpost-text"
+                )
             }
         }
     }

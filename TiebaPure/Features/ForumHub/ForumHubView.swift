@@ -156,6 +156,9 @@ struct ForumHubView: View {
             guard generation == requestGeneration, accountID == self.account?.id else { return }
             followedForums = loaded
         } catch is CancellationError {
+            guard generation == requestGeneration else { return }
+            loadTask = nil
+            isLoadingFollowed = false
             return
         } catch {
             guard generation == requestGeneration, accountID == self.account?.id else { return }

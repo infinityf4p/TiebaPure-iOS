@@ -2,6 +2,16 @@ import AVKit
 import SafariServices
 import SwiftUI
 
+enum TiebaVideoSourcePolicy {
+    static func videoURL(_ url: URL?) -> URL? {
+        TiebaURL.video(url?.absoluteString)
+    }
+
+    static func webpageURL(_ url: URL?) -> URL? {
+        TiebaURL.webpage(url?.absoluteString)
+    }
+}
+
 struct VideoPlayerView: View {
     let video: VideoContent
 
@@ -12,7 +22,7 @@ struct VideoPlayerView: View {
 
     var body: some View {
         Group {
-            if video.videoURL != nil || video.webURL != nil {
+            if resolvedVideoURL != nil || resolvedWebURL != nil {
                 Button {
                     if coverLoadState == .failure {
                         coverRetryTrigger += 1
@@ -32,12 +42,12 @@ struct VideoPlayerView: View {
             }
         }
         .fullScreenCover(isPresented: $showsPlayer) {
-            if let videoURL = video.videoURL {
+            if let videoURL = resolvedVideoURL {
                 FullScreenVideoPlayer(url: videoURL)
             }
         }
         .sheet(isPresented: $showsSafari) {
-            if let webURL = video.webURL {
+            if let webURL = resolvedWebURL {
                 SafariView(url: webURL)
                     .ignoresSafeArea()
             }
@@ -45,11 +55,19 @@ struct VideoPlayerView: View {
     }
 
     private func openVideo() {
-        if video.videoURL != nil {
+        if resolvedVideoURL != nil {
             showsPlayer = true
-        } else if video.webURL != nil {
+        } else if resolvedWebURL != nil {
             showsSafari = true
         }
+    }
+
+    private var resolvedVideoURL: URL? {
+        TiebaVideoSourcePolicy.videoURL(video.videoURL)
+    }
+
+    private var resolvedWebURL: URL? {
+        TiebaVideoSourcePolicy.webpageURL(video.webURL)
     }
 
     private var thumbnail: some View {
@@ -123,9 +141,9 @@ struct DirectVideoPlaybackView: View {
 
     var body: some View {
         Group {
-            if let videoURL = video.videoURL {
+            if let videoURL = TiebaVideoSourcePolicy.videoURL(video.videoURL) {
                 FullScreenVideoPlayer(url: videoURL)
-            } else if let webURL = video.webURL {
+            } else if let webURL = TiebaVideoSourcePolicy.webpageURL(video.webURL) {
                 SafariView(url: webURL)
                     .ignoresSafeArea()
             } else {

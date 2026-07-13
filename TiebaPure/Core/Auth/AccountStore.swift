@@ -29,7 +29,11 @@ final class AccountStore: ObservableObject {
     func load() async throws -> Account? {
         guard let data = try await service.loadData() else { return nil }
         do {
-            return try decoder.decode(Account.self, from: data)
+            let account = try decoder.decode(Account.self, from: data)
+            guard BaiduCredentialPolicy.isValid(account) else {
+                throw AccountStoreError.invalidCredentials
+            }
+            return account
         } catch {
             try? await service.clearData()
             throw error
@@ -38,7 +42,16 @@ final class AccountStore: ObservableObject {
 
     func save(_ account: Account) async throws {
         try Task.checkCancellation()
+        guard BaiduCredentialPolicy.isValid(account) else {
+            throw AccountStoreError.invalidCredentials
+        }
         let previousData = try await service.loadData()
+        let previousAccount = previousData
+            .flatMap { try? decoder.decode(Account.self, from: $0) }
+            .flatMap { BaiduCredentialPolicy.isValid($0) ? $0 : nil }
+        // Re-encode rather than restore the original bytes so removed legacy
+        // fields (including a complete Cookie header) cannot reappear.
+        let restorablePreviousData = previousAccount.flatMap { try? encoder.encode($0) }
         let data = try encoder.encode(account)
         do {
             try Task.checkCancellation()
@@ -51,15 +64,14 @@ final class AccountStore: ObservableObject {
             try Task.checkCancellation()
         } catch is CancellationError {
             do {
-                if let previousData {
-                    try await service.saveData(previousData)
+                if let restorablePreviousData {
+                    try await service.saveData(restorablePreviousData)
                 } else {
                     try await service.clearData()
                 }
             } catch {
                 throw AccountStoreError.cancellationRollbackFailed
             }
-            let previousAccount = previousData.flatMap { try? decoder.decode(Account.self, from: $0) }
             await MainActor.run {
                 accountDidChange.send(previousAccount)
             }
@@ -193,9 +205,7 @@ actor MigratingAccountStoreService: AccountStoreService {
 
     private static func validAccount(from data: Data) -> Account? {
         guard let account = try? JSONDecoder().decode(Account.self, from: data),
-              account.uid.isEmpty == false,
-              account.bduss.isEmpty == false,
-              account.stoken.isEmpty == false else {
+              BaiduCredentialPolicy.isValid(account) else {
             return nil
         }
         return account
@@ -301,4 +311,5 @@ enum KeychainError: Error, Equatable {
 
 enum AccountStoreError: Error, Equatable {
     case cancellationRollbackFailed
+    case invalidCredentials
 }

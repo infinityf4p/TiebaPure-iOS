@@ -63,6 +63,37 @@ final class SecurityRegressionTests: XCTestCase {
         withExtendedLifetime(observation) {}
     }
 
+    @MainActor
+    func testCancelledSaveNeverRestoresUnsafePreviousCredentials() async throws {
+        var unsafeAccount = FixtureTiebaAPI.account
+        unsafeAccount.stoken = "unsafe; INJECTED=true"
+        let service = ControlledSaveAccountStoreService(
+            data: try JSONEncoder().encode(unsafeAccount)
+        )
+        let store = AccountStore(service: service)
+
+        let saveTask = Task {
+            try await store.save(FixtureTiebaAPI.account)
+        }
+        for _ in 0..<200 {
+            if await service.hasPendingSave() { break }
+            await Task.yield()
+        }
+        let didStartSaving = await service.hasPendingSave()
+        XCTAssertTrue(didStartSaving)
+
+        saveTask.cancel()
+        await service.finishPendingSave()
+        do {
+            try await saveTask.value
+            XCTFail("Expected cancellation")
+        } catch is CancellationError {
+        }
+
+        let remainingData = try await service.loadData()
+        XCTAssertNil(remainingData)
+    }
+
     func testBoundedResponseRejectsDeclaredOverflow() async throws {
         SecurityURLProtocol.payload = Data(repeating: 0x41, count: 9)
         SecurityURLProtocol.declaredContentLength = 9
@@ -111,6 +142,59 @@ final class SecurityRegressionTests: XCTestCase {
         XCTAssertFalse(TiebaImageDecodePolicy.allows(width: 100_000, height: 1))
         XCTAssertFalse(TiebaImageDecodePolicy.allows(width: 20_000, height: 20_000))
         XCTAssertFalse(TiebaImageDecodePolicy.allows(width: Int.max, height: 2))
+    }
+
+    func testImageDownloadValidatesDataAndUsesDetectedFileType() async throws {
+        SecurityURLProtocol.payload = try XCTUnwrap(Data(base64Encoded:
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
+        ))
+        SecurityURLProtocol.mimeType = "image/png"
+        let client = TiebaImageDownloadClient(session: Self.session())
+        let url = try XCTUnwrap(URL(string: "https://example.com/original.jpg"))
+
+        let payload = try await client.download(from: url)
+
+        XCTAssertEqual(payload.data, SecurityURLProtocol.payload)
+        XCTAssertEqual(payload.mimeType, "image/png")
+        XCTAssertEqual(payload.fileName, "original.png")
+    }
+
+    func testImageDownloadRejectsInsecureSourceBeforeRequest() async throws {
+        let client = TiebaImageDownloadClient(session: Self.session())
+        let url = try XCTUnwrap(URL(string: "http://example.com/original.jpg"))
+
+        do {
+            _ = try await client.download(from: url)
+            XCTFail("Expected insecure image URL rejection")
+        } catch {
+            XCTAssertEqual(error as? TiebaImageDownloadError, .invalidURL)
+        }
+    }
+
+    func testRequestBuilderRejectsOverflowingRemoteIdentifiersAndPages() async throws {
+        let api = TiebaAPI(client: TiebaHTTPClient(session: Self.session()))
+
+        do {
+            _ = try await api.threadPage(
+                account: nil,
+                threadID: 1,
+                page: 1,
+                postID: UInt64.max
+            )
+            XCTFail("Expected overflowing post identifier rejection")
+        } catch {
+            XCTAssertEqual(
+                error as? TiebaRequestValidationError,
+                .invalidIdentifier(UInt64.max)
+            )
+        }
+
+        do {
+            _ = try await api.personalizedThreads(account: nil, page: -1, loadType: 1)
+            XCTFail("Expected invalid page rejection")
+        } catch {
+            XCTAssertEqual(error as? TiebaRequestValidationError, .invalidPage(-1))
+        }
     }
 
     func testBoundedResponsePropagatesCancellation() async throws {
@@ -239,6 +323,10 @@ private final class SecurityURLProtocol: URLProtocol {
 private actor ControlledSaveAccountStoreService: AccountStoreService {
     private var data: Data?
     private var pendingSave: (data: Data, continuation: CheckedContinuation<Void, Never>)?
+
+    init(data: Data? = nil) {
+        self.data = data
+    }
 
     func loadData() async throws -> Data? { data }
 

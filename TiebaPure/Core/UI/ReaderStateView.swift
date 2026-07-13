@@ -100,6 +100,38 @@ struct ReaderStateView: View {
     }
 }
 
+/// Gives empty and error states a real vertical scroll container so an
+/// ancestor's `.refreshable` action remains reachable even when there is no
+/// list content yet.
+struct ReaderStateScrollView<Content: View>: View {
+    private let refresh: () async -> Void
+    private let content: Content
+
+    init(
+        refresh: @escaping () async -> Void,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.refresh = refresh
+        self.content = content()
+    }
+
+    var body: some View {
+        GeometryReader { proxy in
+            ScrollView {
+                content
+                    .frame(maxWidth: .infinity)
+                    // Keep the empty state genuinely scrollable. A content
+                    // height exactly equal to the viewport intermittently
+                    // suppresses UIRefreshControl on iOS 26.1.
+                    .frame(minHeight: max(proxy.size.height + 1, 1))
+            }
+            .refreshable { await refresh() }
+            .background(TiebaPureTheme.ColorToken.readerGroupedBackground)
+            .accessibilityIdentifier("reader-state-scroll-view")
+        }
+    }
+}
+
 extension ReaderStateView {
     static func loading(_ title: String = "正在加载") -> ReaderStateView {
         ReaderStateView(kind: .loading, title: title, systemImage: "hourglass")
@@ -166,6 +198,29 @@ enum ReaderErrorMessage {
 
         if error is DecodingError {
             return "数据解析失败，请刷新后重试。"
+        }
+
+        if let authError = error as? AuthSessionError {
+            switch authError {
+            case .missingRequiredCookies:
+                return "登录凭证不完整，请返回登录页重试。"
+            case .untrustedCookie:
+                return "登录凭证未通过安全校验，请重新登录。"
+            case .disallowedNavigation:
+                return "已阻止不安全的登录页面跳转。"
+            }
+        }
+
+        if let loginError = error as? LoginValidationError {
+            return loginError.description
+        }
+
+        if error is KeychainError || error is AccountMigrationError || error is AccountStoreError {
+            return "本机账号数据处理失败，请重新登录或稍后重试。"
+        }
+
+        if error is TiebaRequestValidationError {
+            return "请求参数无效，无法继续加载。"
         }
 
         if case let TiebaHTTPError.badStatus(code, _) = error {

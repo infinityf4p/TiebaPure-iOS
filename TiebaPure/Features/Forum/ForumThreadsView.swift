@@ -25,14 +25,18 @@ struct ForumThreadsView: View {
             if isLoading && didLoad == false {
                 ReaderStateView.loading("正在加载帖子")
             } else if let errorMessage, threads.isEmpty {
-                ReaderStateView.error(message: errorMessage) {
-                    Task { await reload() }
+                ReaderStateScrollView(refresh: { await reload() }) {
+                    ReaderStateView.error(message: errorMessage) {
+                        Task { await reload() }
+                    }
                 }
             } else if visibleThreads.isEmpty {
-                ReaderStateView.empty(
-                    title: searchText.isEmpty ? "暂无帖子" : "没有匹配结果",
-                    message: searchText.isEmpty ? "下拉即可刷新本吧帖子。" : nil
-                )
+                ReaderStateScrollView(refresh: { await reload() }) {
+                    ReaderStateView.empty(
+                        title: searchText.isEmpty ? "暂无帖子" : "没有匹配结果",
+                        message: searchText.isEmpty ? "下拉即可刷新本吧帖子。" : nil
+                    )
+                }
             } else {
                 ScrollView {
                     LazyVStack(spacing: 0) {
@@ -177,8 +181,7 @@ struct ForumThreadsView: View {
             loadTask = task
             let next = try await task.value
             guard generation == requestGeneration,
-                  requestedAccountID == account?.id,
-                  Task.isCancelled == false else { return }
+                  requestedAccountID == account?.id else { return }
             if requestedPage == 1 {
                 threads = next
             } else {
@@ -187,6 +190,9 @@ struct ForumThreadsView: View {
             hasMore = next.isEmpty == false
             page = requestedPage + 1
         } catch is CancellationError {
+            guard generation == requestGeneration else { return }
+            loadTask = nil
+            isLoading = false
             return
         } catch {
             guard generation == requestGeneration, requestedAccountID == account?.id else { return }
@@ -349,13 +355,13 @@ struct ForumThreadRow: View {
                         text: thread.title,
                         keyword: highlightKeyword,
                         font: .body.weight(.semibold),
-                        lineLimit: 2
+                        lineLimit: ThreadContentDisplayPolicy.summaryLineLimit
                     )
                 } else if inlinePreviewBlocks.isEmpty == false {
                     InlineContentText(
                         blocks: inlinePreviewBlocks,
                         style: .body,
-                        lineLimit: 2,
+                        lineLimit: ThreadContentDisplayPolicy.summaryLineLimit,
                         highlightKeyword: highlightKeyword,
                         allowsLinkInteraction: false
                     )
@@ -365,7 +371,7 @@ struct ForumThreadRow: View {
                     InlineContentText(
                         blocks: inlinePreviewBlocks,
                         style: .preview,
-                        lineLimit: 2,
+                        lineLimit: ThreadContentDisplayPolicy.summaryLineLimit,
                         highlightKeyword: highlightKeyword,
                         allowsLinkInteraction: false
                     )

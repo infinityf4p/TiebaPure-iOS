@@ -17,34 +17,56 @@ Last updated: 2026-07-13 (Asia/Shanghai)
 
 ## 测试清单与条件跳过
 
-- 单元测试：107 项。
-  - 106 项离线确定性测试。
+- 单元测试：120 项。
+  - 119 项离线确定性测试。
   - 1 项 opt-in 匿名线上冒烟；普通本地测试和 CI 默认跳过。
-- fixture UI 测试：24 项。
-  - 2 项刷新动画测试仅在 Reduce Motion 关闭时运行。
+- fixture UI 测试：27 项。
+  - 2 项刷新功能测试覆盖下拉与首页 Tab 重选，不依赖动画状态。
+  - 1 项空态下拉刷新测试。
+  - 1 项图片页测试覆盖保存反馈与单击返回来源页。
+  - 1 项长文本测试覆盖主贴、评论、楼中楼预览与完整楼中楼页面。
   - 1 项动画抑制测试仅在 Reduce Motion 开启时运行。
   - 2 项仅在 iPad 运行。
 
-UI 测试使用 `UITEST_USE_FIXTURES`，不访问贴吧线上服务。夹具场景为 `success`、`empty`、`error`、`expired`、`slow`、`paginationFailure` 和 `longContent`。
+UI 测试使用 `UITEST_USE_FIXTURES`，不访问贴吧线上服务。夹具场景为 `success`、`refreshUpdate`、`emptyThenSuccess`、`empty`、`error`、`expired`、`slow`、`paginationFailure` 和 `longContent`。
 
 为规避 XCUITest 在多次应用重启后偶发的 Accessibility snapshot 查询超时，完整 UI 验收使用三个独立的 `xcodebuild` invocation：
 
-1. 单独运行 `testHomeTabReselectAfterScrollingShowsRefreshAnimation`。
+1. 单独运行 `testHomeTabReselectAfterScrollingRefreshesContent`。
 2. 运行 UI shard A。
 3. 运行 UI shard B。
 
-每轮聚合必须恰好覆盖全部 24 项，不能把基础设施超时计作通过，也不能遗漏测试。普通 CI 同样只运行确定性 fixture 分片。
+每轮聚合必须恰好覆盖全部 27 项，不能把基础设施超时计作通过，也不能遗漏测试。普通 CI 同样只运行确定性 fixture 分片。
 
-## iPhone 17 干净安装连续两轮
+## iPhone 17 下拉刷新完整回归
 
 设备：iPhone 17 / iOS 26.1 (`23B86`)
 
 | 轮次 | 单元测试 | UI 测试 | 结果 |
 | --- | --- | --- | --- |
-| 1 | 106 通过 / 1 条件跳过 / 0 失败 | 21 通过 / 3 条件跳过 / 0 失败 | PASS |
-| 2 | 106 通过 / 1 条件跳过 / 0 失败 | 21 通过 / 3 条件跳过 / 0 失败 | PASS |
+| 1 | 106 通过 / 1 条件跳过 / 0 失败 | 22 通过 / 3 条件跳过 / 0 失败 | PASS |
+| 2 | 106 通过 / 1 条件跳过 / 0 失败 | 22 通过 / 3 条件跳过 / 0 失败 | PASS |
 
-单元测试唯一跳过项是 opt-in 匿名线上冒烟。UI 的三个预期跳过项是 Reduce Motion-only 测试和两个 iPad-only 测试。两轮之间未修改源码，第二轮重复验证同一最终测试树。
+以上完整 UI 轮次覆盖加入图片下载回归前的 25 项测试树。单元测试唯一跳过项是 opt-in 匿名线上冒烟；UI 的三个预期跳过项是 Reduce Motion-only 测试和两个 iPad-only 测试。
+
+随后加入图片页单击返回与保存原图功能，并在同一台 iPhone 17 / iOS 26.1 模拟器完成：
+
+- 图片功能阶段单元测试：109 通过 / 1 条件跳过 / 0 失败。
+- 图片页与三条刷新路径定向 UI 回归：4 通过 / 0 跳过 / 0 失败。
+- 保存成功反馈与单击返回最终复测：1 通过 / 0 跳过 / 0 失败。
+
+帖子正文截断修复后，在同一模拟器继续完成：
+
+- 最终单元测试：110 通过 / 1 条件跳过 / 0 失败。
+- 主贴、评论及两种楼中楼长文本高度回归：1 通过 / 0 跳过 / 0 失败。
+- HTTPS 链接 trait 与长图入口回归：2 通过 / 0 跳过 / 0 失败。
+
+随后进行追加安全与健壮性审查，修复持久化 Cookie 值注入、取消保存时恢复不安全旧凭证、媒体初始 URL 绕过、下载图片像素与文件名边界、超范围帖子 ID、定位楼层后的分页推进，以及 FRS/搜索错误码不一致。最终在同一台 iPhone 17 / iOS 26.1 模拟器完成：
+
+- 完整离线单元测试：119 通过 / 0 跳过 / 0 失败。
+- 下拉刷新、图片保存/单击返回、长正文/楼中楼和 HTTPS 链接关键 UI 回归：5 通过 / 0 跳过 / 0 失败。
+- `xcodebuild analyze`：PASS。
+- Release `iphoneos` unsigned build：PASS。
 
 ## 小屏与无障碍矩阵
 
@@ -130,5 +152,7 @@ fixture UI 测试生成并检查了首页、搜索、帖子控制区、深色大
 ```text
 build/TiebaPure-unsigned.ipa
 ```
+
+本轮追加审查后的本地包为 `1.0.1 (2)`，SHA-256：`73a21c2fa4a75ea5518820c3971ebd574ca3dfec39fd06c7b360aaf3f4342a63`。包内 `PrivacyInfo.xcprivacy` 可解析，且不含 `_CodeSignature` 或 `embedded.mobileprovision`。
 
 `build/`、IPA、截图和 `.xcresult` 均被忽略，不属于公开仓库内容。IPA 故意不签名，安装前必须由使用者使用自己的证书和描述文件签名。

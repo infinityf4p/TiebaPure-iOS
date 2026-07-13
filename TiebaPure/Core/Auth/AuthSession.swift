@@ -14,6 +14,36 @@ struct BaiduCookies: Equatable, Sendable {
     }
 }
 
+enum BaiduCredentialPolicy {
+    static let maximumCookieValueBytes = 4_096
+
+    static func isValidCookieValue(_ value: String) -> Bool {
+        guard value.isEmpty == false,
+              value.utf8.count <= maximumCookieValueBytes else {
+            return false
+        }
+        // Cookie request headers must stay within visible ASCII and may not
+        // contain the semicolon delimiter. This also blocks CR/LF injection
+        // from legacy or externally modified persisted account data.
+        return value.unicodeScalars.allSatisfy { scalar in
+            scalar.value >= 0x21 && scalar.value <= 0x7E && scalar.value != 0x3B
+        }
+    }
+
+    static func isValid(_ cookies: BaiduCookies) -> Bool {
+        isValidCookieValue(cookies.bduss)
+            && isValidCookieValue(cookies.stoken)
+            && (cookies.baiduID.map(isValidCookieValue) ?? true)
+    }
+
+    static func isValid(_ account: Account) -> Bool {
+        account.uid.isEmpty == false
+            && isValidCookieValue(account.bduss)
+            && isValidCookieValue(account.stoken)
+            && (account.baiduID.map(isValidCookieValue) ?? true)
+    }
+}
+
 enum AuthSessionError: Error, Equatable {
     case missingRequiredCookies
     case untrustedCookie
@@ -121,9 +151,7 @@ struct AuthSession {
         let allowedNames = Set(["BDUSS", "BDUSS_BFESS", "STOKEN", "BAIDUID"])
         guard allowedNames.contains(cookie.name.uppercased()),
               cookie.isSecure,
-              cookie.value.isEmpty == false,
-              cookie.value.rangeOfCharacter(from: .newlines) == nil,
-              cookie.value.contains(";") == false,
+              BaiduCredentialPolicy.isValidCookieValue(cookie.value),
               cookie.expiresDate.map({ $0 > Date() }) ?? true else {
             return false
         }

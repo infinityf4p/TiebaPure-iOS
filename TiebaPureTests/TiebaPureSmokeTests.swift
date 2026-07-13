@@ -1,8 +1,48 @@
+import Security
 import SwiftUI
 import XCTest
 @testable import TiebaPure
 
 final class TiebaPureSmokeTests: XCTestCase {
+    func testThreadDetailUsesUnlimitedWrappingWhileSummariesStillTruncate() {
+        XCTAssertEqual(ThreadContentDisplayPolicy.detailLineLimit, 0)
+        XCTAssertEqual(
+            ThreadContentDisplayPolicy.maximumNumberOfLines(
+                for: ThreadContentDisplayPolicy.detailLineLimit
+            ),
+            0
+        )
+        XCTAssertEqual(
+            ThreadContentDisplayPolicy.lineBreakMode(
+                for: ThreadContentDisplayPolicy.detailLineLimit
+            ),
+            .byWordWrapping
+        )
+        XCTAssertEqual(ThreadContentDisplayPolicy.summaryLineLimit, 2)
+        XCTAssertEqual(
+            ThreadContentDisplayPolicy.lineBreakMode(
+                for: ThreadContentDisplayPolicy.summaryLineLimit
+            ),
+            .byTruncatingTail
+        )
+        XCTAssertEqual(ThreadContentDisplayPolicy.paragraphLineBreakMode, .byWordWrapping)
+    }
+
+    func testThreadPaginationContinuesAfterServerLocatedPostPage() {
+        XCTAssertEqual(
+            TiebaPaginationPolicy.nextPage(requestedPage: 1, responseCurrentPage: 7),
+            8
+        )
+        XCTAssertEqual(
+            TiebaPaginationPolicy.nextPage(requestedPage: 3, responseCurrentPage: 0),
+            4
+        )
+        XCTAssertNil(TiebaPaginationPolicy.nextPage(
+            requestedPage: 1,
+            responseCurrentPage: Int(Int32.max)
+        ))
+    }
+
     func testPreviewAccountHasStableIdentity() {
         XCTAssertEqual(Account.preview.id, "0")
     }
@@ -278,6 +318,19 @@ final class TiebaPureSmokeTests: XCTestCase {
             TiebaImageSourcePolicy.urls(primary: thumbnail, fallback: thumbnail),
             [thumbnail]
         )
+
+        let insecure = try XCTUnwrap(URL(string: "http://tiebapic.baidu.com/private.jpg"))
+        let privateTarget = try XCTUnwrap(URL(string: "https://127.0.0.1/private.jpg"))
+        XCTAssertEqual(
+            TiebaImageSourcePolicy.urls(primary: insecure, fallback: original),
+            [original]
+        )
+        XCTAssertTrue(
+            TiebaImageSourcePolicy.urls(
+                primary: URL(fileURLWithPath: "/tmp/private.png"),
+                fallback: privateTarget
+            ).isEmpty
+        )
     }
 
     func testSyntheticFixtureImageFailureNeverUsesNetwork() throws {
@@ -319,6 +372,56 @@ final class TiebaPureSmokeTests: XCTestCase {
         XCTAssertEqual(
             FullScreenImageSwipePolicy.action(for: CGSize(width: 120, height: 8), currentIndex: 0, totalCount: 3),
             .none
+        )
+    }
+
+    func testFullScreenImageDownloadPrefersOriginalAndPreservesGIFExtension() throws {
+        let original = try XCTUnwrap(URL(string: "https://example.com/photo.gif"))
+        let thumbnail = try XCTUnwrap(URL(string: "https://example.com/photo-small.jpg"))
+
+        XCTAssertEqual(
+            TiebaImageDownloadPolicy.preferredURL(original: original, thumbnail: thumbnail),
+            original
+        )
+        let insecureOriginal = try XCTUnwrap(URL(string: "http://example.com/photo.gif"))
+        XCTAssertEqual(
+            TiebaImageDownloadPolicy.preferredURL(original: insecureOriginal, thumbnail: thumbnail),
+            thumbnail
+        )
+        XCTAssertEqual(
+            TiebaImageDownloadPolicy.fileName(
+                for: original,
+                mimeType: "image/gif",
+                typeIdentifier: nil
+            ),
+            "photo.gif"
+        )
+    }
+
+    func testImageDownloadFileNameIsSanitizedAndBounded() throws {
+        let stem = String(repeating: "a", count: 200)
+        let url = try XCTUnwrap(URL(string: "https://example.com/\(stem)%20bad.jpg"))
+
+        let fileName = TiebaImageDownloadPolicy.fileName(
+            for: url,
+            mimeType: "image/jpeg",
+            typeIdentifier: nil
+        )
+
+        let resolvedStem = String(fileName.dropLast(".jpg".count))
+        XCTAssertLessThanOrEqual(resolvedStem.count, TiebaImageDownloadPolicy.maximumFileNameStemLength)
+        XCTAssertLessThanOrEqual(resolvedStem.utf8.count, TiebaImageDownloadPolicy.maximumFileNameStemBytes)
+        XCTAssertFalse(resolvedStem.contains(" "))
+
+        let unicodeURL = try XCTUnwrap(URL(string: "https://example.com/\(String(repeating: "图", count: 200)).png"))
+        let unicodeFileName = TiebaImageDownloadPolicy.fileName(
+            for: unicodeURL,
+            mimeType: "image/png",
+            typeIdentifier: nil
+        )
+        XCTAssertLessThanOrEqual(
+            String(unicodeFileName.dropLast(".png".count)).utf8.count,
+            TiebaImageDownloadPolicy.maximumFileNameStemBytes
         )
     }
 
@@ -469,6 +572,14 @@ final class TiebaPureSmokeTests: XCTestCase {
     func testReaderErrorMessagesAreConciseAndLocalized() {
         XCTAssertEqual(ReaderErrorMessage.message(for: URLError(.timedOut)), "请求超时，请稍后重试。")
         XCTAssertEqual(ReaderErrorMessage.message(for: URLError(.notConnectedToInternet)), "网络不可用，请检查网络连接。")
+        XCTAssertEqual(
+            ReaderErrorMessage.message(for: AuthSessionError.untrustedCookie),
+            "登录凭证未通过安全校验，请重新登录。"
+        )
+        XCTAssertEqual(
+            ReaderErrorMessage.message(for: KeychainError.status(errSecInteractionNotAllowed)),
+            "本机账号数据处理失败，请重新登录或稍后重试。"
+        )
     }
 
     func testReaderDateTextUsesConciseRelativeTime() {

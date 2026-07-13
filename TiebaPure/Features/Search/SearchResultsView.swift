@@ -74,11 +74,15 @@ struct SearchResultsView: View {
                         if isLoading && didLoad == false {
                             ReaderStateView.loading("正在搜索")
                         } else if let errorMessage, results.isEmpty {
-                            ReaderStateView.error(message: errorMessage) {
-                                Task { await reload() }
+                            ReaderStateScrollView(refresh: { await reload() }) {
+                                ReaderStateView.error(message: errorMessage) {
+                                    Task { await reload() }
+                                }
                             }
                         } else if results.isEmpty {
-                            ReaderStateView.empty(title: "没有结果", message: "可调整范围或排序后重试。")
+                            ReaderStateScrollView(refresh: { await reload() }) {
+                                ReaderStateView.empty(title: "没有结果", message: "可调整范围或排序后重试。")
+                            }
                         } else {
                             ScrollView {
                                 LazyVStack(spacing: TiebaPureTheme.Spacing.sm) {
@@ -334,8 +338,7 @@ struct SearchResultsView: View {
             loadTask = task
             let pageResult = try await task.value
             guard generation == requestGeneration,
-                  key == currentRequestKey(page: requestedPage),
-                  Task.isCancelled == false else { return }
+                  key == currentRequestKey(page: requestedPage) else { return }
             if requestedPage == 1 {
                 results = pageResult.results
             } else {
@@ -343,8 +346,18 @@ struct SearchResultsView: View {
                 results.append(contentsOf: pageResult.results.filter { known.contains($0.id) == false })
             }
             hasMore = pageResult.hasMore && pageResult.results.isEmpty == false
-            page = pageResult.currentPage + 1
+            if let followingPage = TiebaPaginationPolicy.nextPage(
+                requestedPage: requestedPage,
+                responseCurrentPage: pageResult.currentPage
+            ) {
+                page = followingPage
+            } else {
+                hasMore = false
+            }
         } catch is CancellationError {
+            guard generation == requestGeneration else { return }
+            loadTask = nil
+            isLoading = false
             return
         } catch {
             guard generation == requestGeneration, key == currentRequestKey(page: requestedPage) else { return }

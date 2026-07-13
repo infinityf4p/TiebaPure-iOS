@@ -179,7 +179,7 @@ jobs:
 
           reset_simulator
           run_ui_group \
-            -only-testing:TiebaPureUITests/TiebaPureUITests/testHomeTabReselectAfterScrollingShowsRefreshAnimation
+            -only-testing:TiebaPureUITests/TiebaPureUITests/testHomeTabReselectAfterScrollingRefreshesContent
 
           reset_simulator
           run_ui_group \
@@ -189,6 +189,7 @@ jobs:
             -only-testing:TiebaPureUITests/TiebaPureUITests/testFixtureEmptyStateIsDeterministic \
             -only-testing:TiebaPureUITests/TiebaPureUITests/testFixtureErrorStateOffersAccessibleRetry \
             -only-testing:TiebaPureUITests/TiebaPureUITests/testFixtureMediaCountMatrixIsAccessible \
+            -only-testing:TiebaPureUITests/TiebaPureUITests/testFullScreenImageOffersDownloadAndTapReturnsToSource \
             -only-testing:TiebaPureUITests/TiebaPureUITests/testFollowedForumWholeRowNavigatesWithoutGestureConflict \
             -only-testing:TiebaPureUITests/TiebaPureUITests/testForegroundBackgroundKeepsFixtureContent \
             -only-testing:TiebaPureUITests/TiebaPureUITests/testForumHubAndMeKeepLoginOutOfHome \
@@ -202,12 +203,14 @@ jobs:
             -only-testing:TiebaPureUITests/TiebaPureUITests/testLaunchShowsHomeWithoutLoginAndRootTabs \
             -only-testing:TiebaPureUITests/TiebaPureUITests/testPaginationFailureKeepsContentAndRetriesSamePage \
             -only-testing:TiebaPureUITests/TiebaPureUITests/testPostHTTPSLinkExposesNativeLinkTrait \
-            -only-testing:TiebaPureUITests/TiebaPureUITests/testPullingHomeFeedShowsRefreshAnimation \
+            -only-testing:TiebaPureUITests/TiebaPureUITests/testPullingEmptyForumStateLoadsContent \
+            -only-testing:TiebaPureUITests/TiebaPureUITests/testPullingHomeFeedRefreshesContentAndPreservesExistingRows \
             -only-testing:TiebaPureUITests/TiebaPureUITests/testReduceMotionSuppressesCustomRefreshAnimation \
             -only-testing:TiebaPureUITests/TiebaPureUITests/testSearchResultRoutesToMatchedReply \
             -only-testing:TiebaPureUITests/TiebaPureUITests/testSwitchingToHomeDoesNotTriggerReselectRefresh \
             -only-testing:TiebaPureUITests/TiebaPureUITests/testSyntheticScreenshotMatrix \
             -only-testing:TiebaPureUITests/TiebaPureUITests/testTallInlineImageOffersOriginalEntry \
+            -only-testing:TiebaPureUITests/TiebaPureUITests/testThreadDetailMainReplyAndSubpostsWrapWithoutTruncation \
             -only-testing:TiebaPureUITests/TiebaPureUITests/testThreadDetailShowsReplyControls
 
       - name: Static analysis

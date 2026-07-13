@@ -3,6 +3,8 @@ import Foundation
 
 enum FixtureScenario: String {
     case success
+    case refreshUpdate
+    case emptyThenSuccess
     case empty
     case error
     case expired
@@ -30,6 +32,10 @@ struct FixtureTiebaAPI: TiebaAPIService {
     func personalizedThreads(account: Account?, page: Int, loadType: Int) async throws -> [ThreadSummary] {
         try await prepare(page: page)
         guard scenario != .empty else { return [] }
+        if scenario == .refreshUpdate, page == 1 {
+            let requestNumber = await state.nextPersonalizedPageOneRequestNumber()
+            return requestNumber == 1 ? [Self.threads[0]] : [Self.refreshedThread]
+        }
         return page == 1 ? Self.threads : []
     }
 
@@ -42,6 +48,10 @@ struct FixtureTiebaAPI: TiebaAPIService {
     func forumThreads(account: Account?, forumName: String, page: Int, sortType: Int) async throws -> [ThreadSummary] {
         try await prepare(page: page)
         guard scenario != .empty else { return [] }
+        if scenario == .emptyThenSuccess, page == 1,
+           await state.nextForumPageOneRequestNumber() == 1 {
+            return []
+        }
         return page == 1 ? Self.threads.map { thread in
             var copy = thread
             copy.forumName = forumName
@@ -98,8 +108,9 @@ struct FixtureTiebaAPI: TiebaAPIService {
     ) async throws -> ThreadPage {
         try await prepare(page: page)
         let thread = Self.threads.first(where: { $0.id == threadID }) ?? Self.threads[0]
-        let text = scenario == .longContent
-            ? String(repeating: "这是用于大字体与超长正文布局验收的合成内容。", count: 80)
+        let usesLongContent = scenario == .longContent
+        let text = usesLongContent
+            ? String(repeating: "这是用于验证主贴正文完整换行且不显示省略号的合成内容。", count: 14)
             : "这是完全离线的合成帖子正文，内容不来自真实用户。"
         let longImage = ImageContent(
             thumbnailURL: URL(string: "https://fixture.invalid/long-image.png"),
@@ -125,7 +136,15 @@ struct FixtureTiebaAPI: TiebaAPIService {
             previewSubposts: []
         )
         let replyAuthor = UserSummary(id: 2, name: "fixture_reply", displayName: "很长很长的合成回复用户名用于布局测试", portrait: "", level: 12, levelName: "十二级")
-        let replyText = postID == 2002 ? "已定位搜索命中回复" : "确定性回复内容"
+        let replyText: String
+        if postID == 2002 {
+            replyText = "已定位搜索命中回复"
+        } else if usesLongContent {
+            replyText = String(repeating: "这是用于验证评论内容完整换行的合成回复。", count: 10)
+        } else {
+            replyText = "确定性回复内容"
+        }
+        let replySubposts = usesLongContent ? Self.longSubpostFixtures : Self.subpostFixtures
         let reply = Post(
             id: 2002,
             threadID: threadID,
@@ -134,9 +153,9 @@ struct FixtureTiebaAPI: TiebaAPIService {
             ipAddress: "上海",
             createdAt: Date(timeIntervalSince1970: 1_700_000_200),
             blocks: [.text(replyText), .mention(userID: 1, text: "@合成作者")],
-            subpostCount: 2,
+            subpostCount: replySubposts.count,
             likeCount: 3,
-            previewSubposts: Self.subpostFixtures
+            previewSubposts: replySubposts
         )
         let posts = page == 1 ? [main, reply] : []
         return ThreadPage(
@@ -159,7 +178,8 @@ struct FixtureTiebaAPI: TiebaAPIService {
         subpostID: UInt64
     ) async throws -> [Subpost] {
         try await prepare(page: page)
-        return page == 1 ? Self.subpostFixtures : []
+        guard page == 1 else { return [] }
+        return scenario == .longContent ? Self.longSubpostFixtures : Self.subpostFixtures
     }
 
     private func prepare(page: Int = 1) async throws {
@@ -189,6 +209,17 @@ struct FixtureTiebaAPI: TiebaAPIService {
     static let forum = Forum(id: 101, name: "测试", displayName: "测试吧", avatarURL: nil, memberCount: 12345, threadCount: 678)
     static let forumTwo = Forum(id: 102, name: "无障碍", displayName: "无障碍吧", avatarURL: nil, memberCount: 44, threadCount: 88)
     static let author = UserSummary(id: 1, name: "fixture_author", displayName: "合成内容作者", portrait: "", level: 9, levelName: "九级")
+
+    static let refreshedThread = ThreadSummary(
+        id: 1099,
+        forumID: forum.id,
+        title: "下拉刷新已更新",
+        author: author,
+        forumName: forum.name,
+        replyCount: 1,
+        viewCount: 2,
+        blocks: [.text("第二次首页请求返回的确定性刷新内容")]
+    )
 
     static let threads: [ThreadSummary] = {
         let fourImages = (0..<4).map { index in
@@ -267,13 +298,42 @@ struct FixtureTiebaAPI: TiebaAPIService {
         Subpost(id: 3001, floor: 1, author: author, ipAddress: "广东", blocks: [.text("楼中楼合成回复一")], createdAt: nil, likeCount: 1),
         Subpost(id: 3002, floor: 2, author: author, ipAddress: "浙江", blocks: [.text("楼中楼合成回复二")], createdAt: nil, likeCount: 0)
     ]
+
+    static let longSubpostFixtures = (0..<4).map { index in
+        Subpost(
+            id: UInt64(3101 + index),
+            floor: index + 1,
+            author: author,
+            ipAddress: index.isMultiple(of: 2) ? "广东" : "浙江",
+            blocks: [
+                .text(String(
+                    repeating: "这是用于验证楼中楼内容完整换行的第\(index + 1)条合成回复。",
+                    count: 8
+                ))
+            ],
+            createdAt: nil,
+            likeCount: index
+        )
+    }
 }
 
 private actor FixtureRequestState {
     private var failedPages = Set<Int>()
+    private var personalizedPageOneRequestCount = 0
+    private var forumPageOneRequestCount = 0
 
     func shouldFail(page: Int) -> Bool {
         failedPages.insert(page).inserted
+    }
+
+    func nextPersonalizedPageOneRequestNumber() -> Int {
+        personalizedPageOneRequestCount += 1
+        return personalizedPageOneRequestCount
+    }
+
+    func nextForumPageOneRequestNumber() -> Int {
+        forumPageOneRequestCount += 1
+        return forumPageOneRequestCount
     }
 }
 #endif

@@ -54,7 +54,10 @@ struct ImageViewer: View {
     }
 
     private var previewURL: URL? {
-        image.thumbnailURL ?? image.originalURL
+        TiebaImageSourcePolicy.urls(
+            primary: image.thumbnailURL,
+            fallback: image.originalURL
+        ).first
     }
 
     private var inlineAspectRatio: CGFloat {
@@ -171,26 +174,37 @@ private struct FullScreenImageItem: Identifiable, Equatable {
 
     init(image: ImageContent, index: Int) {
         id = "\(index)-\(image.originalURL?.absoluteString ?? image.thumbnailURL?.absoluteString ?? "missing")"
-        primaryURL = image.originalURL ?? image.thumbnailURL
-        fallbackURL = image.thumbnailURL
+        primaryURL = TiebaImageDownloadPolicy.preferredURL(
+            original: image.originalURL,
+            thumbnail: image.thumbnailURL
+        )
+        fallbackURL = TiebaURL.image(image.thumbnailURL?.absoluteString)
     }
 
     init(url: URL?, index: Int) {
         id = "\(index)-\(url?.absoluteString ?? "missing")"
-        primaryURL = url
+        primaryURL = TiebaURL.image(url?.absoluteString)
         fallbackURL = nil
     }
 }
 
 struct FullScreenImageView: View {
     private let items: [FullScreenImageItem]
+    private let saveAction: (URL) async throws -> Void
     @State private var currentIndex: Int
+    @State private var isDownloading = false
+    @State private var downloadTask: Task<Void, Never>?
+    @State private var downloadNotice: ImageDownloadNotice?
 
     @Environment(\.dismiss) private var dismiss
 
-    init(url: URL?) {
+    init(
+        url: URL?,
+        saveAction: @escaping (URL) async throws -> Void = FullScreenImageView.liveSave
+    ) {
         let item = FullScreenImageItem(url: url, index: 0)
         items = [item]
+        self.saveAction = saveAction
         _currentIndex = State(initialValue: 0)
     }
 
@@ -198,11 +212,16 @@ struct FullScreenImageView: View {
         self.init(images: session.images, initialIndex: session.initialIndex)
     }
 
-    init(images: [ImageContent], initialIndex: Int) {
+    init(
+        images: [ImageContent],
+        initialIndex: Int,
+        saveAction: @escaping (URL) async throws -> Void = FullScreenImageView.liveSave
+    ) {
         let resolvedItems = images.enumerated().map { index, image in
             FullScreenImageItem(image: image, index: index)
         }
         items = resolvedItems.isEmpty ? [FullScreenImageItem(url: nil, index: 0)] : resolvedItems
+        self.saveAction = saveAction
         _currentIndex = State(initialValue: ImagePreviewIndexPolicy.clampedIndex(
             initialIndex,
             totalCount: resolvedItems.count
@@ -226,12 +245,17 @@ struct FullScreenImageView: View {
                         .tint(.white)
                         .frame(width: proxy.size.width, height: proxy.size.height)
                     }
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        dismiss()
+                    }
                     .ignoresSafeArea()
                     .tag(index)
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .ignoresSafeArea()
+            .accessibilityIdentifier("full-screen-image-pager")
 
             Button {
                 dismiss()
@@ -245,20 +269,133 @@ struct FullScreenImageView: View {
             .accessibilityLabel("关闭图片")
             .padding(TiebaPureTheme.Spacing.md)
 
+            VStack(spacing: 0) {
+                Spacer(minLength: 0)
+                bottomBar
+            }
+        }
+        .accessibilityHint("轻点图片返回来源页面")
+        .alert(item: $downloadNotice) { notice in
+            Alert(
+                title: Text(notice.title),
+                message: Text(notice.message),
+                dismissButton: .default(Text("好"))
+            )
+        }
+        .onDisappear {
+            downloadTask?.cancel()
+            downloadTask = nil
+        }
+    }
+
+    private var bottomBar: some View {
+        HStack(spacing: TiebaPureTheme.Spacing.md) {
             if items.count > 1 {
                 Text("\(currentIndex + 1) / \(items.count)")
                     .font(.footnote.monospacedDigit().weight(.semibold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(.black.opacity(0.45), in: Capsule())
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-                    .padding(.bottom, TiebaPureTheme.Spacing.lg)
                     .accessibilityLabel("第\(currentIndex + 1)张，共\(items.count)张")
+            }
+
+            Spacer(minLength: 0)
+
+            Button {
+                saveCurrentImage()
+            } label: {
+                if isDownloading {
+                    ProgressView()
+                        .tint(.white)
+                        .frame(width: 44, height: 44)
+                } else {
+                    Label("保存原图", systemImage: "arrow.down.to.line")
+                        .font(.body.weight(.semibold))
+                        .frame(minWidth: 44, minHeight: 44)
+                }
+            }
+            .buttonStyle(.plain)
+            .disabled(isDownloading || currentDownloadURL == nil)
+            .accessibilityIdentifier("save-current-image")
+            .accessibilityLabel(isDownloading ? "正在保存图片" : "保存原图")
+            .accessibilityHint("下载当前原图并保存到系统照片")
+        }
+        .foregroundStyle(.white)
+        .padding(.horizontal, TiebaPureTheme.Spacing.md)
+        .padding(.top, TiebaPureTheme.Spacing.lg)
+        .padding(.bottom, TiebaPureTheme.Spacing.sm)
+        .background(
+            LinearGradient(
+                colors: [.clear, .black.opacity(0.72)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        )
+    }
+
+    private var currentDownloadURL: URL? {
+        guard items.indices.contains(currentIndex) else { return nil }
+        return items[currentIndex].primaryURL
+    }
+
+    private func saveCurrentImage() {
+        guard isDownloading == false, let url = currentDownloadURL else { return }
+        downloadTask?.cancel()
+        isDownloading = true
+        downloadTask = Task { @MainActor in
+            defer {
+                isDownloading = false
+                downloadTask = nil
+            }
+            do {
+                try await saveAction(url)
+                try Task.checkCancellation()
+                downloadNotice = ImageDownloadNotice(
+                    title: "图片已保存",
+                    message: "原图已保存到系统照片。"
+                )
+            } catch is CancellationError {
+                return
+            } catch TiebaImageDownloadError.photoLibraryAccessDenied {
+                downloadNotice = ImageDownloadNotice(
+                    title: "无法保存图片",
+                    message: "请在系统设置中允许 TiebaPure 添加照片后重试。"
+                )
+            } catch {
+                downloadNotice = ImageDownloadNotice(
+                    title: "图片保存失败",
+                    message: "请检查网络或照片权限后重试。"
+                )
             }
         }
     }
+
+    private static func liveSave(url: URL) async throws {
+        let payload = try await TiebaImageDownloadClient().download(from: url)
+        try Task.checkCancellation()
+        try await TiebaPhotoLibrarySaver.save(payload)
+    }
 }
+
+private struct ImageDownloadNotice: Identifiable {
+    let id = UUID()
+    let title: String
+    let message: String
+}
+
+#if DEBUG
+struct ImageViewerUITestHost: View {
+    @State private var isPresented = true
+
+    var body: some View {
+        Text("图片来源页")
+            .accessibilityIdentifier("image-viewer-source")
+            .fullScreenCover(isPresented: $isPresented) {
+                FullScreenImageView(
+                    url: URL(string: "https://fixture.invalid/viewer.png"),
+                    saveAction: { _ in }
+                )
+            }
+    }
+}
+#endif
 
 enum ImagePreviewIndexPolicy {
     static func clampedIndex(_ index: Int, totalCount: Int) -> Int {

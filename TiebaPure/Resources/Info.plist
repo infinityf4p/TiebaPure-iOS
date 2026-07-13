@@ -24,6 +24,8 @@
     <key>NSAllowsArbitraryLoads</key>
     <false/>
   </dict>
+  <key>NSPhotoLibraryAddUsageDescription</key>
+  <string>用于将您选择的贴吧原图保存到系统照片。</string>
   <key>UISupportedInterfaceOrientations</key>
   <array>
     <string>UIInterfaceOrientationPortrait</string>

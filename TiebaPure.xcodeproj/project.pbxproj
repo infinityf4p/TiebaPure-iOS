@@ -223,6 +223,7 @@
 		B03124BC92C58FEBDAEB2E4E /* image_emoticon76.png in Resources */ = {isa = PBXBuildFile; fileRef = 0E7298A1099AA4DDE46A9CA4 /* image_emoticon76.png */; };
 		B0A89B13400DEB2576E1A025 /* AvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 674313EBDA3BABF79049EF20 /* AvatarView.swift */; };
 		B0EB2D4667A96AF1DC28E2E5 /* UserPics.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BA843231F38F8A2AE9E1727 /* UserPics.pb.swift */; };
+		B152F8A68F8CB2ACBCD895AD /* ImageDownloadService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35CD0BAA4D26A1DBC8367F53 /* ImageDownloadService.swift */; };
 		B1EC4ECCDB577E77B8026BE6 /* TiebaEmoticon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EF25E73F880C6AD77740631 /* TiebaEmoticon.swift */; };
 		B2D37327A27748D989FAA4AB /* image_emoticon68.png in Resources */ = {isa = PBXBuildFile; fileRef = 6165A923280F283C2757192A /* image_emoticon68.png */; };
 		B3F1BA603F815B406730EF81 /* Promotion.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDC28A2084FD4AA56B3C0871 /* Promotion.pb.swift */; };
@@ -429,6 +430,7 @@
 		33DE3AF374E24A41A7FEA021 /* image_emoticon62.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = image_emoticon62.png; sourceTree = "<group>"; };
 		34741C5DC5F7641143A9E167 /* image_emoticon49.webp */ = {isa = PBXFileReference; path = image_emoticon49.webp; sourceTree = "<group>"; };
 		354E53E3356399F314D91419 /* image_emoticon22.webp */ = {isa = PBXFileReference; path = image_emoticon22.webp; sourceTree = "<group>"; };
+		35CD0BAA4D26A1DBC8367F53 /* ImageDownloadService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageDownloadService.swift; sourceTree = "<group>"; };
 		36421D36A7372F3886F8A1FA /* FixtureTiebaAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FixtureTiebaAPI.swift; sourceTree = "<group>"; };
 		36B67E756AB1645246585843 /* FrsPage_VideoImageColor.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrsPage_VideoImageColor.pb.swift; sourceTree = "<group>"; };
 		36B7B87BD4A9EB32A9F340FC /* ContentFilterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentFilterTests.swift; sourceTree = "<group>"; };
@@ -1037,6 +1039,7 @@
 		99D16779574852E2B4B2A612 /* Media */ = {
 			isa = PBXGroup;
 			children = (
+				35CD0BAA4D26A1DBC8367F53 /* ImageDownloadService.swift */,
 				AF02A66EF1B9089518F9ED99 /* ImageViewer.swift */,
 				AABE9716DCC2C5720A003041 /* VideoPlayerView.swift */,
 			);
@@ -1566,6 +1569,7 @@
 				87228240E48DD9E7F78AE972 /* HotPost.pb.swift in Sources */,
 				38A9598D900E99E90399C80F /* HotTWThreadInfo.pb.swift in Sources */,
 				D366EA10D2671B4DBB5E8A58 /* Icon.pb.swift in Sources */,
+				B152F8A68F8CB2ACBCD895AD /* ImageDownloadService.swift in Sources */,
 				4336E79CF69F763DE348DB22 /* ImageViewer.swift in Sources */,
 				688574045667315195491F21 /* Item.pb.swift in Sources */,
 				F3B505EDD61D0FE83B97987B /* LabelInfo.pb.swift in Sources */,
@@ -1795,13 +1799,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				INFOPLIST_FILE = TiebaPure/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.kevinchen.tiebapure;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -1847,13 +1851,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				INFOPLIST_FILE = TiebaPure/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.kevinchen.tiebapure;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";

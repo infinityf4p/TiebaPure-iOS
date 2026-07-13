@@ -9,6 +9,7 @@ extension TiebaAPI {
         forumName: String? = nil,
         pageSize: Int = 30
     ) async throws -> SearchResultsPage {
+        _ = try TiebaRequestValuePolicy.signedPage(page)
         let trimmed = keyword.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.isEmpty == false else {
             return SearchResultsPage(results: [], currentPage: 1, hasMore: false)
@@ -50,9 +51,10 @@ extension TiebaAPI {
             as: SearchThreadResponseDTO.self
         )
 
-        if response.errorCode != 0 {
-            throw TiebaAPIError.response(code: response.errorCode, message: response.errorMessage)
-        }
+        try TiebaResponseValidator.validate(
+            code: response.errorCode,
+            message: response.errorMessage
+        )
 
         return SearchResultsPage(
             results: response.data.postList.map(\.searchResult),

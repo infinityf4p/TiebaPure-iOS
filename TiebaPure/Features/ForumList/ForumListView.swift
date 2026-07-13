@@ -26,14 +26,18 @@ struct ForumListView: View {
                 if isLoading && didLoad == false {
                     ReaderStateView.loading("正在加载贴吧")
                 } else if let errorMessage, forums.isEmpty {
-                    ReaderStateView.error(message: errorMessage) {
-                        Task { await reload() }
+                    ReaderStateScrollView(refresh: { await reload() }) {
+                        ReaderStateView.error(message: errorMessage) {
+                            Task { await reload() }
+                        }
                     }
                 } else if visibleForums.isEmpty {
-                    ReaderStateView.empty(
-                        title: searchText.isEmpty ? "暂无关注贴吧" : "没有匹配结果",
-                        message: searchText.isEmpty ? "下拉即可刷新关注贴吧。" : nil
-                    )
+                    ReaderStateScrollView(refresh: { await reload() }) {
+                        ReaderStateView.empty(
+                            title: searchText.isEmpty ? "暂无关注贴吧" : "没有匹配结果",
+                            message: searchText.isEmpty ? "下拉即可刷新关注贴吧。" : nil
+                        )
+                    }
                 } else {
                     ScrollView {
                         LazyVStack(spacing: 0) {
@@ -126,9 +130,12 @@ struct ForumListView: View {
             let task = Task { try await environment.api.followedForums(account: account) }
             loadTask = task
             let loaded = try await task.value
-            guard generation == requestGeneration, Task.isCancelled == false else { return }
+            guard generation == requestGeneration else { return }
             forums = loaded
         } catch is CancellationError {
+            guard generation == requestGeneration else { return }
+            loadTask = nil
+            isLoading = false
             return
         } catch {
             guard generation == requestGeneration else { return }
