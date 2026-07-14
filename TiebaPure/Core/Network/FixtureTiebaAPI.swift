@@ -11,6 +11,7 @@ enum FixtureScenario: String {
     case slow
     case paginationFailure
     case longContent
+    case subpostReference
 }
 
 struct FixtureTiebaAPI: TiebaAPIService {
@@ -109,9 +110,20 @@ struct FixtureTiebaAPI: TiebaAPIService {
         try await prepare(page: page)
         let thread = Self.threads.first(where: { $0.id == threadID }) ?? Self.threads[0]
         let usesLongContent = scenario == .longContent
-        let text = usesLongContent
-            ? String(repeating: "这是用于验证主贴正文完整换行且不显示省略号的合成内容。", count: 14)
-            : "这是完全离线的合成帖子正文，内容不来自真实用户。"
+        let threadPageOneRequestNumber: Int
+        if scenario == .refreshUpdate, page == 1 {
+            threadPageOneRequestNumber = await state.nextThreadPageOneRequestNumber()
+        } else {
+            threadPageOneRequestNumber = 1
+        }
+        let text: String
+        if threadPageOneRequestNumber > 1 {
+            text = "帖子下拉刷新已更新"
+        } else if usesLongContent {
+            text = String(repeating: "这是用于验证主贴正文完整换行且不显示省略号的合成内容。", count: 14)
+        } else {
+            text = "这是完全离线的合成帖子正文，内容不来自真实用户。"
+        }
         let longImage = ImageContent(
             thumbnailURL: URL(string: "https://fixture.invalid/long-image.png"),
             originalURL: URL(string: "https://fixture.invalid/long-image-original.png"),
@@ -144,7 +156,15 @@ struct FixtureTiebaAPI: TiebaAPIService {
         } else {
             replyText = "确定性回复内容"
         }
-        let replySubposts = usesLongContent ? Self.longSubpostFixtures : Self.subpostFixtures
+        let replySubposts: [Subpost]
+        switch scenario {
+        case .longContent:
+            replySubposts = Self.longSubpostFixtures
+        case .subpostReference:
+            replySubposts = Self.referenceSubpostFixtures
+        default:
+            replySubposts = Self.subpostFixtures
+        }
         let reply = Post(
             id: 2002,
             threadID: threadID,
@@ -179,7 +199,14 @@ struct FixtureTiebaAPI: TiebaAPIService {
     ) async throws -> [Subpost] {
         try await prepare(page: page)
         guard page == 1 else { return [] }
-        return scenario == .longContent ? Self.longSubpostFixtures : Self.subpostFixtures
+        switch scenario {
+        case .longContent:
+            return Self.longSubpostFixtures
+        case .subpostReference:
+            return Self.referenceSubpostFixtures
+        default:
+            return Self.subpostFixtures
+        }
     }
 
     private func prepare(page: Int = 1) async throws {
@@ -295,23 +322,41 @@ struct FixtureTiebaAPI: TiebaAPIService {
     }()
 
     static let subpostFixtures = [
-        Subpost(id: 3001, floor: 1, author: author, ipAddress: "广东", blocks: [.text("楼中楼合成回复一")], createdAt: nil, likeCount: 1),
-        Subpost(id: 3002, floor: 2, author: author, ipAddress: "浙江", blocks: [.text("楼中楼合成回复二")], createdAt: nil, likeCount: 0)
+        Subpost(id: 3001, floor: 1, author: author, ipAddress: "广东", blocks: [.text("楼中楼合成回复一")], createdAt: Date(timeIntervalSince1970: 1_700_000_300), likeCount: 1),
+        Subpost(id: 3002, floor: 2, author: author, ipAddress: "浙江", blocks: [.text("楼中楼合成回复二")], createdAt: Date(timeIntervalSince1970: 1_700_000_360), likeCount: 0)
     ]
 
+    static let referenceSubpostFixtures: [Subpost] = (0..<4).map { index -> Subpost in
+        let createdAt = Date(timeIntervalSince1970: TimeInterval(1_700_000_300 + index * 60))
+        let blocks: [ContentBlock] = [
+            .text("楼中楼参考布局回复\(index + 1)，用于检查完整换行。")
+        ]
+        return Subpost(
+            id: UInt64(3_051 + index),
+            floor: index + 1,
+            author: author,
+            ipAddress: index.isMultiple(of: 2) ? "广东" : "浙江",
+            blocks: blocks,
+            createdAt: createdAt,
+            likeCount: index
+        )
+    }
+
     static let longSubpostFixtures = (0..<4).map { index in
-        Subpost(
+        let createdAt = Date(timeIntervalSince1970: TimeInterval(1_700_000_300 + index * 60))
+        let blocks: [ContentBlock] = [
+            .text(String(
+                repeating: "这是用于验证楼中楼内容完整换行的第\(index + 1)条合成回复。",
+                count: 8
+            ))
+        ]
+        return Subpost(
             id: UInt64(3101 + index),
             floor: index + 1,
             author: author,
             ipAddress: index.isMultiple(of: 2) ? "广东" : "浙江",
-            blocks: [
-                .text(String(
-                    repeating: "这是用于验证楼中楼内容完整换行的第\(index + 1)条合成回复。",
-                    count: 8
-                ))
-            ],
-            createdAt: nil,
+            blocks: blocks,
+            createdAt: createdAt,
             likeCount: index
         )
     }
@@ -321,6 +366,7 @@ private actor FixtureRequestState {
     private var failedPages = Set<Int>()
     private var personalizedPageOneRequestCount = 0
     private var forumPageOneRequestCount = 0
+    private var threadPageOneRequestCount = 0
 
     func shouldFail(page: Int) -> Bool {
         failedPages.insert(page).inserted
@@ -334,6 +380,11 @@ private actor FixtureRequestState {
     func nextForumPageOneRequestNumber() -> Int {
         forumPageOneRequestCount += 1
         return forumPageOneRequestCount
+    }
+
+    func nextThreadPageOneRequestNumber() -> Int {
+        threadPageOneRequestCount += 1
+        return threadPageOneRequestCount
     }
 }
 #endif

@@ -110,7 +110,7 @@ enum PostMapper {
             threadID: threadID == 0 ? proto.tid : threadID,
             floor: Int(proto.floor),
             author: author,
-            ipAddress: firstNonEmpty(proto.lbsInfo.name, author.ipAddress),
+            ipAddress: firstNonEmpty(author.ipAddress, proto.lbsInfo.name),
             createdAt: proto.time == 0 ? nil : Date(timeIntervalSince1970: TimeInterval(proto.time)),
             blocks: blocks(from: proto.content),
             subpostCount: Int(proto.subPostNumber),
@@ -130,7 +130,7 @@ enum PostMapper {
             id: proto.id,
             floor: Int(proto.floor),
             author: author,
-            ipAddress: firstNonEmpty(proto.location.name, author.ipAddress),
+            ipAddress: firstNonEmpty(author.ipAddress, proto.location.name),
             blocks: blocks(from: proto.content),
             createdAt: proto.time == 0 ? nil : Date(timeIntervalSince1970: TimeInterval(proto.time)),
             likeCount: Int(proto.agree.agreeNum)

@@ -22,6 +22,25 @@ enum ReaderDateText {
         return formatted(date, pattern: "yyyy-MM-dd", calendar: calendar)
     }
 
+    static func threadMetadataString(
+        from date: Date,
+        now: Date = Date(),
+        calendar: Calendar = .current
+    ) -> String {
+        let elapsed = max(now.timeIntervalSince(date), 0)
+        if elapsed < 3_600 || calendar.isDate(date, inSameDayAs: now) {
+            return string(from: date, now: now, calendar: calendar)
+        }
+        if let yesterday = calendar.date(byAdding: .day, value: -1, to: now),
+           calendar.isDate(date, inSameDayAs: yesterday) {
+            return "昨天 \(formatted(date, pattern: "HH:mm", calendar: calendar))"
+        }
+        if calendar.component(.year, from: date) == calendar.component(.year, from: now) {
+            return formatted(date, pattern: "MM-dd", calendar: calendar)
+        }
+        return formatted(date, pattern: "yyyy-MM-dd", calendar: calendar)
+    }
+
     private static func formatted(_ date: Date, pattern: String, calendar: Calendar) -> String {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "zh_CN")

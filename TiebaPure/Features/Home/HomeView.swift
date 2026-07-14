@@ -8,7 +8,6 @@ struct HomeView: View {
     let account: Account?
     var refreshToken: Int = 0
 
-    @State private var searchText = ""
     @State private var activeSearch: SearchRoute?
     @State private var threads: [ThreadSummary] = []
     @State private var page = 1
@@ -26,6 +25,9 @@ struct HomeView: View {
     @State private var loadTask: Task<[ThreadSummary], Error>?
     @State private var pendingPaginationRequest = false
     @State private var paginationRequestScheduled = false
+    @State private var scrollTopOffset: CGFloat = 0
+    @State private var isTrackingPullGesture = false
+    @State private var pullGestureStartedAtTop = false
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
@@ -161,9 +163,18 @@ struct HomeView: View {
             }
             .navigationTitle("首页")
             .navigationBarTitleDisplayMode(.inline)
-            .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "搜索帖子或回复")
-            .onSubmit(of: .search) {
-                submitSearch()
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        activeSearch = SearchRoute(keyword: "")
+                    } label: {
+                        Image(systemName: "magnifyingglass")
+                    }
+                    .minTouchTarget()
+                    .accessibilityLabel("搜索")
+                    .accessibilityHint("打开单独的搜索页面")
+                    .accessibilityIdentifier("home-search-button")
+                }
             }
             .navigationDestination(isPresented: searchIsActive) {
                 if let activeSearch {
@@ -211,6 +222,9 @@ struct HomeView: View {
                 paginationRequestScheduled = false
                 errorMessage = nil
                 showsInlineRefreshAnimation = false
+                scrollTopOffset = 0
+                isTrackingPullGesture = false
+                pullGestureStartedAtTop = false
                 navigationPath = []
                 Task { await reload(trigger: .initial) }
             }
@@ -239,6 +253,8 @@ struct HomeView: View {
                 showsInlineRefreshAnimation = false
                 pendingPaginationRequest = false
                 paginationRequestScheduled = false
+                isTrackingPullGesture = false
+                pullGestureStartedAtTop = false
             }
         }
     }
@@ -254,12 +270,6 @@ struct HomeView: View {
         )
     }
 
-    private func submitSearch() {
-        let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.isEmpty == false else { return }
-        activeSearch = SearchRoute(keyword: trimmed)
-    }
-
     private func openThread(threadID: Int64, forumID: Int64?) {
         navigationPath.append(.thread(threadID: threadID, forumID: forumID))
     }
@@ -267,12 +277,48 @@ struct HomeView: View {
     private func refreshableScrollView<Content: View>(@ViewBuilder content: () -> Content) -> some View {
         ScrollView {
             VStack(spacing: 0) {
+                GeometryReader { proxy in
+                    Color.clear.preference(
+                        key: HomeScrollTopOffsetPreferenceKey.self,
+                        value: proxy.frame(in: .named(HomeScrollCoordinateSpace.name)).minY
+                    )
+                }
+                .frame(height: 0)
+
                 content()
             }
             .contentShape(Rectangle())
         }
+        .coordinateSpace(name: HomeScrollCoordinateSpace.name)
+        .onPreferenceChange(HomeScrollTopOffsetPreferenceKey.self) { offset in
+            scrollTopOffset = offset
+        }
+        .simultaneousGesture(
+            DragGesture(minimumDistance: ShortPullRefreshPolicy.minimumTrackingDistance)
+                .onChanged { _ in
+                    guard isTrackingPullGesture == false else { return }
+                    isTrackingPullGesture = true
+                    pullGestureStartedAtTop = ShortPullRefreshPolicy.isAtTop(offset: scrollTopOffset)
+                }
+                .onEnded { value in
+                    let shouldRefresh = ShortPullRefreshPolicy.shouldTrigger(
+                        startedAtTop: pullGestureStartedAtTop,
+                        isRefreshing: isLoading,
+                        translation: value.translation
+                    )
+                    isTrackingPullGesture = false
+                    pullGestureStartedAtTop = false
+                    guard shouldRefresh else { return }
+                    Task { await refreshFromPullGestureIfIdle() }
+                }
+        )
         .background(TiebaPureTheme.ColorToken.readerGroupedBackground)
-        .refreshable { await reload(trigger: .pullToRefresh) }
+        .refreshable { await refreshFromPullGestureIfIdle() }
+    }
+
+    private func refreshFromPullGestureIfIdle() async {
+        guard isLoading == false else { return }
+        await reload(trigger: .pullToRefresh)
     }
 
     private func reload(trigger: HomeRefreshTrigger) async {
@@ -471,6 +517,39 @@ enum HomeRefreshAnimationPolicy {
 enum HomeRefreshRevealPolicy {
     static func shouldScrollToTop(trigger: HomeRefreshTrigger, hasExistingContent: Bool) -> Bool {
         hasExistingContent && trigger == .tabTap
+    }
+}
+
+enum ShortPullRefreshPolicy {
+    static let minimumTrackingDistance: CGFloat = 8
+    static let triggerDistance: CGFloat = 64
+    static let topTolerance: CGFloat = 2
+    static let verticalDominance: CGFloat = 1.2
+
+    static func isAtTop(offset: CGFloat) -> Bool {
+        offset >= -topTolerance
+    }
+
+    static func shouldTrigger(
+        startedAtTop: Bool,
+        isRefreshing: Bool,
+        translation: CGSize
+    ) -> Bool {
+        guard startedAtTop, isRefreshing == false else { return false }
+        guard translation.height >= triggerDistance else { return false }
+        return translation.height >= abs(translation.width) * verticalDominance
+    }
+}
+
+private enum HomeScrollCoordinateSpace {
+    static let name = "home-refresh-scroll"
+}
+
+private struct HomeScrollTopOffsetPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
     }
 }
 

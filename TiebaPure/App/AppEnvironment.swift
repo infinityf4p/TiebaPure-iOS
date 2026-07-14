@@ -14,7 +14,11 @@ final class AppEnvironment: ObservableObject {
 
     static func live() -> AppEnvironment {
 #if DEBUG
-        if ProcessInfo.processInfo.arguments.contains("UITEST_USE_FIXTURES") {
+        let arguments = ProcessInfo.processInfo.arguments
+        if arguments.contains("UITEST_RESET_SEARCH_HISTORY") {
+            SearchHistoryStore.shared.clear()
+        }
+        if arguments.contains("UITEST_USE_FIXTURES") {
             return fixture()
         }
 #endif

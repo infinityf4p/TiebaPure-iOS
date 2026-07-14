@@ -44,6 +44,40 @@ final class StateRegressionTests: XCTestCase {
         defaults.removePersistentDomain(forName: suiteName)
     }
 
+    @MainActor
+    func testSearchHistoryPersistsDeduplicatesLimitsAndDeletes() throws {
+        let suiteName = "SearchHistoryStoreTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defaults.removePersistentDomain(forName: suiteName)
+        let store = SearchHistoryStore(
+            defaults: defaults,
+            key: "search-history",
+            limit: 3
+        )
+
+        store.record("  第一条  ")
+        store.record("Second")
+        store.record("second")
+        store.record("第三条")
+        store.record("第四条")
+
+        XCTAssertEqual(store.items, ["第四条", "第三条", "second"])
+
+        let reloaded = SearchHistoryStore(
+            defaults: defaults,
+            key: "search-history",
+            limit: 3
+        )
+        XCTAssertEqual(reloaded.items, store.items)
+
+        reloaded.remove("SECOND")
+        XCTAssertEqual(reloaded.items, ["第四条", "第三条"])
+        reloaded.clear()
+        XCTAssertTrue(reloaded.items.isEmpty)
+        XCTAssertNil(defaults.object(forKey: "search-history"))
+        defaults.removePersistentDomain(forName: suiteName)
+    }
+
     func testFixtureSearchCarriesPostIDAndCancellationPropagates() async throws {
         let api = FixtureTiebaAPI(scenario: .success)
         let page = try await api.searchThreads(

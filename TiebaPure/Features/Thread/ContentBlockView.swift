@@ -161,6 +161,35 @@ struct KeywordHighlightedText: View {
 }
 
 struct InlineContentText: UIViewRepresentable {
+    private final class LinkOnlyTextView: UITextView {
+        override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+            guard super.point(inside: point, with: event), isSelectable else {
+                return false
+            }
+
+            let textPoint = CGPoint(
+                x: point.x - textContainerInset.left,
+                y: point.y - textContainerInset.top
+            )
+            guard textPoint.x >= 0, textPoint.y >= 0, layoutManager.numberOfGlyphs > 0 else {
+                return false
+            }
+
+            let glyphIndex = layoutManager.glyphIndex(for: textPoint, in: textContainer)
+            guard glyphIndex < layoutManager.numberOfGlyphs else { return false }
+
+            let glyphRect = layoutManager.boundingRect(
+                forGlyphRange: NSRange(location: glyphIndex, length: 1),
+                in: textContainer
+            )
+            guard glyphRect.insetBy(dx: -4, dy: -4).contains(textPoint) else { return false }
+
+            let characterIndex = layoutManager.characterIndexForGlyph(at: glyphIndex)
+            guard characterIndex < textStorage.length else { return false }
+            return textStorage.attribute(.link, at: characterIndex, effectiveRange: nil) != nil
+        }
+    }
+
     enum PrefixPart: Equatable {
         case text(String)
         case threadAuthorBadge
@@ -236,10 +265,14 @@ struct InlineContentText: UIViewRepresentable {
     }
 
     func makeUIView(context: Context) -> UITextView {
-        let textView = UITextView()
+        let textView = LinkOnlyTextView()
         textView.backgroundColor = .clear
         textView.isEditable = false
         textView.isScrollEnabled = false
+        // UITextView keeps an internal pan recognizer even when scrolling is
+        // disabled. Let the enclosing thread ScrollView own vertical drags,
+        // while the text view continues to handle taps on real HTTPS links.
+        textView.panGestureRecognizer.isEnabled = false
         textView.adjustsFontForContentSizeCategory = true
         textView.textContainerInset = .zero
         textView.textContainer.lineFragmentPadding = 0
@@ -264,6 +297,7 @@ struct InlineContentText: UIViewRepresentable {
         textView.attributedText = attributedString()
         textView.isSelectable = allowsLinkInteraction
         textView.isUserInteractionEnabled = allowsLinkInteraction
+        textView.panGestureRecognizer.isEnabled = false
     }
 
     func sizeThatFits(_ proposal: ProposedViewSize, uiView: UITextView, context: Context) -> CGSize? {

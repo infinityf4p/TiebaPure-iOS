@@ -504,6 +504,38 @@ final class TiebaPureSmokeTests: XCTestCase {
         ))
     }
 
+    func testShortPullRefreshRequiresTopAndVertical64PointPull() {
+        XCTAssertTrue(ShortPullRefreshPolicy.isAtTop(offset: 0))
+        XCTAssertTrue(ShortPullRefreshPolicy.isAtTop(offset: -2))
+        XCTAssertFalse(ShortPullRefreshPolicy.isAtTop(offset: -3))
+
+        XCTAssertTrue(ShortPullRefreshPolicy.shouldTrigger(
+            startedAtTop: true,
+            isRefreshing: false,
+            translation: CGSize(width: 4, height: 64)
+        ))
+        XCTAssertFalse(ShortPullRefreshPolicy.shouldTrigger(
+            startedAtTop: true,
+            isRefreshing: false,
+            translation: CGSize(width: 4, height: 63)
+        ))
+        XCTAssertFalse(ShortPullRefreshPolicy.shouldTrigger(
+            startedAtTop: false,
+            isRefreshing: false,
+            translation: CGSize(width: 4, height: 100)
+        ))
+        XCTAssertFalse(ShortPullRefreshPolicy.shouldTrigger(
+            startedAtTop: true,
+            isRefreshing: true,
+            translation: CGSize(width: 4, height: 100)
+        ))
+        XCTAssertFalse(ShortPullRefreshPolicy.shouldTrigger(
+            startedAtTop: true,
+            isRefreshing: false,
+            translation: CGSize(width: 80, height: 70)
+        ))
+    }
+
     func testHomeOpenRefreshPolicyRefreshesWhenLoadedAppBecomesActive() {
         XCTAssertTrue(HomeOpenRefreshPolicy.shouldRefreshOnScenePhaseChange(
             from: .background,
@@ -587,6 +619,150 @@ final class TiebaPureSmokeTests: XCTestCase {
 
         XCTAssertEqual(ReaderDateText.string(from: now.addingTimeInterval(-30), now: now), "刚刚")
         XCTAssertEqual(ReaderDateText.string(from: now.addingTimeInterval(-1_800), now: now), "30分钟前")
+    }
+
+    func testThreadReplyMetadataMatchesCompactFooterStyle() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try XCTUnwrap(TimeZone(secondsFromGMT: 0))
+        let now = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 7, day: 13, hour: 16)))
+        let postDate = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 7, day: 12, hour: 9, minute: 30)))
+
+        XCTAssertEqual(
+            ThreadPostMetadataText.text(
+                createdAt: postDate,
+                ipAddress: "IP属地：湖南",
+                now: now,
+                calendar: calendar
+            ),
+            "昨天 09:30  湖南"
+        )
+        let olderDate = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 7, day: 10, hour: 9)))
+        XCTAssertEqual(
+            ThreadPostMetadataText.text(
+                createdAt: olderDate,
+                ipAddress: "来自 浙江 ",
+                now: now,
+                calendar: calendar
+            ),
+            "07-10  浙江"
+        )
+        XCTAssertEqual(ThreadPostMetadataText.firstLocation("  ", nil, "广东"), "广东")
+    }
+
+    func testSubpostOpenAllUsesCompactVisualAndHitHeights() {
+        XCTAssertEqual(SubpostPreviewLayout.openAllVisualMinHeight, 30)
+        XCTAssertEqual(
+            SubpostPreviewLayout.openAllVisualMinHeight / 44,
+            2.0 / 3.0,
+            accuracy: 0.02
+        )
+        XCTAssertEqual(
+            SubpostPreviewLayout.openAllVisualMinHeight
+                + SubpostPreviewLayout.openAllHitExpansion * 2,
+            SubpostPreviewLayout.openAllHitHeight
+        )
+        XCTAssertEqual(SubpostPreviewLayout.openAllHitHeight, 36)
+        XCTAssertLessThan(SubpostPreviewLayout.openAllHitHeight, 44)
+    }
+
+    func testSubpostSheetTitleAndMiddleRightSwipeDismissPolicy() {
+        XCTAssertEqual(SubpostSheetTitle.text(floor: 2, count: 10), "2楼的回复(10条)")
+        XCTAssertTrue(SubpostDismissSwipePolicy.shouldDismiss(
+            startLocationX: 195,
+            containerWidth: 390,
+            translation: CGSize(width: 120, height: 10),
+            predictedEndTranslation: CGSize(width: 150, height: 12)
+        ))
+        XCTAssertTrue(SubpostDismissSwipePolicy.shouldDismiss(
+            startLocationX: 195,
+            containerWidth: 390,
+            translation: CGSize(width: 60, height: 8),
+            predictedEndTranslation: CGSize(width: 180, height: 10)
+        ))
+        XCTAssertFalse(SubpostDismissSwipePolicy.shouldDismiss(
+            startLocationX: 195,
+            containerWidth: 390,
+            translation: CGSize(width: -140, height: 0),
+            predictedEndTranslation: CGSize(width: -180, height: 0)
+        ))
+        XCTAssertFalse(SubpostDismissSwipePolicy.shouldDismiss(
+            startLocationX: 20,
+            containerWidth: 390,
+            translation: CGSize(width: 140, height: 0),
+            predictedEndTranslation: CGSize(width: 180, height: 0)
+        ))
+        XCTAssertFalse(SubpostDismissSwipePolicy.shouldDismiss(
+            startLocationX: 195,
+            containerWidth: 390,
+            translation: CGSize(width: 110, height: 120),
+            predictedEndTranslation: CGSize(width: 180, height: 160)
+        ))
+    }
+
+    func testThreadDetailMiddleRightSwipeDismissPolicyRejectsEdgeVerticalAndLeftDrags() {
+        XCTAssertTrue(ThreadDetailDismissSwipePolicy.shouldDismiss(
+            startLocationX: 195,
+            containerWidth: 390,
+            translation: CGSize(width: 120, height: 8),
+            predictedEndTranslation: CGSize(width: 150, height: 10)
+        ))
+        XCTAssertTrue(ThreadDetailDismissSwipePolicy.shouldDismiss(
+            startLocationX: 195,
+            containerWidth: 390,
+            translation: CGSize(width: 60, height: 4),
+            predictedEndTranslation: CGSize(width: 180, height: 8)
+        ))
+        XCTAssertFalse(ThreadDetailDismissSwipePolicy.shouldDismiss(
+            startLocationX: 20,
+            containerWidth: 390,
+            translation: CGSize(width: 140, height: 0),
+            predictedEndTranslation: CGSize(width: 180, height: 0)
+        ))
+        XCTAssertFalse(ThreadDetailDismissSwipePolicy.shouldDismiss(
+            startLocationX: 195,
+            containerWidth: 390,
+            translation: CGSize(width: -140, height: 0),
+            predictedEndTranslation: CGSize(width: -180, height: 0)
+        ))
+        XCTAssertFalse(ThreadDetailDismissSwipePolicy.shouldDismiss(
+            startLocationX: 195,
+            containerWidth: 390,
+            translation: CGSize(width: 100, height: 100),
+            predictedEndTranslation: CGSize(width: 180, height: 160)
+        ))
+    }
+
+    func testSearchMiddleRightSwipeDismissPolicyRejectsVerticalAndLeftDrags() {
+        XCTAssertTrue(SearchDismissSwipePolicy.shouldDismiss(
+            startLocationX: 195,
+            containerWidth: 390,
+            translation: CGSize(width: 120, height: 8),
+            predictedEndTranslation: CGSize(width: 150, height: 10)
+        ))
+        XCTAssertTrue(SearchDismissSwipePolicy.shouldDismiss(
+            startLocationX: 20,
+            containerWidth: 390,
+            translation: CGSize(width: 60, height: 4),
+            predictedEndTranslation: CGSize(width: 180, height: 8)
+        ))
+        XCTAssertFalse(SearchDismissSwipePolicy.shouldDismiss(
+            startLocationX: 350,
+            containerWidth: 390,
+            translation: CGSize(width: 140, height: 0),
+            predictedEndTranslation: CGSize(width: 180, height: 0)
+        ))
+        XCTAssertFalse(SearchDismissSwipePolicy.shouldDismiss(
+            startLocationX: 195,
+            containerWidth: 390,
+            translation: CGSize(width: -140, height: 0),
+            predictedEndTranslation: CGSize(width: -180, height: 0)
+        ))
+        XCTAssertFalse(SearchDismissSwipePolicy.shouldDismiss(
+            startLocationX: 195,
+            containerWidth: 390,
+            translation: CGSize(width: 100, height: 100),
+            predictedEndTranslation: CGSize(width: 180, height: 160)
+        ))
     }
 
     private func thread(id: Int64, title: String) -> ThreadSummary {

@@ -20,7 +20,7 @@ struct SubpostPreviewView: View {
 
     var body: some View {
         if subposts.isEmpty == false {
-            VStack(alignment: .leading, spacing: TiebaPureTheme.Spacing.xs) {
+            VStack(alignment: .leading, spacing: TiebaPureTheme.Spacing.xxs) {
                 ForEach(subposts) { subpost in
                     SubpostInlineRow(
                         subpost: subpost,
@@ -34,28 +34,42 @@ struct SubpostPreviewView: View {
                         onOpenAll()
                     } label: {
                         HStack(spacing: 2) {
-                            Text("查看全部 \(totalCount) 条回复")
+                            Text("查看全部\(totalCount)条回复")
                             Image(systemName: "chevron.right")
                                 .font(.footnote.weight(.semibold))
                         }
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .padding(.top, 1)
+                        .font(.footnote)
+                        .foregroundStyle(TiebaPureTheme.ColorToken.primaryAccent)
+                        .frame(
+                            maxWidth: .infinity,
+                            minHeight: SubpostPreviewLayout.openAllVisualMinHeight,
+                            alignment: .leading
+                        )
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .contentShape(Rectangle())
-                    .minTouchTarget()
+                    .contentShape(
+                        .interaction,
+                        Rectangle().inset(by: -SubpostPreviewLayout.openAllHitExpansion)
+                    )
                     .accessibilityLabel("查看全部\(totalCount)条回复")
                 }
             }
             .padding(.horizontal, TiebaPureTheme.Spacing.sm)
-            .padding(.vertical, TiebaPureTheme.Spacing.xs)
+            .padding(.top, ThreadReplyLayout.previewTopPadding)
+            .padding(.bottom, ThreadReplyLayout.previewBottomPadding)
             .background(
                 RoundedRectangle(cornerRadius: TiebaPureTheme.Radius.media, style: .continuous)
                     .fill(TiebaPureTheme.ColorToken.readerTertiarySurface)
             )
         }
     }
+}
+
+enum SubpostPreviewLayout {
+    static let openAllVisualMinHeight: CGFloat = 30
+    static let openAllHitHeight: CGFloat = 36
+    static let openAllHitExpansion = (openAllHitHeight - openAllVisualMinHeight) / 2
 }
 
 struct SubpostInlineRow: View {

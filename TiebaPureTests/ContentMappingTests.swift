@@ -443,6 +443,36 @@ final class ContentMappingTests: XCTestCase {
         XCTAssertEqual(mapped.previewSubposts.first?.blocks.compactMap(\.plainText).joined(), "回复内容")
     }
 
+    func testPostAndSubpostPreferAuthorIPOverLocationFallbacks() throws {
+        var author = Tieba_User()
+        author.id = 8
+        author.name = "reply_raw"
+        author.ipAddress = "湖南"
+
+        var subpost = Tieba_SubPostList()
+        subpost.id = 99
+        subpost.authorID = author.id
+        var subpostLocation = Tieba_Lbs()
+        subpostLocation.name = "陕西"
+        subpost.location = subpostLocation
+
+        var subpostList = Tieba_SubPost()
+        subpostList.subPostList = [subpost]
+
+        var post = Tieba_Post()
+        post.id = 7
+        post.author = author
+        var postLocation = Tieba_Lbs()
+        postLocation.name = "北京"
+        post.lbsInfo = postLocation
+        post.subPostList = subpostList
+
+        let mapped = PostMapper.post(from: post, usersByID: [author.id: author], threadID: 123)
+
+        XCTAssertEqual(mapped.ipAddress, "湖南")
+        XCTAssertEqual(try XCTUnwrap(mapped.previewSubposts.first).ipAddress, "湖南")
+    }
+
     func testSubpostAuthorFallsBackToUserIDInsteadOfBlankName() {
         var subpost = Tieba_SubPostList()
         subpost.id = 99

@@ -23,42 +23,54 @@ struct PostRowView: View {
 
     var body: some View {
         ReaderCard(showsDivider: isMainPost == false) {
-            VStack(alignment: .leading, spacing: isMainPost ? TiebaPureTheme.Spacing.md : TiebaPureTheme.Spacing.sm) {
+            VStack(
+                alignment: .leading,
+                spacing: isMainPost ? TiebaPureTheme.Spacing.md : ThreadReplyLayout.headerContentSpacing
+            ) {
                 UserHeaderView(
                     author: post.author,
                     floor: post.floor,
-                    ipAddress: post.ipAddress,
-                    createdAt: post.createdAt,
                     isThreadAuthor: isThreadAuthor,
                     isMainPost: isMainPost,
                     showsFloorBadge: isMainPost == false,
                     trailingLikeCount: isMainPost ? nil : post.likeCount
                 )
 
-                if isMainPost, let threadTitle, threadTitle.isEmpty == false {
-                    Text(threadTitle)
-                        .font(.title2.weight(.semibold))
-                        .lineSpacing(4)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+                VStack(alignment: .leading, spacing: TiebaPureTheme.Spacing.sm) {
+                    if isMainPost, let threadTitle, threadTitle.isEmpty == false {
+                        Text(threadTitle)
+                            .font(.title2.weight(.semibold))
+                            .lineSpacing(4)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
 
-                ContentBlocksView(
-                    blocks: post.blocks,
-                    textStyle: isMainPost ? .body : .reply,
-                    lineLimit: ThreadContentDisplayPolicy.detailLineLimit,
-                    inlineAccessibilityIdentifier: isMainPost
-                        ? "thread-main-text"
-                        : "thread-reply-text"
-                )
-
-                if post.previewSubposts.isEmpty == false {
-                    SubpostPreviewView(
-                        subposts: post.previewSubposts,
-                        totalCount: post.subpostCount,
-                        threadAuthorID: threadAuthorID,
-                        onOpenAll: onOpenSubposts.map { open in { open(post) } }
+                    ContentBlocksView(
+                        blocks: post.blocks,
+                        textStyle: isMainPost ? .body : .reply,
+                        lineLimit: ThreadContentDisplayPolicy.detailLineLimit,
+                        inlineAccessibilityIdentifier: isMainPost
+                            ? "thread-main-text"
+                            : "thread-reply-text"
                     )
+
+                    ThreadPostMetadataView(
+                        createdAt: post.createdAt,
+                        ipAddress: ThreadPostMetadataText.firstLocation(post.ipAddress, post.author.ipAddress),
+                        accessibilityIdentifier: isMainPost
+                            ? "thread-main-metadata"
+                            : "thread-reply-metadata"
+                    )
+
+                    if post.previewSubposts.isEmpty == false {
+                        SubpostPreviewView(
+                            subposts: post.previewSubposts,
+                            totalCount: post.subpostCount,
+                            threadAuthorID: threadAuthorID,
+                            onOpenAll: onOpenSubposts.map { open in { open(post) } }
+                        )
+                    }
                 }
+                .padding(.leading, isMainPost ? 0 : ThreadReplyLayout.bodyLeadingInset)
             }
         }
     }
@@ -69,11 +81,19 @@ struct PostRowView: View {
     }
 }
 
+private enum UserNameCenterAlignment: AlignmentID {
+    static func defaultValue(in context: ViewDimensions) -> CGFloat {
+        context[VerticalAlignment.center]
+    }
+}
+
+private extension VerticalAlignment {
+    static let userNameCenter = VerticalAlignment(UserNameCenterAlignment.self)
+}
+
 struct UserHeaderView: View {
     let author: UserSummary
     let floor: Int?
-    var ipAddress: String? = nil
-    let createdAt: Date?
     let isThreadAuthor: Bool
     var isMainPost: Bool = false
     var showsFloorBadge = true
@@ -87,15 +107,18 @@ struct UserHeaderView: View {
     }
 
     private var avatar: some View {
-            AvatarView(
-                url: author.portraitURL,
-                title: author.displayNameResolved,
-                size: isMainPost ? TiebaPureTheme.AvatarSize.large : TiebaPureTheme.AvatarSize.medium
-            )
+        AvatarView(
+            url: author.portraitURL,
+            title: author.displayNameResolved,
+            size: isMainPost ? TiebaPureTheme.AvatarSize.large : TiebaPureTheme.AvatarSize.medium
+        )
+        .alignmentGuide(.userNameCenter) { dimensions in
+            dimensions[VerticalAlignment.center]
+        }
     }
 
     private var regularLayout: some View {
-        HStack(alignment: .top, spacing: TiebaPureTheme.Spacing.sm) {
+        HStack(alignment: .userNameCenter, spacing: TiebaPureTheme.Spacing.sm) {
             avatar
             VStack(alignment: .leading, spacing: TiebaPureTheme.Spacing.xxs) {
                 HStack(alignment: .center, spacing: TiebaPureTheme.Spacing.xs) {
@@ -110,54 +133,110 @@ struct UserHeaderView: View {
                         showsFloorBadge: showsFloorBadge
                     )
                 }
-
-                Text(metadataText)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
+                .alignmentGuide(.userNameCenter) { dimensions in
+                    dimensions[VerticalAlignment.center]
+                }
             }
 
             Spacer(minLength: TiebaPureTheme.Spacing.sm)
 
             if let trailingLikeCount {
                 CompactLikeCountView(count: trailingLikeCount)
+                    .alignmentGuide(.userNameCenter) { dimensions in
+                        dimensions[VerticalAlignment.center]
+                    }
             }
         }
     }
 
     private var compactLayout: some View {
-        HStack(alignment: .top, spacing: TiebaPureTheme.Spacing.sm) {
+        HStack(alignment: .userNameCenter, spacing: TiebaPureTheme.Spacing.sm) {
             avatar
             VStack(alignment: .leading, spacing: TiebaPureTheme.Spacing.xxs) {
                 Text(author.displayNameResolved)
                     .font((isMainPost ? Font.body : Font.callout).weight(.semibold))
                     .fixedSize(horizontal: false, vertical: true)
+                    .alignmentGuide(.userNameCenter) { dimensions in
+                        dimensions[VerticalAlignment.center]
+                    }
                 UserBadgesView(
                     author: author,
                     isThreadAuthor: isThreadAuthor,
                     floor: floor,
                     showsFloorBadge: showsFloorBadge
                 )
-                Text(metadataText)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                if let trailingLikeCount {
-                    CompactLikeCountView(count: trailingLikeCount)
-                }
+            }
+
+            Spacer(minLength: TiebaPureTheme.Spacing.xs)
+
+            if let trailingLikeCount {
+                CompactLikeCountView(count: trailingLikeCount)
+                    .alignmentGuide(.userNameCenter) { dimensions in
+                        dimensions[VerticalAlignment.center]
+                    }
             }
         }
     }
+}
 
-    private var metadataText: String {
+enum ThreadReplyLayout {
+    static let bodyLeadingInset = TiebaPureTheme.AvatarSize.medium + TiebaPureTheme.Spacing.sm
+    static let headerContentSpacing: CGFloat = TiebaPureTheme.Spacing.xxs
+    static let sectionSeparatorHeight: CGFloat = TiebaPureTheme.Spacing.xs
+    static let previewTopPadding: CGFloat = TiebaPureTheme.Spacing.sm
+    static let previewBottomPadding: CGFloat = TiebaPureTheme.Spacing.xxs
+}
+
+enum ThreadPostMetadataText {
+    static func text(
+        createdAt: Date?,
+        ipAddress: String?,
+        now: Date = Date(),
+        calendar: Calendar = .current
+    ) -> String {
         var items: [String] = []
         if let createdAt {
-            items.append(ReaderDateText.string(from: createdAt))
+            items.append(ReaderDateText.threadMetadataString(from: createdAt, now: now, calendar: calendar))
         }
-        if let ipAddress = ipAddress ?? author.ipAddress, ipAddress.isEmpty == false {
-            items.append(ipAddress)
+        if let location = normalizedLocation(ipAddress) {
+            items.append(location)
         }
         return items.joined(separator: "  ")
+    }
+
+    static func firstLocation(_ candidates: String?...) -> String? {
+        candidates.lazy.compactMap(normalizedLocation).first
+    }
+
+    static func normalizedLocation(_ value: String?) -> String? {
+        guard var value = value?.trimmingCharacters(in: .whitespacesAndNewlines),
+              value.isEmpty == false else {
+            return nil
+        }
+        for prefix in ["IP属地：", "IP属地:", "来自"] where value.hasPrefix(prefix) {
+            value.removeFirst(prefix.count)
+            value = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            break
+        }
+        return value.isEmpty ? nil : value
+    }
+}
+
+struct ThreadPostMetadataView: View {
+    let createdAt: Date?
+    let ipAddress: String?
+    let accessibilityIdentifier: String
+
+    var body: some View {
+        let displayText = ThreadPostMetadataText.text(createdAt: createdAt, ipAddress: ipAddress)
+        if displayText.isEmpty == false {
+            Text(displayText)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier(accessibilityIdentifier)
+                .accessibilityLabel(displayText)
+        }
     }
 }
 

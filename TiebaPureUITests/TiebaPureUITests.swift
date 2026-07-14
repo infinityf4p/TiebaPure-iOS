@@ -27,13 +27,35 @@ final class TiebaPureUITests: XCTestCase {
         XCTAssertTrue(firstRow.waitForExistence(timeout: 45))
         let originalThread = app.buttons["确定性主帖：回复筛选与媒体布局"]
         XCTAssertTrue(originalThread.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.searchFields.firstMatch.exists)
+        XCTAssertTrue(app.buttons["home-search-button"].isHittable)
 
-        let start = firstRow.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.15))
-        let end = firstRow.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 1.35))
+        let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.20))
+        let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.34))
         start.press(forDuration: 0.1, thenDragTo: end)
 
         XCTAssertTrue(app.buttons["下拉刷新已更新"].waitForExistence(timeout: 5))
         XCTAssertTrue(originalThread.exists, "刷新后应保留之前加载的帖子")
+        let refreshedRow = threadRows(in: app).firstMatch
+        let navigationBar = app.navigationBars["首页"]
+        XCTAssertLessThanOrEqual(refreshedRow.frame.minY - navigationBar.frame.maxY, 24)
+    }
+
+    func testShortPullRefreshesThreadDetailAtSameDistanceAsHome() {
+        let app = launchApp(scenario: "refreshUpdate")
+        openFirstThread(in: app)
+
+        let mainText = app.textViews["thread-main-text"]
+        XCTAssertTrue(mainText.waitForExistence(timeout: 8))
+        XCTAssertFalse((mainText.value as? String)?.contains("帖子下拉刷新已更新") == true)
+
+        let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.20))
+        let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.34))
+        start.press(forDuration: 0.1, thenDragTo: end)
+
+        let refreshed = NSPredicate(format: "value CONTAINS %@", "帖子下拉刷新已更新")
+        expectation(for: refreshed, evaluatedWith: mainText)
+        waitForExpectations(timeout: 8)
     }
 
     func testPullingEmptyForumStateLoadsContent() {
@@ -102,9 +124,7 @@ final class TiebaPureUITests: XCTestCase {
     func testSearchResultRoutesToMatchedReply() {
         let app = launchApp()
 
-        let searchField = app.searchFields.firstMatch
-        XCTAssertTrue(searchField.waitForExistence(timeout: 20))
-        searchField.tap()
+        let searchField = openGlobalSearch(in: app)
         searchField.typeText("iPhone")
         searchField.typeText("\n")
 
@@ -114,6 +134,63 @@ final class TiebaPureUITests: XCTestCase {
         XCTAssertTrue(firstResult.waitForExistence(timeout: 10))
         app.descendants(matching: .any).matching(identifier: "thread-open-area").firstMatch.tap()
         XCTAssertTrue(waitForLabelContaining("已定位搜索命中回复", in: app, maxSwipes: 10))
+    }
+
+    func testSearchBackButtonDismissesFocusedSearchInOneStepAndHistoryPersists() {
+        let app = launchApp()
+        let searchField = openGlobalSearch(in: app)
+        searchField.typeText("history-test")
+        searchField.typeText("\n")
+        XCTAssertTrue(threadRows(in: app).firstMatch.waitForExistence(timeout: 8))
+
+        let backButton = app.buttons["search-back-button"]
+        XCTAssertTrue(backButton.isHittable)
+        backButton.tap()
+
+        XCTAssertTrue(app.navigationBars["首页"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.navigationBars["搜索"].exists)
+
+        let reopenedField = openGlobalSearch(in: app)
+        XCTAssertTrue(reopenedField.exists)
+        let historyItem = app.buttons["search-history-item-0"]
+        XCTAssertTrue(historyItem.waitForExistence(timeout: 5))
+        XCTAssertTrue(historyItem.label.contains("history-test"))
+        XCTAssertTrue(app.buttons["search-history-clear-all"].exists)
+    }
+
+    func testSearchSupportsMiddleRightSwipeToPreviousPage() {
+        let app = launchApp()
+        _ = openGlobalSearch(in: app)
+        let searchNavigationBar = app.navigationBars["搜索"]
+
+        let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.45, dy: 0.38))
+        let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.88, dy: 0.38))
+        start.press(forDuration: 0.05, thenDragTo: end)
+
+        let dismissed = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == false"),
+            object: searchNavigationBar
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [dismissed], timeout: 5), .completed)
+        XCTAssertTrue(app.navigationBars["首页"].exists)
+    }
+
+    func testThreadDetailSupportsMiddleRightSwipeToPreviousPage() {
+        let app = launchApp()
+        openFirstThread(in: app)
+        let detailMarker = app.buttons["更多"]
+        XCTAssertTrue(detailMarker.exists)
+
+        let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.45, dy: 0.38))
+        let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.88, dy: 0.38))
+        start.press(forDuration: 0.05, thenDragTo: end)
+
+        let dismissed = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == false"),
+            object: detailMarker
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [dismissed], timeout: 5), .completed)
+        XCTAssertTrue(app.navigationBars["首页"].exists)
     }
 
     func testThreadDetailShowsReplyControls() {
@@ -137,7 +214,7 @@ final class TiebaPureUITests: XCTestCase {
 
         XCTAssertTrue(app.buttons["搜索本吧"].exists)
         app.buttons["搜索本吧"].tap()
-        XCTAssertTrue(app.staticTexts["输入关键词"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.textFields["search-input"].waitForExistence(timeout: 10))
     }
 
     func testAboutShowsTiebaLiteAttributionAndGPL() {
@@ -212,7 +289,7 @@ final class TiebaPureUITests: XCTestCase {
 
         XCTAssertTrue(waitForElement(named: "查看全部4条回复", in: app, maxSwipes: 6))
         app.buttons["查看全部4条回复"].tap()
-        XCTAssertTrue(app.navigationBars["楼中楼"].waitForExistence(timeout: 8))
+        XCTAssertTrue(app.navigationBars["2楼的回复(4条)"].waitForExistence(timeout: 8))
 
         let parentText = elementWithIdentifier(
             "thread-subpost-parent-text",
@@ -229,6 +306,30 @@ final class TiebaPureUITests: XCTestCase {
         )
         XCTAssertNotNil(subpostText)
         XCTAssertGreaterThan(subpostText?.frame.height ?? 0, 80)
+        XCTAssertTrue(app.descendants(matching: .any)["thread-subpost-metadata"].exists)
+    }
+
+    func testSubpostSheetSupportsMiddleRightSwipeDismissal() {
+        let app = launchApp(scenario: "subpostReference")
+        openFirstThread(in: app)
+
+        XCTAssertTrue(waitForElement(named: "查看全部4条回复", in: app, maxSwipes: 20))
+        let openAllButton = app.buttons["查看全部4条回复"]
+        XCTAssertEqual(openAllButton.frame.height, 36, accuracy: 1)
+        openAllButton.tap()
+        let navigationBar = app.navigationBars["2楼的回复(4条)"]
+        XCTAssertTrue(navigationBar.waitForExistence(timeout: 8))
+        attachScreenshot(named: "fixture-subpost-reference-layout")
+
+        let swipeStart = app.coordinate(withNormalizedOffset: CGVector(dx: 0.45, dy: 0.55))
+        let swipeEnd = app.coordinate(withNormalizedOffset: CGVector(dx: 0.88, dy: 0.55))
+        swipeStart.press(forDuration: 0.05, thenDragTo: swipeEnd)
+
+        let dismissed = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == false"),
+            object: navigationBar
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [dismissed], timeout: 5), .completed)
     }
 
     func testFullScreenImageOffersDownloadAndTapReturnsToSource() {
@@ -253,8 +354,7 @@ final class TiebaPureUITests: XCTestCase {
         XCTAssertTrue(threadRows(in: app).firstMatch.waitForExistence(timeout: 8))
         attachScreenshot(named: "fixture-home")
 
-        let searchField = app.searchFields.firstMatch
-        searchField.tap()
+        let searchField = openGlobalSearch(in: app)
         searchField.typeText("合成测试")
         searchField.typeText("\n")
         XCTAssertTrue(threadRows(in: app).firstMatch.waitForExistence(timeout: 8))
@@ -277,8 +377,7 @@ final class TiebaPureUITests: XCTestCase {
         XCTAssertTrue(rootTab("首页", in: app).isHittable)
         attachScreenshot(named: "fixture-landscape-home")
 
-        let searchField = app.searchFields.firstMatch
-        searchField.tap()
+        let searchField = openGlobalSearch(in: app)
         searchField.typeText("横屏")
         searchField.typeText("\n")
         XCTAssertTrue(threadRows(in: app).firstMatch.waitForExistence(timeout: 8))
@@ -335,9 +434,7 @@ final class TiebaPureUITests: XCTestCase {
 
     func testEmptyFilteredSearchKeepsControlsAvailable() {
         let app = launchApp()
-        let searchField = app.searchFields.firstMatch
-        XCTAssertTrue(searchField.waitForExistence(timeout: 8))
-        searchField.tap()
+        let searchField = openGlobalSearch(in: app)
         searchField.typeText("仅回复命中")
         searchField.typeText("\n")
         XCTAssertTrue(threadRows(in: app).firstMatch.waitForExistence(timeout: 8))
@@ -462,7 +559,11 @@ final class TiebaPureUITests: XCTestCase {
         additionalArguments: [String] = []
     ) -> XCUIApplication {
         let app = XCUIApplication()
-        app.launchArguments = ["UITEST_USE_FIXTURES", "UITEST_DISABLE_ANIMATIONS"] + additionalArguments
+        app.launchArguments = [
+            "UITEST_USE_FIXTURES",
+            "UITEST_DISABLE_ANIMATIONS",
+            "UITEST_RESET_SEARCH_HISTORY"
+        ] + additionalArguments
         app.launchEnvironment["TIEBAPURE_FIXTURE_SCENARIO"] = scenario
         if let account {
             app.launchEnvironment["TIEBAPURE_FIXTURE_ACCOUNT"] = account
@@ -473,6 +574,21 @@ final class TiebaPureUITests: XCTestCase {
 
     private func threadRows(in app: XCUIApplication) -> XCUIElementQuery {
         app.descendants(matching: .any).matching(identifier: "thread-row")
+    }
+
+    private func openGlobalSearch(in app: XCUIApplication) -> XCUIElement {
+        XCTAssertFalse(app.searchFields.firstMatch.exists)
+        let searchButton = app.buttons["home-search-button"]
+        XCTAssertTrue(searchButton.waitForExistence(timeout: 8))
+        XCTAssertTrue(searchButton.isHittable)
+        searchButton.tap()
+
+        XCTAssertTrue(app.navigationBars["搜索"].waitForExistence(timeout: 8))
+        let searchField = app.textFields["search-input"]
+        XCTAssertTrue(searchField.waitForExistence(timeout: 8))
+        XCTAssertTrue(searchField.isHittable)
+        searchField.tap()
+        return searchField
     }
 
     private func rootTab(_ label: String, in app: XCUIApplication) -> XCUIElement {
