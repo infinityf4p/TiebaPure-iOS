@@ -100,6 +100,7 @@ struct ForumListView: View {
             requestGeneration += 1
             isLoading = false
         }
+        .fullScreenInteractiveNavigationPop()
     }
 
     private var selectedForumIsActive: Binding<Bool> {

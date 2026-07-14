@@ -78,6 +78,7 @@
 		3A1540194B03616A8959A6CC /* DealMedia.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC4271371D6695B391FDFCD3 /* DealMedia.pb.swift */; };
 		3B2E046A4156D28EBFBACA31 /* PbPage_AddPost.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = 662282E29E15A08C1581FB66 /* PbPage_AddPost.pb.swift */; };
 		3B44D0AEE323EDE56E2C1784 /* image_emoticon96.png in Resources */ = {isa = PBXBuildFile; fileRef = 593F8799EA1D3C2CB3A1506C /* image_emoticon96.png */; };
+		3C76B30ACE505A1329C35516 /* SubpostSheetInteractiveDismiss.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58BC2EF1ED11AC6A71B3CED6 /* SubpostSheetInteractiveDismiss.swift */; };
 		3CC33074E89642F73FA11ADC /* image_emoticon39.webp in Resources */ = {isa = PBXBuildFile; fileRef = F7E888D44F39FD3129CE8836 /* image_emoticon39.webp */; };
 		3D820156023B2AAC2887E038 /* ManagerElection.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C7AF8D2E086E41911C724D3 /* ManagerElection.pb.swift */; };
 		3E9AEBF0D826281F5D16B564 /* image_emoticon45.webp in Resources */ = {isa = PBXBuildFile; fileRef = 6F45908F2160FA923C9E4D2C /* image_emoticon45.webp */; };
@@ -259,6 +260,7 @@
 		CAFCAF6105FDFEA5A21E4A70 /* image_emoticon137.png in Resources */ = {isa = PBXBuildFile; fileRef = 1B3E4875BEC08A136A5603CE /* image_emoticon137.png */; };
 		CB0F89FADA488E36B598132C /* ThreadPicList.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ECA88FD4FD9566C6742CF78 /* ThreadPicList.pb.swift */; };
 		CBEFA9957FD305149BE29170 /* AlaChallengeInfo.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = 499D3FE08691B68F1CED6047 /* AlaChallengeInfo.pb.swift */; };
+		CCA17993A164DE84409AF929 /* InteractiveNavigationPop.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78FABF04E476AC1533EBDFA2 /* InteractiveNavigationPop.swift */; };
 		CE70750547AFB3CB53EDE288 /* VideoPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AABE9716DCC2C5720A003041 /* VideoPlayerView.swift */; };
 		CF454E1295D97B7FE03A3DDA /* ContentMappingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA31C128D796A3D90D001643 /* ContentMappingTests.swift */; };
 		CFEA94941A929B26FBD03092 /* Timgs.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = 322281FC8FDCC6E16F231209 /* Timgs.pb.swift */; };
@@ -478,6 +480,7 @@
 		555FE166C1C7A25F67A4DB26 /* FeedForumInfo.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedForumInfo.pb.swift; sourceTree = "<group>"; };
 		57251BD2DFECD14E39C9442A /* ZhiBoInfoTW.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZhiBoInfoTW.pb.swift; sourceTree = "<group>"; };
 		57A9A4B84B000932F635CFCC /* FrsPage_CoverImageColor.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrsPage_CoverImageColor.pb.swift; sourceTree = "<group>"; };
+		58BC2EF1ED11AC6A71B3CED6 /* SubpostSheetInteractiveDismiss.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubpostSheetInteractiveDismiss.swift; sourceTree = "<group>"; };
 		58E3D6637BA450BDE92E21B7 /* image_emoticon46.webp */ = {isa = PBXFileReference; path = image_emoticon46.webp; sourceTree = "<group>"; };
 		593F8799EA1D3C2CB3A1506C /* image_emoticon96.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = image_emoticon96.png; sourceTree = "<group>"; };
 		594CFFAE35B27CDF27D9B903 /* SecurityRegressionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecurityRegressionTests.swift; sourceTree = "<group>"; };
@@ -521,6 +524,7 @@
 		762DDD6339095CF6A5D7682F /* image_emoticon126.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = image_emoticon126.png; sourceTree = "<group>"; };
 		77147B5CC9CF65DA5A40A6D6 /* BusinessAccountInfo.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BusinessAccountInfo.pb.swift; sourceTree = "<group>"; };
 		7754F05E72F3262D2B2EBA83 /* HotPost.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotPost.pb.swift; sourceTree = "<group>"; };
+		78FABF04E476AC1533EBDFA2 /* InteractiveNavigationPop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InteractiveNavigationPop.swift; sourceTree = "<group>"; };
 		7D258A9BF97B365AE98B663F /* AuthSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthSessionTests.swift; sourceTree = "<group>"; };
 		7E006E1FF382CBF57F7AEE14 /* PbPage_RecommendBook.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PbPage_RecommendBook.pb.swift; sourceTree = "<group>"; };
 		7E1E444728B1E8608ECF6413 /* PbPage_FloatingIcon.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PbPage_FloatingIcon.pb.swift; sourceTree = "<group>"; };
@@ -738,6 +742,7 @@
 			children = (
 				674313EBDA3BABF79049EF20 /* AvatarView.swift */,
 				994E9D3128F82A0683DA39E0 /* CapsuleLabel.swift */,
+				78FABF04E476AC1533EBDFA2 /* InteractiveNavigationPop.swift */,
 				277C554E042BEC92DDCC065C /* MediaGridView.swift */,
 				5D5F7218DA6FD8845675AE38 /* MetadataLine.swift */,
 				431A697F330BBEC18E2252D0 /* ReaderCard.swift */,
@@ -947,6 +952,7 @@
 				10B4550B620AEBC6B7EA4F46 /* ContentBlockView.swift */,
 				8ADF8B92CA2483FCA22CEEE6 /* PostRowView.swift */,
 				FF76DC72E50AAADA883B8D85 /* SubpostPreviewView.swift */,
+				58BC2EF1ED11AC6A71B3CED6 /* SubpostSheetInteractiveDismiss.swift */,
 				1626D4B0DD88E88576EBC2EB /* ThreadDetailView.swift */,
 			);
 			path = Thread;
@@ -1571,6 +1577,7 @@
 				D366EA10D2671B4DBB5E8A58 /* Icon.pb.swift in Sources */,
 				B152F8A68F8CB2ACBCD895AD /* ImageDownloadService.swift in Sources */,
 				4336E79CF69F763DE348DB22 /* ImageViewer.swift in Sources */,
+				CCA17993A164DE84409AF929 /* InteractiveNavigationPop.swift in Sources */,
 				688574045667315195491F21 /* Item.pb.swift in Sources */,
 				F3B505EDD61D0FE83B97987B /* LabelInfo.pb.swift in Sources */,
 				8380398A329CE6AEDB1EC3BF /* Lbs.pb.swift in Sources */,
@@ -1656,6 +1663,7 @@
 				BE4F2342007F0803F98D82B7 /* SubPost.pb.swift in Sources */,
 				5C75A4BE925EE2D5EBB01684 /* SubPostList.pb.swift in Sources */,
 				41A327F3241D4342AE1D1D45 /* SubpostPreviewView.swift in Sources */,
+				3C76B30ACE505A1329C35516 /* SubpostSheetInteractiveDismiss.swift in Sources */,
 				DD136FFB41E342149393636C /* TPointPost.pb.swift in Sources */,
 				EF025B768FF3C3C34F74BAFA /* TailInfo.pb.swift in Sources */,
 				751BF89DC90AF644D4457738 /* Terminal.pb.swift in Sources */,
@@ -1799,14 +1807,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 6;
 				INFOPLIST_FILE = TiebaPure/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.1;
-				PRODUCT_BUNDLE_IDENTIFIER = dev.kevinchen.tiebapure;
+				MARKETING_VERSION = 1.0.2;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.infinityf4p.tiebapure;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -1822,7 +1830,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = dev.kevinchen.TiebaPureTests;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.infinityf4p.TiebaPureTests;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TiebaPure.app/TiebaPure";
@@ -1839,7 +1847,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = dev.kevinchen.TiebaPureTests;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.infinityf4p.TiebaPureTests;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TiebaPure.app/TiebaPure";
@@ -1851,14 +1859,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 6;
 				INFOPLIST_FILE = TiebaPure/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.1;
-				PRODUCT_BUNDLE_IDENTIFIER = dev.kevinchen.tiebapure;
+				MARKETING_VERSION = 1.0.2;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.infinityf4p.tiebapure;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -1874,7 +1882,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = dev.kevinchen.TiebaPureUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.infinityf4p.TiebaPureUITests;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_TARGET_NAME = TiebaPure;
@@ -1891,7 +1899,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = dev.kevinchen.TiebaPureUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.infinityf4p.TiebaPureUITests;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_TARGET_NAME = TiebaPure;

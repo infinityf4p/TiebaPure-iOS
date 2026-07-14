@@ -291,6 +291,77 @@ final class AuthSessionTests: XCTestCase {
         XCTAssertFalse(AuthSession.hasRequiredCookies([expiredBDUSS, validSToken]))
     }
 
+    func testApprovedHTTPSCompletionNormalizesActualIOSBaiduCookieTopology() throws {
+        let cookies = [
+            Self.cookie(name: "BDUSS", value: "bduss", domain: ".baidu.com", secure: false),
+            Self.cookie(name: "STOKEN", value: "stoken", domain: ".wappass.baidu.com"),
+            Self.cookie(name: "BAIDUID", value: "baiduid", domain: ".baidu.com", secure: false)
+        ]
+        XCTAssertFalse(AuthSession.hasRequiredCookies(cookies))
+
+        let normalized = AuthSession.cookiesForApprovedHTTPSCompletion(
+            cookies,
+            completionURL: AuthSession.loginCompletionURL
+        )
+
+        XCTAssertTrue(AuthSession.hasRequiredCookies(normalized))
+        XCTAssertTrue(normalized.first(where: { $0.name == "BDUSS" })?.isSecure == true)
+        XCTAssertTrue(normalized.first(where: { $0.name == "BAIDUID" })?.isSecure == true)
+        let result = try AuthSession.extract(from: normalized)
+        XCTAssertEqual(result.bduss, "bduss")
+        XCTAssertEqual(result.stoken, "stoken")
+        XCTAssertEqual(result.baiduID, "baiduid")
+    }
+
+    func testCookieCompatibilityUpgradeRequiresExactHTTPSCompletionURL() throws {
+        let insecureBDUSS = Self.cookie(
+            name: "BDUSS",
+            value: "bduss",
+            domain: ".baidu.com",
+            secure: false
+        )
+        let stoken = Self.cookie(name: "STOKEN", value: "stoken", domain: ".wappass.baidu.com")
+        let passportURL = try XCTUnwrap(URL(string: "https://wappass.baidu.com/passport"))
+
+        let normalized = AuthSession.cookiesForApprovedHTTPSCompletion(
+            [insecureBDUSS, stoken],
+            completionURL: passportURL
+        )
+
+        XCTAssertFalse(normalized[0].isSecure)
+        XCTAssertFalse(AuthSession.hasRequiredCookies(normalized))
+    }
+
+    func testCookieCompatibilityUpgradeNeverRelaxesSTokenOrDomainValidation() {
+        let secureBDUSS = Self.cookie(name: "BDUSS", value: "bduss", domain: ".baidu.com")
+        let insecureSToken = Self.cookie(
+            name: "STOKEN",
+            value: "stoken",
+            domain: ".wappass.baidu.com",
+            secure: false
+        )
+        let attackBDUSS = Self.cookie(
+            name: "BDUSS",
+            value: "attack",
+            domain: ".baidu.com.attacker.example",
+            secure: false
+        )
+        let secureSToken = Self.cookie(name: "STOKEN", value: "stoken", domain: ".wappass.baidu.com")
+
+        let insecureSTokenResult = AuthSession.cookiesForApprovedHTTPSCompletion(
+            [secureBDUSS, insecureSToken],
+            completionURL: AuthSession.loginCompletionURL
+        )
+        XCTAssertFalse(AuthSession.hasRequiredCookies(insecureSTokenResult))
+
+        let attackDomainResult = AuthSession.cookiesForApprovedHTTPSCompletion(
+            [attackBDUSS, secureSToken],
+            completionURL: AuthSession.loginCompletionURL
+        )
+        XCTAssertFalse(attackDomainResult[0].isSecure)
+        XCTAssertFalse(AuthSession.hasRequiredCookies(attackDomainResult))
+    }
+
     func testAuthSessionMinimalHeaderExcludesUnrelatedBrowserCookies() throws {
         let cookies = [
             Self.cookie(name: "BDUSS", value: "bduss", domain: ".baidu.com"),
@@ -307,6 +378,18 @@ final class AuthSessionTests: XCTestCase {
         let url = try XCTUnwrap(URL(string: "https://tieba.baidu.com/index/tbwise/mine"))
 
         XCTAssertTrue(AuthSession.isSuccessURL(url))
+        XCTAssertTrue(AuthSession.shouldCaptureCompletionWithoutRendering(url))
+        XCTAssertEqual(AuthSession.loginCompletionURL, url)
+    }
+
+    func testOnlyExactCompletionURLIsCapturedWithoutRendering() throws {
+        let completion = try XCTUnwrap(URL(string: "https://tieba.baidu.com/index/tbwise/mine"))
+        let ordinaryTiebaPage = try XCTUnwrap(URL(string: "https://tieba.baidu.com/f?kw=swift"))
+        let lookalike = try XCTUnwrap(URL(string: "https://tieba.baidu.com.attacker.example/index/tbwise/mine"))
+
+        XCTAssertTrue(AuthSession.shouldCaptureCompletionWithoutRendering(completion))
+        XCTAssertFalse(AuthSession.shouldCaptureCompletionWithoutRendering(ordinaryTiebaPage))
+        XCTAssertFalse(AuthSession.shouldCaptureCompletionWithoutRendering(lookalike))
     }
 
     func testLoginNavigationRequiresHTTPSBaiduBoundaryWithoutUserInfo() throws {
@@ -334,12 +417,86 @@ final class AuthSessionTests: XCTestCase {
         let customScheme = try XCTUnwrap(URL(string: "tbclient://jump/pb?tid=1"))
         let encodedScheme = try XCTUnwrap(URL(string: "https://tieba.baidu.com/mo/q/checkurl?schema=tbclient%3A%2F%2Fjump%2Fpb%3Ftid%3D1"))
         let appStore = try XCTUnwrap(URL(string: "https://apps.apple.com/cn/app/id477927812"))
+        let appDistributor = try XCTUnwrap(URL(
+            string: "https://a.app.qq.com/o/simple.jsp?pkgname=com.baidu.tieba"
+        ))
         let webURL = try XCTUnwrap(URL(string: "https://wappass.baidu.com/passport?login"))
 
         XCTAssertTrue(AuthSession.isExternalAppRedirectURL(customScheme))
         XCTAssertTrue(AuthSession.isExternalAppRedirectURL(encodedScheme))
         XCTAssertTrue(AuthSession.isExternalAppRedirectURL(appStore))
+        XCTAssertTrue(AuthSession.isExternalAppRedirectURL(appDistributor))
         XCTAssertFalse(AuthSession.isExternalAppRedirectURL(webURL))
+    }
+
+    func testLoginNavigationAllowsOnlyInertAboutBlankDocument() throws {
+        XCTAssertTrue(AuthSession.isInertLoginDocumentURL(try XCTUnwrap(URL(string: "about:blank"))))
+        XCTAssertFalse(AuthSession.isInertLoginDocumentURL(try XCTUnwrap(URL(string: "about:srcdoc"))))
+        XCTAssertFalse(AuthSession.isInertLoginDocumentURL(try XCTUnwrap(URL(string: "javascript:alert(1)"))))
+    }
+
+    func testPostLoginAppRedirectRecoversOnTrustedTiebaWebPage() throws {
+        let appRedirect = try XCTUnwrap(URL(
+            string: "https://tieba.baidu.com/mo/q/checkurl?schema=tbclient%3A%2F%2Fjump%2Fpb"
+        ))
+        let universalLink = try XCTUnwrap(URL(string: "https://a.app.qq.com/o/simple.jsp?pkgname=com.baidu.tieba"))
+
+        XCTAssertEqual(
+            AuthSession.blockedNavigationResolution(
+                for: appRedirect,
+                hasPrimaryLoginCookie: true,
+                isUserInitiated: true
+            ),
+            .recoverOnTiebaWeb
+        )
+        XCTAssertEqual(
+            AuthSession.blockedNavigationResolution(
+                for: universalLink,
+                hasPrimaryLoginCookie: true,
+                isUserInitiated: true
+            ),
+            .recoverOnTiebaWeb
+        )
+        XCTAssertEqual(
+            AuthSession.blockedNavigationResolution(
+                for: appRedirect,
+                hasPrimaryLoginCookie: false,
+                isUserInitiated: true
+            ),
+            .ignore
+        )
+    }
+
+    func testAutomaticBlockedRedirectDoesNotShowSpuriousLoginFailure() throws {
+        let insecureRedirect = try XCTUnwrap(URL(string: "http://wappass.baidu.com/passport"))
+        XCTAssertEqual(
+            AuthSession.blockedNavigationResolution(
+                for: insecureRedirect,
+                hasPrimaryLoginCookie: false,
+                isUserInitiated: false
+            ),
+            .ignore
+        )
+        XCTAssertEqual(
+            AuthSession.blockedNavigationResolution(
+                for: insecureRedirect,
+                hasPrimaryLoginCookie: false,
+                isUserInitiated: true
+            ),
+            .reportError
+        )
+    }
+
+    func testPrimaryLoginCookieRequiresTrustedSecureBaiduCookie() {
+        XCTAssertTrue(AuthSession.hasPrimaryLoginCookie([
+            Self.cookie(name: "BDUSS", value: "valid", domain: ".baidu.com")
+        ]))
+        XCTAssertFalse(AuthSession.hasPrimaryLoginCookie([
+            Self.cookie(name: "BDUSS", value: "insecure", domain: ".baidu.com", secure: false)
+        ]))
+        XCTAssertFalse(AuthSession.hasPrimaryLoginCookie([
+            Self.cookie(name: "BDUSS", value: "attack", domain: ".baidu.com.attacker.example")
+        ]))
     }
 
     func testValidateLoginFallsBackToWebMyInfoWhenClientLoginHasNoUser() async throws {

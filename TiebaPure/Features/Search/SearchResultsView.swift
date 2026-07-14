@@ -65,35 +65,21 @@ struct SearchResultsView: View {
     }
 
     var body: some View {
-        GeometryReader { geometry in
-            VStack(spacing: 0) {
-                searchBar
-                    .readableWidth()
+        VStack(spacing: 0) {
+            searchBar
+                .readableWidth()
 
-                Divider()
+            Divider()
 
-                if submittedKeyword.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    searchHistory
-                } else {
-                    searchResults
-                }
+            if submittedKeyword.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                searchHistory
+            } else {
+                searchResults
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(TiebaPureTheme.ColorToken.readerGroupedBackground)
-            .contentShape(Rectangle())
-            .simultaneousGesture(
-                DragGesture(minimumDistance: SearchDismissSwipePolicy.minimumTrackingDistance)
-                    .onEnded { value in
-                        guard SearchDismissSwipePolicy.shouldDismiss(
-                            startLocationX: value.startLocation.x,
-                            containerWidth: geometry.size.width,
-                            translation: value.translation,
-                            predictedEndTranslation: value.predictedEndTranslation
-                        ) else { return }
-                        dismissSearchPage()
-                    }
-            )
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(TiebaPureTheme.ColorToken.readerGroupedBackground)
+        .contentShape(Rectangle())
         .navigationTitle(scope.title)
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
@@ -155,6 +141,7 @@ struct SearchResultsView: View {
         .fullScreenCover(item: $selectedVideoPreview) { preview in
             DirectVideoPlaybackView(video: preview.video)
         }
+        .fullScreenInteractiveNavigationPop()
     }
 
     private var searchBar: some View {
@@ -586,33 +573,6 @@ struct SearchRequestKey: Equatable {
     let page: Int
 }
 
-enum SearchDismissSwipePolicy {
-    static let minimumTrackingDistance: CGFloat = 20
-    static let minimumTranslation: CGFloat = 96
-    static let minimumPredictedTranslation: CGFloat = 160
-    static let horizontalDominance: CGFloat = 1.35
-    static let maximumStartFraction: CGFloat = 0.8
-
-    static func shouldDismiss(
-        startLocationX: CGFloat,
-        containerWidth: CGFloat,
-        translation: CGSize,
-        predictedEndTranslation: CGSize
-    ) -> Bool {
-        guard containerWidth > 0 else { return false }
-        let startFraction = startLocationX / containerWidth
-        guard startFraction >= 0,
-              startFraction <= maximumStartFraction,
-              translation.width > 0,
-              abs(translation.width) >= 44,
-              abs(translation.width) > abs(translation.height) * horizontalDominance else {
-            return false
-        }
-        return translation.width >= minimumTranslation
-            || predictedEndTranslation.width >= minimumPredictedTranslation
-    }
-}
-
 enum SearchHistoryPolicy {
     static func normalizedKeyword(_ keyword: String) -> String {
         keyword.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -664,7 +624,7 @@ final class SearchHistoryStore: ObservableObject {
 
     init(
         defaults: UserDefaults = .standard,
-        key: String = "dev.kevinchen.tiebapure.searchHistory",
+        key: String = "dev.infinityf4p.tiebapure.searchHistory",
         limit: Int = 20
     ) {
         self.defaults = defaults

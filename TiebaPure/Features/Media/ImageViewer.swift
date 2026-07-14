@@ -22,26 +22,23 @@ struct ImageViewer: View {
     var body: some View {
         Group {
             if previewURL != nil {
-                Button {
-                    if inlineLoadState == .failure {
-                        inlineRetryTrigger += 1
-                    } else {
-                        previewSession = ImagePreviewSession(
-                            images: galleryImages,
-                            initialIndex: galleryIndex
-                        )
-                    }
-                } label: {
-                    inlineImage
-                }
-                .buttonStyle(.plain)
+                inlineImage
                 .minTouchTarget()
+                .onTapGesture {
+                    activateInlineImage()
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityAddTraits(.isButton)
+                .accessibilityIdentifier("thread-inline-image")
                 .accessibilityLabel(inlineLoadState == .failure
                     ? "图片加载失败，重新加载"
                     : (isTallImage ? "查看长图原图" : "查看图片"))
                 .accessibilityHint(inlineLoadState == .failure
                     ? "重新请求当前图片，不会打开全屏预览"
                     : "全屏显示完整图片")
+                .accessibilityAction {
+                    activateInlineImage()
+                }
             } else {
                 imagePlaceholder
                     .accessibilityLabel("图片不可用")
@@ -66,6 +63,17 @@ struct ImageViewer: View {
 
     private var isTallImage: Bool {
         TiebaLiteInlineImageLayoutPolicy.isTall(image)
+    }
+
+    private func activateInlineImage() {
+        if inlineLoadState == .failure {
+            inlineRetryTrigger += 1
+        } else {
+            previewSession = ImagePreviewSession(
+                images: galleryImages,
+                initialIndex: galleryIndex
+            )
+        }
     }
 
     private var inlineImage: some View {

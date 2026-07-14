@@ -32,7 +32,7 @@ final class RecentForumStore: ObservableObject {
 
     init(
         defaults: UserDefaults = .standard,
-        key: String = "dev.kevinchen.tiebapure.recentForums",
+        key: String = "dev.infinityf4p.tiebapure.recentForums",
         limit: Int = 30,
         now: @escaping () -> Date = Date.init
     ) {

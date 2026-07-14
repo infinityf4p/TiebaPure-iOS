@@ -39,6 +39,9 @@ enum TiebaImageRequestPolicy {
 
 enum TiebaImageSourcePolicy {
     private static let syntheticFailureHost = "fixture.invalid"
+#if DEBUG
+    private static let syntheticSuccessHost = "fixture-success.invalid"
+#endif
 
     static func urls(primary: URL?, fallback: URL? = nil) -> [URL] {
         var result: [URL] = []
@@ -58,6 +61,15 @@ enum TiebaImageSourcePolicy {
         url.scheme?.lowercased() == "https"
             && url.host?.lowercased() == syntheticFailureHost
     }
+
+#if DEBUG
+    /// Deterministic UI-test images are generated in memory and never consult
+    /// DNS or the network stack.
+    static func isSyntheticSuccessURL(_ url: URL) -> Bool {
+        url.scheme?.lowercased() == "https"
+            && url.host?.lowercased() == syntheticSuccessHost
+    }
+#endif
 }
 
 enum TiebaImageDecodePolicy {
@@ -142,6 +154,11 @@ actor TiebaImagePipeline {
         guard TiebaImageSourcePolicy.isSyntheticFailureURL(url) == false else {
             throw TiebaImagePipelineError.invalidImageData
         }
+#if DEBUG
+        if TiebaImageSourcePolicy.isSyntheticSuccessURL(url) {
+            return Self.syntheticFixtureImage()
+        }
+#endif
         if let cached = memoryCache.object(forKey: url as NSURL) {
             return cached
         }
@@ -206,6 +223,19 @@ actor TiebaImagePipeline {
             }
         }
     }
+
+#if DEBUG
+    private static func syntheticFixtureImage() -> UIImage {
+        let size = CGSize(width: 120, height: 480)
+        return UIGraphicsImageRenderer(size: size).image { context in
+            let bounds = CGRect(origin: .zero, size: size)
+            context.cgContext.setFillColor(UIColor.systemIndigo.cgColor)
+            context.cgContext.fill(bounds)
+            context.cgContext.setFillColor(UIColor.systemTeal.withAlphaComponent(0.7).cgColor)
+            context.cgContext.fill(CGRect(x: 0, y: size.height * 0.45, width: size.width, height: size.height * 0.55))
+        }
+    }
+#endif
 
     private static func decodedImage(from data: Data) -> UIImage? {
         guard let source = CGImageSourceCreateWithData(data as CFData, nil),

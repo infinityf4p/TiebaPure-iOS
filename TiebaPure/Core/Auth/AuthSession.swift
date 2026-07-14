@@ -50,10 +50,22 @@ enum AuthSessionError: Error, Equatable {
     case disallowedNavigation
 }
 
+enum BlockedLoginNavigationResolution: Equatable {
+    case recoverOnTiebaWeb
+    case ignore
+    case reportError
+}
+
 struct AuthSession {
-    static let loginURL = URL(
-        string: "https://wappass.baidu.com/passport?login&u=https%3A%2F%2Ftieba.baidu.com%2Findex%2Ftbwise%2Fmine"
-    )!
+    static let loginCompletionURL = URL(string: "https://tieba.baidu.com/index/tbwise/mine")!
+    static let loginURL: URL = {
+        var components = URLComponents(string: "https://wappass.baidu.com/passport")!
+        components.queryItems = [
+            URLQueryItem(name: "login", value: nil),
+            URLQueryItem(name: "u", value: loginCompletionURL.absoluteString)
+        ]
+        return components.url!
+    }()
 
     static func isSuccessURL(_ url: URL) -> Bool {
         guard url.scheme?.lowercased() == "https",
@@ -78,6 +90,10 @@ struct AuthSession {
         return host == "baidu.com" || host.hasSuffix(".baidu.com")
     }
 
+    static func isInertLoginDocumentURL(_ url: URL) -> Bool {
+        url.absoluteString.caseInsensitiveCompare("about:blank") == .orderedSame
+    }
+
     static func isExternalAppRedirectURL(_ url: URL) -> Bool {
         let scheme = url.scheme?.lowercased() ?? ""
         let webSchemes = ["about", "http", "https"]
@@ -98,7 +114,8 @@ struct AuthSession {
             "baidutieba://",
             "tieba://",
             "baiduboxapp://",
-            "com.baidu.tieba://"
+            "com.baidu.tieba",
+            "id477927812"
         ]
         return appMarkers.contains { marker in
             text.contains(marker) || decodedText.contains(marker)
@@ -109,10 +126,66 @@ struct AuthSession {
         isSuccessURL(url)
     }
 
+    /// The official Tieba app claims the HTTPS completion address as a
+    /// Universal Link. Capture it as an authentication signal, but never let
+    /// WebKit render or hand it to the operating system.
+    static func shouldCaptureCompletionWithoutRendering(_ url: URL) -> Bool {
+        isSuccessURL(url)
+    }
+
+    static func blockedNavigationResolution(
+        for url: URL,
+        hasPrimaryLoginCookie: Bool,
+        isUserInitiated: Bool
+    ) -> BlockedLoginNavigationResolution {
+        if hasPrimaryLoginCookie {
+            return .recoverOnTiebaWeb
+        }
+        if isExternalAppRedirectURL(url) || isUserInitiated == false {
+            return .ignore
+        }
+        return .reportError
+    }
+
+    static func hasPrimaryLoginCookie(_ cookies: [HTTPCookie]) -> Bool {
+        let valuesByName = preferredCookieValues(from: cookies)
+        return valuesByName["BDUSS"] != nil || valuesByName["BDUSS_BFESS"] != nil
+    }
+
     static func hasRequiredCookies(_ cookies: [HTTPCookie]) -> Bool {
         let valuesByName = preferredCookieValues(from: cookies)
         let hasBDUSS = valuesByName["BDUSS"] != nil || valuesByName["BDUSS_BFESS"] != nil
         return hasBDUSS && valuesByName["STOKEN"] != nil
+    }
+
+    /// Baidu currently returns the primary login cookie without the Secure
+    /// attribute on iOS, even though it is delivered during an HTTPS-only
+    /// login flow. Keep the general cookie policy strict and apply this narrow
+    /// compatibility upgrade only after WebKit has requested the exact,
+    /// trusted Tieba completion URL. The ephemeral login web view rejects all
+    /// HTTP navigation, and the resulting credentials are sent only by the
+    /// HTTPS-only API client.
+    static func cookiesForApprovedHTTPSCompletion(
+        _ cookies: [HTTPCookie],
+        completionURL: URL
+    ) -> [HTTPCookie] {
+        guard isSuccessURL(completionURL) else { return cookies }
+
+        return cookies.map { cookie in
+            guard shouldUpgradeLegacyBaiduCookie(cookie) else { return cookie }
+
+            var properties: [HTTPCookiePropertyKey: Any] = [
+                .name: cookie.name,
+                .value: cookie.value,
+                .domain: cookie.domain,
+                .path: cookie.path.isEmpty ? "/" : cookie.path,
+                .secure: "TRUE"
+            ]
+            if let expiresDate = cookie.expiresDate {
+                properties[.expires] = expiresDate
+            }
+            return HTTPCookie(properties: properties) ?? cookie
+        }
     }
 
     static func extract(from cookies: [HTTPCookie]) throws -> BaiduCookies {
@@ -149,19 +222,43 @@ struct AuthSession {
 
     private static func isTrustedCookie(_ cookie: HTTPCookie) -> Bool {
         let allowedNames = Set(["BDUSS", "BDUSS_BFESS", "STOKEN", "BAIDUID"])
-        guard allowedNames.contains(cookie.name.uppercased()),
+        let name = cookie.name.uppercased()
+        guard allowedNames.contains(name),
               cookie.isSecure,
               BaiduCredentialPolicy.isValidCookieValue(cookie.value),
               cookie.expiresDate.map({ $0 > Date() }) ?? true else {
             return false
         }
 
-        let domain = cookie.domain.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: "."))
-        let allowedCookieDomains = Set(["baidu.com", "tieba.baidu.com"])
-        guard allowedCookieDomains.contains(domain) else {
+        let domain = normalizedDomain(cookie.domain.lowercased())
+        guard allowedCookieDomains(for: name).contains(domain) else {
             return false
         }
         return cookie.path.isEmpty || cookie.path.hasPrefix("/")
+    }
+
+    private static func shouldUpgradeLegacyBaiduCookie(_ cookie: HTTPCookie) -> Bool {
+        let upgradableNames = Set(["BDUSS", "BDUSS_BFESS", "BAIDUID"])
+        let name = cookie.name.uppercased()
+        return cookie.isSecure == false
+            && upgradableNames.contains(name)
+            && normalizedDomain(cookie.domain.lowercased()) == "baidu.com"
+            && BaiduCredentialPolicy.isValidCookieValue(cookie.value)
+            && (cookie.expiresDate.map { $0 > Date() } ?? true)
+            && (cookie.path.isEmpty || cookie.path.hasPrefix("/"))
+    }
+
+    private static func allowedCookieDomains(for name: String) -> Set<String> {
+        switch name {
+        case "STOKEN":
+            return ["baidu.com", "tieba.baidu.com", "wappass.baidu.com", "passport.baidu.com"]
+        case "BDUSS", "BDUSS_BFESS":
+            return ["baidu.com", "tieba.baidu.com"]
+        case "BAIDUID":
+            return ["baidu.com"]
+        default:
+            return []
+        }
     }
 
     private static func isPreferredSToken(_ candidate: HTTPCookie, over current: HTTPCookie?) -> Bool {

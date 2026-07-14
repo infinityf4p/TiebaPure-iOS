@@ -137,6 +137,7 @@ struct ForumThreadsView: View {
             requestGeneration += 1
             isLoading = false
         }
+        .fullScreenInteractiveNavigationPop()
     }
 
     private var searchIsActive: Binding<Bool> {

@@ -9,11 +9,15 @@ struct LoginView: View {
     var body: some View {
         ZStack {
             LoginWebView { cookies in
+                LoginDiagnostics.record("cookiesReady validationTaskStarting")
                 validationTask?.cancel()
                 validationTask = Task {
                     await validate(cookies)
                 }
             } onError: { error in
+                LoginDiagnostics.record(
+                    "loginViewError errorType=\(String(reflecting: type(of: error)))"
+                )
                 errorMessage = ReaderErrorMessage.message(for: error)
             }
 
@@ -32,6 +36,7 @@ struct LoginView: View {
             Text(errorMessage ?? "")
         }
         .onDisappear {
+            LoginDiagnostics.record("loginViewDisappeared validationTaskCancelled=true")
             validationTask?.cancel()
             validationTask = nil
         }
@@ -49,16 +54,23 @@ struct LoginView: View {
 
     @MainActor
     private func validate(_ cookies: BaiduCookies) async {
+        LoginDiagnostics.record("apiValidationStarted")
         isValidating = true
         defer { isValidating = false }
 
         do {
             let account = try await environment.api.validateLogin(cookies: cookies)
+            LoginDiagnostics.record("apiValidationSucceeded accountStoreSaveStarting")
             try Task.checkCancellation()
             try await environment.accountStore.save(account)
+            LoginDiagnostics.record("accountStoreSaveSucceeded")
         } catch is CancellationError {
+            LoginDiagnostics.record("apiValidationCancelled")
             return
         } catch {
+            LoginDiagnostics.record(
+                "apiValidationFailed errorType=\(String(reflecting: type(of: error)))"
+            )
             errorMessage = ReaderErrorMessage.message(for: error)
         }
     }

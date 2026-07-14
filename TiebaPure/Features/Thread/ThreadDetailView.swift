@@ -5,6 +5,7 @@ struct ThreadDetailView: View {
     @EnvironmentObject private var environment: AppEnvironment
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let account: Account?
     let threadID: Int64
     let forumID: Int64?
@@ -25,9 +26,11 @@ struct ThreadDetailView: View {
     @State private var pendingInitialPostID: UInt64?
     @State private var requestGeneration = 0
     @State private var loadTask: Task<ThreadPage, Error>?
-    @State private var scrollTopOffset: CGFloat = 0
+    @State private var scrollDistanceFromTop: CGFloat = 0
     @State private var isTrackingPullGesture = false
     @State private var pullGestureStartedAtTop = false
+    @State private var showsInlineRefreshAnimation = false
+    @State private var showsPullRefreshIndicator = false
 
     init(account: Account?, threadID: Int64, forumID: Int64? = nil, initialPostID: UInt64? = nil) {
         self.account = account
@@ -38,111 +41,105 @@ struct ThreadDetailView: View {
     }
 
     var body: some View {
-        GeometryReader { geometry in
-            Group {
-                if isLoading && didLoad == false {
-                    ReaderStateView.loading("正在加载帖子")
-                } else if let errorMessage, posts.isEmpty {
-                    ReaderStateScrollView(refresh: { await reload() }) {
-                        ReaderStateView.error(message: errorMessage) {
-                            Task { await reload() }
-                        }
+        Group {
+            if isLoading && didLoad == false {
+                ReaderStateView.loading("正在加载帖子")
+            } else if let errorMessage, posts.isEmpty {
+                ReaderStateScrollView(refresh: { await reload() }) {
+                    ReaderStateView.error(message: errorMessage) {
+                        Task { await reload() }
                     }
-                } else if posts.isEmpty {
-                    ReaderStateScrollView(refresh: { await reload() }) {
-                        ReaderStateView.empty(title: "暂无内容", message: "下拉即可刷新帖子。")
-                    }
-                } else {
-                    refreshablePostScrollView {
-                        LazyVStack(spacing: 0) {
-                            if let mainPost {
-                                PostRowView(
-                                    post: mainPost,
-                                    threadTitle: threadPage?.thread.title,
-                                    threadAuthorID: threadAuthorID,
-                                    isMainPost: true,
-                                    onOpenSubposts: openSubpostsIfPossible
-                                )
-                                .padding(.bottom, TiebaPureTheme.Spacing.xs)
-                            }
-
-                            Section {
-                                if replyPosts.isEmpty, isLoading == false {
-                                    ReaderStateView.empty(title: "暂无回复", message: seeLz ? "这个帖子暂时没有楼主回复。" : "这个帖子暂时没有更多回复。")
-                                        .frame(maxWidth: .infinity)
-                                        .background(Color(uiColor: .systemBackground))
-                                } else {
-                                    ForEach(Array(replyPosts.enumerated()), id: \.element.id) { index, post in
-                                        PostRowView(
-                                            post: post,
-                                            threadAuthorID: threadAuthorID,
-                                            onOpenSubposts: openSubpostsIfPossible
-                                        )
-                                        .onAppear {
-                                            guard PaginationPrefetchPolicy.shouldLoadMore(
-                                                currentIndex: index,
-                                                totalCount: replyPosts.count
-                                            ) else { return }
-                                            Task { await loadMore() }
-                                        }
-                                    }
-                                }
-
-                                if isLoading, didLoad {
-                                    ProgressView()
-                                        .padding(TiebaPureTheme.Spacing.md)
-                                        .accessibilityLabel("正在加载更多回复")
-                                }
-
-                                if let errorMessage {
-                                    InlineLoadErrorView(message: errorMessage) {
-                                        Task {
-                                            if nextPage <= 1 { await reload() } else { await loadMore() }
-                                        }
-                                    }
-                                }
-                            } header: {
-                                ReplyControlBar(
-                                    seeLz: seeLz,
-                                    sortType: sortType,
-                                    onSeeLzChange: { value in
-                                        guard seeLz != value else { return }
-                                        seeLz = value
-                                        Task { await reload() }
-                                    },
-                                    onSortChange: { value in
-                                        guard sortType != value else { return }
-                                        sortType = value
-                                        Task { await reload() }
-                                    }
-                                )
-                            }
-
-                            Color.clear
-                                .frame(height: 32)
-                                .accessibilityHidden(true)
-                        }
-                        .readableWidth()
-                    }
-                    .background(TiebaPureTheme.ColorToken.readerGroupedBackground)
                 }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .contentShape(Rectangle())
-            .simultaneousGesture(
-                DragGesture(minimumDistance: ThreadDetailDismissSwipePolicy.minimumTrackingDistance)
-                    .onEnded { value in
-                        guard isSearchActive == false,
-                              selectedSubpostPost == nil,
-                              ThreadDetailDismissSwipePolicy.shouldDismiss(
-                                startLocationX: value.startLocation.x,
-                                containerWidth: geometry.size.width,
-                                translation: value.translation,
-                                predictedEndTranslation: value.predictedEndTranslation
-                              ) else { return }
-                        dismiss()
+            } else if posts.isEmpty {
+                ReaderStateScrollView(refresh: { await reload() }) {
+                    ReaderStateView.empty(title: "暂无内容", message: "下拉即可刷新帖子。")
+                }
+            } else {
+                refreshablePostScrollView {
+                    LazyVStack(spacing: 0) {
+                        if let mainPost {
+                            PostRowView(
+                                post: mainPost,
+                                threadTitle: threadPage?.thread.title,
+                                threadAuthorID: threadAuthorID,
+                                isMainPost: true,
+                                onOpenSubposts: openSubpostsIfPossible
+                            )
+                            .padding(.bottom, TiebaPureTheme.Spacing.xs)
+                        }
+
+                        Section {
+                            if replyPosts.isEmpty, isLoading == false {
+                                ReaderStateView.empty(title: "暂无回复", message: seeLz ? "这个帖子暂时没有楼主回复。" : "这个帖子暂时没有更多回复。")
+                                    .frame(maxWidth: .infinity)
+                                    .background(Color(uiColor: .systemBackground))
+                            } else {
+                                ForEach(Array(replyPosts.enumerated()), id: \.element.id) { index, post in
+                                    PostRowView(
+                                        post: post,
+                                        threadAuthorID: threadAuthorID,
+                                        onOpenSubposts: openSubpostsIfPossible
+                                    )
+                                    .onAppear {
+                                        guard PaginationPrefetchPolicy.shouldLoadMore(
+                                            currentIndex: index,
+                                            totalCount: replyPosts.count
+                                        ) else { return }
+                                        Task { await loadMore() }
+                                    }
+                                }
+                            }
+
+                            if isLoading, didLoad, nextPage > 1 {
+                                ProgressView()
+                                    .padding(TiebaPureTheme.Spacing.md)
+                                    .accessibilityLabel("正在加载更多回复")
+                            }
+
+                            if let errorMessage {
+                                InlineLoadErrorView(message: errorMessage) {
+                                    Task {
+                                        if nextPage <= 1 { await reload() } else { await loadMore() }
+                                    }
+                                }
+                            }
+                        } header: {
+                            ReplyControlBar(
+                                seeLz: seeLz,
+                                sortType: sortType,
+                                onSeeLzChange: { value in
+                                    guard seeLz != value else { return }
+                                    seeLz = value
+                                    Task { await reload() }
+                                },
+                                onSortChange: { value in
+                                    guard sortType != value else { return }
+                                    sortType = value
+                                    Task { await reload() }
+                                }
+                            )
+                        }
+
+                        Color.clear
+                            .frame(height: 32)
+                            .accessibilityHidden(true)
                     }
-            )
+                    .readableWidth()
+                }
+                .background(TiebaPureTheme.ColorToken.readerGroupedBackground)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .contentShape(Rectangle())
+        .overlay(alignment: .top) {
+            if showsInlineRefreshAnimation || showsPullRefreshIndicator {
+                InlineRefreshActivityIndicator(
+                    accessibilityIdentifier: "thread-refresh-animation"
+                )
+                .transition(.opacity)
+                .allowsHitTesting(false)
+                .zIndex(2)
+            }
         }
         .navigationTitle(threadPage?.thread.title.isEmpty == false ? threadPage?.thread.title ?? "帖子" : "帖子")
         .navigationBarTitleDisplayMode(.inline)
@@ -171,7 +168,7 @@ struct ThreadDetailView: View {
 
                 Menu {
                     Button {
-                        Task { await reload() }
+                        Task { await refreshFromPullGestureIfIdle() }
                     } label: {
                         Label("刷新", systemImage: "arrow.clockwise")
                     }
@@ -211,9 +208,13 @@ struct ThreadDetailView: View {
                     threadID: threadID,
                     forumID: forumID,
                     post: post,
-                    threadAuthorID: threadAuthorID
+                    threadAuthorID: threadAuthorID,
+                    onInteractiveDismiss: {
+                        selectedSubpostPost = nil
+                    }
                 )
                 .environmentObject(environment)
+                .subpostInteractivePresentation()
             } else {
                 ReaderStateView.error(message: "缺少贴吧 ID，无法加载楼中楼。")
                     .padding()
@@ -234,7 +235,10 @@ struct ThreadDetailView: View {
             didLoad = false
             errorMessage = nil
             selectedSubpostPost = nil
+            showsInlineRefreshAnimation = false
+            showsPullRefreshIndicator = false
             pendingInitialPostID = initialPostID
+            scrollDistanceFromTop = 0
             resetPullGestureState()
             Task { await reload() }
         }
@@ -243,8 +247,11 @@ struct ThreadDetailView: View {
             loadTask?.cancel()
             requestGeneration += 1
             isLoading = false
+            showsInlineRefreshAnimation = false
+            showsPullRefreshIndicator = false
             resetPullGestureState()
         }
+        .fullScreenInteractiveNavigationPop(isEnabled: selectedSubpostPost == nil)
     }
 
     private func refreshablePostScrollView<Content: View>(@ViewBuilder content: () -> Content) -> some View {
@@ -263,15 +270,32 @@ struct ThreadDetailView: View {
             .contentShape(Rectangle())
         }
         .coordinateSpace(name: ThreadDetailScrollCoordinateSpace.name)
-        .onPreferenceChange(ThreadDetailScrollTopOffsetPreferenceKey.self) { offset in
-            scrollTopOffset = offset
+        .onPreferenceChange(ThreadDetailScrollTopOffsetPreferenceKey.self) { markerOffset in
+            if #unavailable(iOS 18.0) {
+                scrollDistanceFromTop = ShortPullRefreshPolicy.distanceFromTop(
+                    markerOffset: markerOffset
+                )
+            }
         }
+        .trackVerticalScrollDistanceFromTop($scrollDistanceFromTop)
         .simultaneousGesture(
             DragGesture(minimumDistance: ShortPullRefreshPolicy.minimumTrackingDistance)
-                .onChanged { _ in
-                    guard isTrackingPullGesture == false else { return }
-                    isTrackingPullGesture = true
-                    pullGestureStartedAtTop = ShortPullRefreshPolicy.isAtTop(offset: scrollTopOffset)
+                .onChanged { value in
+                    if isTrackingPullGesture == false {
+                        isTrackingPullGesture = true
+                        pullGestureStartedAtTop = ShortPullRefreshPolicy.shouldBegin(
+                            distanceFromTop: scrollDistanceFromTop,
+                            initialTranslation: value.translation
+                        )
+                        if pullGestureStartedAtTop, isLoading == false {
+                            setPullRefreshIndicator(visible: true)
+                        }
+                    } else if ShortPullRefreshPolicy.isAtTop(
+                        distanceFromTop: scrollDistanceFromTop
+                    ) == false {
+                        pullGestureStartedAtTop = false
+                        setPullRefreshIndicator(visible: false)
+                    }
                 }
                 .onEnded { value in
                     let shouldRefresh = ShortPullRefreshPolicy.shouldTrigger(
@@ -284,17 +308,61 @@ struct ThreadDetailView: View {
                     Task { await refreshFromPullGestureIfIdle() }
                 }
         )
-        .refreshable { await refreshFromPullGestureIfIdle() }
     }
 
     private func refreshFromPullGestureIfIdle() async {
         guard isLoading == false else { return }
+        let showsAnimation = reduceMotion == false
+        if showsAnimation {
+            setInlineRefreshAnimation(visible: true)
+        }
+        let animationStart = DispatchTime.now().uptimeNanoseconds
         await reload()
+        if showsAnimation {
+            let elapsed = DispatchTime.now().uptimeNanoseconds - animationStart
+            let remaining = HomeRefreshAnimationPolicy.remainingVisibleDurationNanoseconds(
+                minimum: HomeRefreshAnimationPolicy.minimumVisibleDurationNanoseconds,
+                elapsed: elapsed
+            )
+            if remaining > 0 {
+                let minimumVisibilityTask = Task.detached {
+                    try? await Task.sleep(nanoseconds: remaining)
+                }
+                await minimumVisibilityTask.value
+            }
+            setInlineRefreshAnimation(visible: false)
+        }
+    }
+
+    private func setInlineRefreshAnimation(visible: Bool) {
+        if HomeRefreshAnimationPolicy.disablesUITestAnimations(
+            arguments: ProcessInfo.processInfo.arguments
+        ) || reduceMotion {
+            showsInlineRefreshAnimation = visible
+        } else {
+            withAnimation(.easeInOut(duration: 0.18)) {
+                showsInlineRefreshAnimation = visible
+            }
+        }
+    }
+
+    private func setPullRefreshIndicator(visible: Bool) {
+        let resolvedVisibility = visible && reduceMotion == false
+        if HomeRefreshAnimationPolicy.disablesUITestAnimations(
+            arguments: ProcessInfo.processInfo.arguments
+        ) {
+            showsPullRefreshIndicator = resolvedVisibility
+        } else {
+            withAnimation(.easeOut(duration: 0.12)) {
+                showsPullRefreshIndicator = resolvedVisibility
+            }
+        }
     }
 
     private func resetPullGestureState() {
         isTrackingPullGesture = false
         pullGestureStartedAtTop = false
+        setPullRefreshIndicator(visible: false)
     }
 
     private var mainPost: Post? {
@@ -568,6 +636,7 @@ private struct SubpostListSheet: View {
     let forumID: Int64
     let post: Post
     let threadAuthorID: Int64?
+    let onInteractiveDismiss: () -> Void
 
     @State private var subposts: [Subpost] = []
     @State private var nextPage = 1
@@ -579,9 +648,8 @@ private struct SubpostListSheet: View {
     @State private var loadTask: Task<[Subpost], Error>?
 
     var body: some View {
-        GeometryReader { geometry in
-            NavigationStack {
-            Group {
+        NavigationStack {
+                Group {
                 if isLoading && didLoad == false {
                     ReaderStateView.loading("加载回复")
                 } else if let errorMessage, subposts.isEmpty {
@@ -659,28 +727,15 @@ private struct SubpostListSheet: View {
                     }
                     .background(TiebaPureTheme.ColorToken.readerGroupedBackground)
                 }
-            }
-            .navigationTitle(SubpostSheetTitle.text(floor: post.floor, count: post.subpostCount))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("完成") { dismiss() }
+                }
+                .navigationTitle(SubpostSheetTitle.text(floor: post.floor, count: post.subpostCount))
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("完成") { dismiss() }
+                    }
                 }
             }
-            }
-            .simultaneousGesture(
-                DragGesture(minimumDistance: 20)
-                    .onEnded { value in
-                        if SubpostDismissSwipePolicy.shouldDismiss(
-                            startLocationX: value.startLocation.x,
-                            containerWidth: geometry.size.width,
-                            translation: value.translation,
-                            predictedEndTranslation: value.predictedEndTranslation
-                        ) {
-                            dismiss()
-                        }
-                    }
-            )
             .accessibilityAction(named: "关闭楼中楼") {
                 dismiss()
             }
@@ -688,13 +743,18 @@ private struct SubpostListSheet: View {
                 guard didLoad == false else { return }
                 await reload()
             }
-            .refreshable { await reload() }
             .onDisappear {
                 loadTask?.cancel()
                 requestGeneration += 1
                 isLoading = false
             }
-        }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(uiColor: .systemBackground))
+            .background {
+                SubpostSheetInteractiveDismissInstaller(
+                    onDismiss: onInteractiveDismiss
+                )
+            }
     }
 
     private func reload() async {
@@ -804,47 +864,18 @@ enum SubpostSheetTitle {
     }
 }
 
-enum ThreadDetailDismissSwipePolicy {
-    static let minimumTrackingDistance: CGFloat = 20
-
-    static func shouldDismiss(
-        startLocationX: CGFloat,
-        containerWidth: CGFloat,
-        translation: CGSize,
-        predictedEndTranslation: CGSize
-    ) -> Bool {
-        SubpostDismissSwipePolicy.shouldDismiss(
-            startLocationX: startLocationX,
-            containerWidth: containerWidth,
-            translation: translation,
-            predictedEndTranslation: predictedEndTranslation
-        )
-    }
-}
-
-enum SubpostDismissSwipePolicy {
-    static let minimumTranslation: CGFloat = 96
-    static let minimumPredictedTranslation: CGFloat = 160
-    static let horizontalDominance: CGFloat = 1.35
-    static let minimumStartFraction: CGFloat = 0.2
-    static let maximumStartFraction: CGFloat = 0.8
-
-    static func shouldDismiss(
-        startLocationX: CGFloat,
-        containerWidth: CGFloat,
-        translation: CGSize,
-        predictedEndTranslation: CGSize
-    ) -> Bool {
-        guard containerWidth > 0 else { return false }
-        let startFraction = startLocationX / containerWidth
-        guard startFraction >= minimumStartFraction,
-              startFraction <= maximumStartFraction,
-              translation.width > 0,
-              abs(translation.width) >= 44,
-              abs(translation.width) > abs(translation.height) * horizontalDominance else {
-            return false
+private extension View {
+    @ViewBuilder
+    func subpostInteractivePresentation() -> some View {
+        if #available(iOS 16.4, *) {
+            presentationDetents([.large])
+                .presentationDragIndicator(.hidden)
+                .presentationBackground(.clear)
+                .interactiveDismissDisabled()
+        } else {
+            presentationDetents([.large])
+                .presentationDragIndicator(.hidden)
+                .interactiveDismissDisabled()
         }
-        return translation.width >= minimumTranslation
-            || predictedEndTranslation.width >= minimumPredictedTranslation
     }
 }

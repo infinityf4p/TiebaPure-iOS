@@ -88,6 +88,7 @@ struct SettingsView: View {
                 Text(logoutErrorMessage)
             }
         }
+        .fullScreenInteractiveNavigationPop()
     }
 
     private func logOut() async {

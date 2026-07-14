@@ -61,7 +61,10 @@ final class AccountStore: ObservableObject {
                 try Task.checkCancellation()
                 accountDidChange.send(account)
             }
-            try Task.checkCancellation()
+            // Publishing the account is the commit point. Subscribers are
+            // expected to dismiss the login view, which cancels its validation
+            // task. Treating that expected dismissal as a failed save would
+            // immediately roll the newly stored account back to logged out.
         } catch is CancellationError {
             do {
                 if let restorablePreviousData {
@@ -252,7 +255,7 @@ struct KeychainAccountStoreService: AccountStoreService {
     private let service: String
     private let account: String
 
-    init(service: String = "dev.kevinchen.tiebapure.account", account: String = "single") {
+    init(service: String = "dev.infinityf4p.tiebapure.account", account: String = "single") {
         self.service = service
         self.account = account
     }

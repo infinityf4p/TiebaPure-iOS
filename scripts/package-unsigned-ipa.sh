@@ -14,7 +14,8 @@ if command -v xcodegen >/dev/null 2>&1; then
   (cd "$ROOT" && xcodegen generate >/dev/null)
 fi
 
-rm -rf "$PACKAGE_ROOT" "$OUTPUT"
+mkdir -p "$PACKAGE_ROOT"
+rm -rf "$ARCHIVE_PATH" "$PAYLOAD_DIR" "$OUTPUT"
 mkdir -p "$PAYLOAD_DIR"
 
 xcodebuild \

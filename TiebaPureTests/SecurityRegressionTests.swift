@@ -12,7 +12,7 @@ final class SecurityRegressionTests: XCTestCase {
 
     func testKeychainUpdatesExistingItemWithoutDeleteFirst() async throws {
         let service = KeychainAccountStoreService(
-            service: "dev.kevinchen.tiebapure.tests.\(UUID().uuidString)",
+            service: "dev.infinityf4p.tiebapure.tests.\(UUID().uuidString)",
             account: "update"
         )
         try? await service.clearData()
@@ -60,6 +60,26 @@ final class SecurityRegressionTests: XCTestCase {
         let persisted = try await store.load()
         XCTAssertNil(persisted)
         XCTAssertTrue(publishedAccounts.isEmpty)
+        withExtendedLifetime(observation) {}
+    }
+
+    @MainActor
+    func testPublishedLoginRemainsSavedWhenSheetDismissalCancelsValidationTask() async throws {
+        let store = AccountStore(service: MemoryAccountStoreService())
+        var saveTask: Task<Void, Error>?
+        let observation = store.accountDidChange.sink { account in
+            if account != nil {
+                saveTask?.cancel()
+            }
+        }
+
+        saveTask = Task {
+            try await store.save(FixtureTiebaAPI.account)
+        }
+        try await saveTask?.value
+
+        let persistedAccount = try await store.load()
+        XCTAssertEqual(persistedAccount, FixtureTiebaAPI.account)
         withExtendedLifetime(observation) {}
     }
 

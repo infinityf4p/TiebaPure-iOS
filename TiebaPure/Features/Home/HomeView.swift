@@ -19,13 +19,14 @@ struct HomeView: View {
     @State private var selectedImagePreview: ImagePreviewSession?
     @State private var selectedVideoPreview: HomeVideoPreview?
     @State private var showsInlineRefreshAnimation = false
+    @State private var showsPullRefreshIndicator = false
     @State private var lastScenePhase: ScenePhase = .inactive
     @State private var scrollToTopRequest = 0
     @State private var requestGeneration = 0
     @State private var loadTask: Task<[ThreadSummary], Error>?
     @State private var pendingPaginationRequest = false
     @State private var paginationRequestScheduled = false
-    @State private var scrollTopOffset: CGFloat = 0
+    @State private var scrollDistanceFromTop: CGFloat = 0
     @State private var isTrackingPullGesture = false
     @State private var pullGestureStartedAtTop = false
 
@@ -35,7 +36,7 @@ struct HomeView: View {
                 if isLoading && didLoad == false {
                     ReaderStateView.loading("正在加载帖子")
                 } else if let errorMessage, threads.isEmpty {
-                    refreshableScrollView {
+                    refreshableScrollView(usesSystemRefresh: true) {
                         ReaderStateView.error(message: errorMessage) {
                             Task { await reload(trigger: .retry) }
                         }
@@ -43,7 +44,7 @@ struct HomeView: View {
                         .padding(.top, TiebaPureTheme.Spacing.lg)
                     }
                 } else if threads.isEmpty {
-                    refreshableScrollView {
+                    refreshableScrollView(usesSystemRefresh: true) {
                         ReaderStateView.empty(title: "暂无推荐", message: "下拉即可刷新推荐帖子。")
                             .frame(maxWidth: .infinity)
                             .padding(.top, TiebaPureTheme.Spacing.lg)
@@ -138,27 +139,13 @@ struct HomeView: View {
                 }
             }
             .overlay(alignment: .top) {
-                if showsInlineRefreshAnimation {
-                    HStack(spacing: TiebaPureTheme.Spacing.xs) {
-                        if disablesUITestAnimations {
-                            Image(systemName: "arrow.clockwise")
-                                .font(.footnote.weight(.semibold))
-                                .accessibilityHidden(true)
-                        } else {
-                            ProgressView()
-                                .controlSize(.small)
-                        }
-                        Text("正在刷新")
-                            .font(.footnote.weight(.medium))
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(.horizontal, TiebaPureTheme.Spacing.sm)
-                    .padding(.vertical, 7)
-                    .background(.regularMaterial, in: Capsule())
-                    .padding(.top, TiebaPureTheme.Spacing.xs)
+                if showsInlineRefreshAnimation || showsPullRefreshIndicator {
+                    InlineRefreshActivityIndicator(
+                        accessibilityIdentifier: "home-refresh-animation"
+                    )
                     .transition(.opacity)
-                    .accessibilityElement(children: .combine)
-                    .accessibilityIdentifier("home-refresh-animation")
+                    .allowsHitTesting(false)
+                    .zIndex(2)
                 }
             }
             .navigationTitle("首页")
@@ -222,9 +209,9 @@ struct HomeView: View {
                 paginationRequestScheduled = false
                 errorMessage = nil
                 showsInlineRefreshAnimation = false
-                scrollTopOffset = 0
-                isTrackingPullGesture = false
-                pullGestureStartedAtTop = false
+                showsPullRefreshIndicator = false
+                scrollDistanceFromTop = 0
+                resetPullGestureState()
                 navigationPath = []
                 Task { await reload(trigger: .initial) }
             }
@@ -251,10 +238,10 @@ struct HomeView: View {
                 requestGeneration += 1
                 isLoading = false
                 showsInlineRefreshAnimation = false
+                showsPullRefreshIndicator = false
                 pendingPaginationRequest = false
                 paginationRequestScheduled = false
-                isTrackingPullGesture = false
-                pullGestureStartedAtTop = false
+                resetPullGestureState()
             }
         }
     }
@@ -274,8 +261,12 @@ struct HomeView: View {
         navigationPath.append(.thread(threadID: threadID, forumID: forumID))
     }
 
-    private func refreshableScrollView<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-        ScrollView {
+    @ViewBuilder
+    private func refreshableScrollView<Content: View>(
+        usesSystemRefresh: Bool = false,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        let scrollView = ScrollView {
             VStack(spacing: 0) {
                 GeometryReader { proxy in
                     Color.clear.preference(
@@ -290,15 +281,34 @@ struct HomeView: View {
             .contentShape(Rectangle())
         }
         .coordinateSpace(name: HomeScrollCoordinateSpace.name)
-        .onPreferenceChange(HomeScrollTopOffsetPreferenceKey.self) { offset in
-            scrollTopOffset = offset
+        .onPreferenceChange(HomeScrollTopOffsetPreferenceKey.self) { markerOffset in
+            if #unavailable(iOS 18.0) {
+                scrollDistanceFromTop = ShortPullRefreshPolicy.distanceFromTop(
+                    markerOffset: markerOffset
+                )
+            }
         }
+        .trackVerticalScrollDistanceFromTop($scrollDistanceFromTop)
         .simultaneousGesture(
             DragGesture(minimumDistance: ShortPullRefreshPolicy.minimumTrackingDistance)
-                .onChanged { _ in
-                    guard isTrackingPullGesture == false else { return }
-                    isTrackingPullGesture = true
-                    pullGestureStartedAtTop = ShortPullRefreshPolicy.isAtTop(offset: scrollTopOffset)
+                .onChanged { value in
+                    if isTrackingPullGesture == false {
+                        isTrackingPullGesture = true
+                        pullGestureStartedAtTop = ShortPullRefreshPolicy.shouldBegin(
+                            distanceFromTop: scrollDistanceFromTop,
+                            initialTranslation: value.translation
+                        )
+                        if pullGestureStartedAtTop, isLoading == false {
+                            setPullRefreshIndicator(visible: true)
+                        }
+                    } else if ShortPullRefreshPolicy.isAtTop(
+                        distanceFromTop: scrollDistanceFromTop
+                    ) == false {
+                        // Eligibility is latched at gesture start. Reaching the
+                        // top later in the same downward drag must not refresh.
+                        pullGestureStartedAtTop = false
+                        setPullRefreshIndicator(visible: false)
+                    }
                 }
                 .onEnded { value in
                     let shouldRefresh = ShortPullRefreshPolicy.shouldTrigger(
@@ -306,14 +316,19 @@ struct HomeView: View {
                         isRefreshing: isLoading,
                         translation: value.translation
                     )
-                    isTrackingPullGesture = false
-                    pullGestureStartedAtTop = false
+                    resetPullGestureState()
                     guard shouldRefresh else { return }
                     Task { await refreshFromPullGestureIfIdle() }
                 }
         )
         .background(TiebaPureTheme.ColorToken.readerGroupedBackground)
-        .refreshable { await refreshFromPullGestureIfIdle() }
+        .accessibilityIdentifier("home-feed-scroll-view")
+
+        if usesSystemRefresh {
+            scrollView.refreshable { await refreshFromPullGestureIfIdle() }
+        } else {
+            scrollView
+        }
     }
 
     private func refreshFromPullGestureIfIdle() async {
@@ -372,13 +387,30 @@ struct HomeView: View {
     }
 
     private func setInlineRefreshAnimation(visible: Bool) {
-        if disablesUITestAnimations {
+        if disablesUITestAnimations || reduceMotion {
             showsInlineRefreshAnimation = visible
         } else {
             withAnimation(.easeInOut(duration: 0.18)) {
                 showsInlineRefreshAnimation = visible
             }
         }
+    }
+
+    private func setPullRefreshIndicator(visible: Bool) {
+        let resolvedVisibility = visible && reduceMotion == false
+        if disablesUITestAnimations {
+            showsPullRefreshIndicator = resolvedVisibility
+        } else {
+            withAnimation(.easeOut(duration: 0.12)) {
+                showsPullRefreshIndicator = resolvedVisibility
+            }
+        }
+    }
+
+    private func resetPullGestureState() {
+        isTrackingPullGesture = false
+        pullGestureStartedAtTop = false
+        setPullRefreshIndicator(visible: false)
     }
 
     private var disablesUITestAnimations: Bool {
@@ -490,7 +522,7 @@ enum HomeRefreshAnimationPolicy {
         }
         #endif
 
-        return 250_000_000
+        return 600_000_000
     }
 
     static func disablesUITestAnimations(arguments: [String]) -> Bool {
@@ -521,13 +553,30 @@ enum HomeRefreshRevealPolicy {
 }
 
 enum ShortPullRefreshPolicy {
-    static let minimumTrackingDistance: CGFloat = 8
+    static let minimumTrackingDistance: CGFloat = 1
     static let triggerDistance: CGFloat = 64
     static let topTolerance: CGFloat = 2
     static let verticalDominance: CGFloat = 1.2
 
-    static func isAtTop(offset: CGFloat) -> Bool {
-        offset >= -topTolerance
+    static func distanceFromTop(contentOffsetY: CGFloat, topInset: CGFloat) -> CGFloat {
+        max(contentOffsetY + topInset, 0)
+    }
+
+    static func distanceFromTop(markerOffset: CGFloat) -> CGFloat {
+        max(-markerOffset, 0)
+    }
+
+    static func isAtTop(distanceFromTop: CGFloat) -> Bool {
+        distanceFromTop <= topTolerance
+    }
+
+    static func shouldBegin(
+        distanceFromTop: CGFloat,
+        initialTranslation: CGSize
+    ) -> Bool {
+        guard isAtTop(distanceFromTop: distanceFromTop) else { return false }
+        guard initialTranslation.height > 0 else { return false }
+        return initialTranslation.height >= abs(initialTranslation.width) * verticalDominance
     }
 
     static func shouldTrigger(
@@ -538,6 +587,24 @@ enum ShortPullRefreshPolicy {
         guard startedAtTop, isRefreshing == false else { return false }
         guard translation.height >= triggerDistance else { return false }
         return translation.height >= abs(translation.width) * verticalDominance
+    }
+}
+
+extension View {
+    @ViewBuilder
+    func trackVerticalScrollDistanceFromTop(_ distance: Binding<CGFloat>) -> some View {
+        if #available(iOS 18.0, *) {
+            onScrollGeometryChange(for: CGFloat.self) { geometry in
+                ShortPullRefreshPolicy.distanceFromTop(
+                    contentOffsetY: geometry.contentOffset.y,
+                    topInset: geometry.contentInsets.top
+                )
+            } action: { _, newDistance in
+                distance.wrappedValue = newDistance
+            }
+        } else {
+            self
+        }
     }
 }
 

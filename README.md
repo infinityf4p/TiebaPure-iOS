@@ -4,6 +4,8 @@
 
 [![iOS CI](https://github.com/infinityf4p/TiebaPure-iOS/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/infinityf4p/TiebaPure-iOS/actions/workflows/ci.yml?query=branch%3Amain)
 
+本 iOS 实现的项目作者与维护者：[infinityf4p](https://github.com/infinityf4p)。
+
 TiebaPure-iOS 是一个使用 SwiftUI 编写的非官方百度贴吧只读客户端，支持访客浏览、首页推荐、进吧、吧内列表、搜索主题/回复、帖子与楼中楼、图片和视频查看，以及可选的百度手机号验证码登录。它与百度公司、百度贴吧官方及 TiebaLite 原作者均无隶属、授权或认可关系。
 
 ## 来源与许可证
@@ -15,7 +17,7 @@ TiebaPure-iOS 是一个使用 SwiftUI 编写的非官方百度贴吧只读客户
 - 贴吧旧客户端协议请求字段、protobuf 组合、响应映射、内容过滤规则和部分阅读界面行为参考了 TiebaLite。
 - iOS/SwiftUI 代码是面向本项目的实现和修改，但可追溯衍生内容仍按 GPL 要求发布。
 
-代码、协议材料和可追溯衍生材料采用 [`GPL-3.0-only`](LICENSE)。修改日期为 **2026-07-13**。本软件不提供任何明示或暗示担保。
+代码、协议材料和可追溯衍生材料采用 [`GPL-3.0-only`](LICENSE)。修改日期为 **2026-07-14**。本软件不提供任何明示或暗示担保。
 
 另有 **54 个 PNG 表情资源的来源与再分发许可未知，本项目不声明这些文件受 GPL 授权**。保留这些文件是经明确选择后的兼容决定；披露并不能消除版权或再分发风险。逐文件 SHA-256、分类和完整说明见 [ASSET_MANIFEST.sha256](ASSET_MANIFEST.sha256) 与 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 

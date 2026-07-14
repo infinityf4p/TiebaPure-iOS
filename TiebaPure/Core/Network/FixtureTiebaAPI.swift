@@ -12,6 +12,7 @@ enum FixtureScenario: String {
     case paginationFailure
     case longContent
     case subpostReference
+    case imageGesture
 }
 
 struct FixtureTiebaAPI: TiebaAPIService {
@@ -35,7 +36,7 @@ struct FixtureTiebaAPI: TiebaAPIService {
         guard scenario != .empty else { return [] }
         if scenario == .refreshUpdate, page == 1 {
             let requestNumber = await state.nextPersonalizedPageOneRequestNumber()
-            return requestNumber == 1 ? [Self.threads[0]] : [Self.refreshedThread]
+            return requestNumber == 1 ? Self.threads : [Self.refreshedThread]
         }
         return page == 1 ? Self.threads : []
     }
@@ -124,9 +125,12 @@ struct FixtureTiebaAPI: TiebaAPIService {
         } else {
             text = "这是完全离线的合成帖子正文，内容不来自真实用户。"
         }
+        let imageFixtureHost = scenario == .imageGesture
+            ? "fixture-success.invalid"
+            : "fixture.invalid"
         let longImage = ImageContent(
-            thumbnailURL: URL(string: "https://fixture.invalid/long-image.png"),
-            originalURL: URL(string: "https://fixture.invalid/long-image-original.png"),
+            thumbnailURL: URL(string: "https://\(imageFixtureHost)/long-image.png"),
+            originalURL: URL(string: "https://\(imageFixtureHost)/long-image-original.png"),
             width: 400,
             height: 1_600,
             showOriginalButton: true

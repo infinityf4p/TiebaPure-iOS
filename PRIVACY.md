@@ -1,6 +1,6 @@
 # TiebaPure-iOS 隐私说明
 
-更新日期：2026-07-13。
+更新日期：2026-07-14。
 
 TiebaPure-iOS 是非官方、开源的百度贴吧只读客户端。本项目自身不包含广告 SDK、分析 SDK、用户画像、跨应用跟踪或自建遥测服务器。
 
@@ -15,7 +15,7 @@ TiebaPure-iOS 是非官方、开源的百度贴吧只读客户端。本项目自
 
 ## 登录
 
-登录页由百度 HTTPS 页面提供，使用非持久 `WKWebsiteDataStore`。应用只允许百度域边界内的 HTTPS 导航，只在精确的贴吧成功页面读取 Cookie，并只接受名称白名单、Secure、未过期且属于百度域的三类必要 Cookie。应用不会保存或转发浏览器的完整 Cookie 字符串。
+登录页由百度 HTTPS 页面提供，使用非持久 `WKWebsiteDataStore`。应用只允许百度域边界内的 HTTPS 导航，并在识别到精确的贴吧 HTTPS 成功回调后取消页面渲染，避免该 Universal Link 被官方贴吧 App 接管。应用只读取名称白名单、未过期且属于精确百度域的必要 Cookie；`STOKEN` 必须原始标记为 Secure。百度在 iOS WebKit 中下发的 `BDUSS`、`BDUSS_BFESS` 或 `BAIDUID` 若缺少 Secure 属性，仅可在上述精确成功回调已获准后于内存中提升为 Secure 表示，且后续只会发送到 HTTPS API。应用不会保存或转发浏览器的完整 Cookie 字符串。
 
 退出登录会清理旧 WebKit 百度数据、`HTTPCookieStorage`、URL/图片缓存和 Keychain。只有所有清理全部成功后才发布“已退出”状态；任一步失败时保持已登录并向用户显示错误。
 

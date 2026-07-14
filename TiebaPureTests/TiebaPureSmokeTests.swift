@@ -343,6 +343,16 @@ final class TiebaPureSmokeTests: XCTestCase {
         XCTAssertFalse(TiebaImageSourcePolicy.isSyntheticFailureURL(wrongScheme))
     }
 
+    func testSyntheticFixtureImageSuccessRequiresExactHTTPSHost() throws {
+        let fixture = try XCTUnwrap(URL(string: "https://fixture-success.invalid/long-image.png"))
+        let lookalike = try XCTUnwrap(URL(string: "https://fixture-success.invalid.example/long-image.png"))
+        let wrongScheme = try XCTUnwrap(URL(string: "http://fixture-success.invalid/long-image.png"))
+
+        XCTAssertTrue(TiebaImageSourcePolicy.isSyntheticSuccessURL(fixture))
+        XCTAssertFalse(TiebaImageSourcePolicy.isSyntheticSuccessURL(lookalike))
+        XCTAssertFalse(TiebaImageSourcePolicy.isSyntheticSuccessURL(wrongScheme))
+    }
+
     func testTiebaLiteInlineImageLayoutKeepsWideImagesShallowInThreadDetail() {
         let wideImage = ImageContent(
             thumbnailURL: URL(string: "https://image.example/wide-thumb.jpg"),
@@ -469,7 +479,7 @@ final class TiebaPureSmokeTests: XCTestCase {
         ))
         XCTAssertEqual(
             HomeRefreshAnimationPolicy.minimumVisibleDurationNanoseconds(arguments: []),
-            250_000_000
+            600_000_000
         )
         XCTAssertEqual(
             HomeRefreshAnimationPolicy.minimumVisibleDurationNanoseconds(
@@ -505,9 +515,35 @@ final class TiebaPureSmokeTests: XCTestCase {
     }
 
     func testShortPullRefreshRequiresTopAndVertical64PointPull() {
-        XCTAssertTrue(ShortPullRefreshPolicy.isAtTop(offset: 0))
-        XCTAssertTrue(ShortPullRefreshPolicy.isAtTop(offset: -2))
-        XCTAssertFalse(ShortPullRefreshPolicy.isAtTop(offset: -3))
+        XCTAssertEqual(
+            ShortPullRefreshPolicy.distanceFromTop(contentOffsetY: -59, topInset: 59),
+            0
+        )
+        XCTAssertEqual(
+            ShortPullRefreshPolicy.distanceFromTop(contentOffsetY: 41, topInset: 59),
+            100
+        )
+        XCTAssertEqual(ShortPullRefreshPolicy.distanceFromTop(markerOffset: -100), 100)
+        XCTAssertTrue(ShortPullRefreshPolicy.isAtTop(distanceFromTop: 0))
+        XCTAssertTrue(ShortPullRefreshPolicy.isAtTop(distanceFromTop: 2))
+        XCTAssertFalse(ShortPullRefreshPolicy.isAtTop(distanceFromTop: 3))
+
+        XCTAssertTrue(ShortPullRefreshPolicy.shouldBegin(
+            distanceFromTop: 0,
+            initialTranslation: CGSize(width: 0, height: 1)
+        ))
+        XCTAssertFalse(ShortPullRefreshPolicy.shouldBegin(
+            distanceFromTop: 20,
+            initialTranslation: CGSize(width: 0, height: 20)
+        ))
+        XCTAssertFalse(ShortPullRefreshPolicy.shouldBegin(
+            distanceFromTop: 0,
+            initialTranslation: CGSize(width: 0, height: -20)
+        ))
+        XCTAssertFalse(ShortPullRefreshPolicy.shouldBegin(
+            distanceFromTop: 0,
+            initialTranslation: CGSize(width: 20, height: 10)
+        ))
 
         XCTAssertTrue(ShortPullRefreshPolicy.shouldTrigger(
             startedAtTop: true,
@@ -534,6 +570,11 @@ final class TiebaPureSmokeTests: XCTestCase {
             isRefreshing: false,
             translation: CGSize(width: 80, height: 70)
         ))
+        XCTAssertFalse(ShortPullRefreshPolicy.shouldTrigger(
+            startedAtTop: false,
+            isRefreshing: false,
+            translation: CGSize(width: 0, height: 200)
+        ), "从列表中部开始并越过顶部的长下滑也不得刷新")
     }
 
     func testHomeOpenRefreshPolicyRefreshesWhenLoadedAppBecomesActive() {
@@ -665,104 +706,97 @@ final class TiebaPureSmokeTests: XCTestCase {
         XCTAssertLessThan(SubpostPreviewLayout.openAllHitHeight, 44)
     }
 
-    func testSubpostSheetTitleAndMiddleRightSwipeDismissPolicy() {
+    func testSubpostSheetTitle() {
         XCTAssertEqual(SubpostSheetTitle.text(floor: 2, count: 10), "2楼的回复(10条)")
-        XCTAssertTrue(SubpostDismissSwipePolicy.shouldDismiss(
-            startLocationX: 195,
-            containerWidth: 390,
-            translation: CGSize(width: 120, height: 10),
-            predictedEndTranslation: CGSize(width: 150, height: 12)
+    }
+
+    func testSubpostRightSwipeDismissPolicyAcceptsOnlyIntentionalRightSwipes() {
+        XCTAssertTrue(SubpostRightSwipeDismissPolicy.shouldBegin(
+            translation: CGSize(width: 32, height: 8)
         ))
-        XCTAssertTrue(SubpostDismissSwipePolicy.shouldDismiss(
-            startLocationX: 195,
-            containerWidth: 390,
-            translation: CGSize(width: 60, height: 8),
-            predictedEndTranslation: CGSize(width: 180, height: 10)
+        XCTAssertFalse(SubpostRightSwipeDismissPolicy.shouldBegin(
+            translation: CGSize(width: -32, height: 0)
         ))
-        XCTAssertFalse(SubpostDismissSwipePolicy.shouldDismiss(
-            startLocationX: 195,
-            containerWidth: 390,
-            translation: CGSize(width: -140, height: 0),
-            predictedEndTranslation: CGSize(width: -180, height: 0)
+        XCTAssertFalse(SubpostRightSwipeDismissPolicy.shouldBegin(
+            translation: CGSize(width: 20, height: 40)
         ))
-        XCTAssertFalse(SubpostDismissSwipePolicy.shouldDismiss(
-            startLocationX: 20,
-            containerWidth: 390,
-            translation: CGSize(width: 140, height: 0),
-            predictedEndTranslation: CGSize(width: 180, height: 0)
+        XCTAssertEqual(
+            SubpostRightSwipeDismissPolicy.verticalOffset(
+                translationX: 120,
+                containerHeight: 800
+            ),
+            120
+        )
+        XCTAssertEqual(
+            SubpostRightSwipeDismissPolicy.verticalOffset(
+                translationX: 800,
+                containerHeight: 800
+            ),
+            576
+        )
+        XCTAssertEqual(
+            SubpostRightSwipeDismissPolicy.predictedTranslation(
+                translationX: 40,
+                velocityX: 1_000
+            ),
+            220
+        )
+        XCTAssertTrue(SubpostRightSwipeDismissPolicy.shouldFinish(
+            translationX: 120,
+            predictedTranslationX: 120,
+            containerWidth: 390
         ))
-        XCTAssertFalse(SubpostDismissSwipePolicy.shouldDismiss(
-            startLocationX: 195,
-            containerWidth: 390,
-            translation: CGSize(width: 110, height: 120),
-            predictedEndTranslation: CGSize(width: 180, height: 160)
+        XCTAssertTrue(SubpostRightSwipeDismissPolicy.shouldFinish(
+            translationX: 40,
+            predictedTranslationX: 260,
+            containerWidth: 390
+        ))
+        XCTAssertFalse(SubpostRightSwipeDismissPolicy.shouldFinish(
+            translationX: 40,
+            predictedTranslationX: 100,
+            containerWidth: 390
         ))
     }
 
-    func testThreadDetailMiddleRightSwipeDismissPolicyRejectsEdgeVerticalAndLeftDrags() {
-        XCTAssertTrue(ThreadDetailDismissSwipePolicy.shouldDismiss(
+    func testInteractiveNavigationPopPolicySupportsFullScreenRightSwipe() {
+        XCTAssertTrue(InteractiveNavigationPopPolicy.shouldBegin(
             startLocationX: 195,
             containerWidth: 390,
-            translation: CGSize(width: 120, height: 8),
-            predictedEndTranslation: CGSize(width: 150, height: 10)
+            velocity: CGSize(width: 600, height: 30)
         ))
-        XCTAssertTrue(ThreadDetailDismissSwipePolicy.shouldDismiss(
-            startLocationX: 195,
-            containerWidth: 390,
-            translation: CGSize(width: 60, height: 4),
-            predictedEndTranslation: CGSize(width: 180, height: 8)
-        ))
-        XCTAssertFalse(ThreadDetailDismissSwipePolicy.shouldDismiss(
+        XCTAssertTrue(InteractiveNavigationPopPolicy.shouldBegin(
             startLocationX: 20,
             containerWidth: 390,
-            translation: CGSize(width: 140, height: 0),
-            predictedEndTranslation: CGSize(width: 180, height: 0)
+            velocity: CGSize(width: 600, height: 30)
         ))
-        XCTAssertFalse(ThreadDetailDismissSwipePolicy.shouldDismiss(
+        XCTAssertFalse(InteractiveNavigationPopPolicy.shouldBegin(
+            startLocationX: 370,
+            containerWidth: 390,
+            velocity: CGSize(width: 600, height: 30)
+        ))
+        XCTAssertFalse(InteractiveNavigationPopPolicy.shouldBegin(
             startLocationX: 195,
             containerWidth: 390,
-            translation: CGSize(width: -140, height: 0),
-            predictedEndTranslation: CGSize(width: -180, height: 0)
+            velocity: CGSize(width: -600, height: 0)
         ))
-        XCTAssertFalse(ThreadDetailDismissSwipePolicy.shouldDismiss(
+        XCTAssertFalse(InteractiveNavigationPopPolicy.shouldBegin(
             startLocationX: 195,
             containerWidth: 390,
-            translation: CGSize(width: 100, height: 100),
-            predictedEndTranslation: CGSize(width: 180, height: 160)
+            velocity: CGSize(width: 100, height: 200)
         ))
-    }
 
-    func testSearchMiddleRightSwipeDismissPolicyRejectsVerticalAndLeftDrags() {
-        XCTAssertTrue(SearchDismissSwipePolicy.shouldDismiss(
-            startLocationX: 195,
-            containerWidth: 390,
-            translation: CGSize(width: 120, height: 8),
-            predictedEndTranslation: CGSize(width: 150, height: 10)
-        ))
-        XCTAssertTrue(SearchDismissSwipePolicy.shouldDismiss(
-            startLocationX: 20,
-            containerWidth: 390,
-            translation: CGSize(width: 60, height: 4),
-            predictedEndTranslation: CGSize(width: 180, height: 8)
-        ))
-        XCTAssertFalse(SearchDismissSwipePolicy.shouldDismiss(
-            startLocationX: 350,
-            containerWidth: 390,
-            translation: CGSize(width: 140, height: 0),
-            predictedEndTranslation: CGSize(width: 180, height: 0)
-        ))
-        XCTAssertFalse(SearchDismissSwipePolicy.shouldDismiss(
-            startLocationX: 195,
-            containerWidth: 390,
-            translation: CGSize(width: -140, height: 0),
-            predictedEndTranslation: CGSize(width: -180, height: 0)
-        ))
-        XCTAssertFalse(SearchDismissSwipePolicy.shouldDismiss(
-            startLocationX: 195,
-            containerWidth: 390,
-            translation: CGSize(width: 100, height: 100),
-            predictedEndTranslation: CGSize(width: 180, height: 160)
-        ))
+        XCTAssertEqual(
+            InteractiveNavigationPopPolicy.progress(translationX: 195, containerWidth: 390),
+            0.5,
+            accuracy: 0.001
+        )
+        XCTAssertEqual(
+            InteractiveNavigationPopPolicy.progress(translationX: -20, containerWidth: 390),
+            0
+        )
+        XCTAssertTrue(InteractiveNavigationPopPolicy.shouldFinish(progress: 0.3, velocityX: 0))
+        XCTAssertTrue(InteractiveNavigationPopPolicy.shouldFinish(progress: 0.1, velocityX: 700))
+        XCTAssertFalse(InteractiveNavigationPopPolicy.shouldFinish(progress: 0.2, velocityX: 200))
     }
 
     private func thread(id: Int64, title: String) -> ThreadSummary {

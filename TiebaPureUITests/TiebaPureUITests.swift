@@ -58,6 +58,59 @@ final class TiebaPureUITests: XCTestCase {
         waitForExpectations(timeout: 8)
     }
 
+    func testHomeAndThreadRefreshKeepTopIndicatorsVisible() {
+        let app = launchApp(
+            scenario: "refreshUpdate",
+            additionalArguments: ["UITEST_EXTENDED_REFRESH_ANIMATION"]
+        )
+        XCTAssertTrue(threadRows(in: app).firstMatch.waitForExistence(timeout: 45))
+
+        let homeStart = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.20))
+        let homeEnd = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.34))
+        homeStart.press(forDuration: 0.1, thenDragTo: homeEnd)
+        XCTAssertTrue(
+            app.descendants(matching: .any)["home-refresh-animation"].waitForExistence(timeout: 2)
+        )
+        attachScreenshot(named: "fixture-home-refresh-indicator")
+
+        openFirstThread(in: app)
+        let threadStart = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.20))
+        let threadEnd = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.34))
+        threadStart.press(forDuration: 0.1, thenDragTo: threadEnd)
+        XCTAssertTrue(
+            app.descendants(matching: .any)["thread-refresh-animation"].waitForExistence(timeout: 2)
+        )
+        attachScreenshot(named: "fixture-thread-refresh-indicator")
+    }
+
+    func testPullingDownAwayFromHomeTopDoesNotRefresh() {
+        let app = launchApp(
+            scenario: "refreshUpdate",
+            additionalArguments: ["UITEST_EXTENDED_REFRESH_ANIMATION"]
+        )
+
+        let homeScrollView = app.scrollViews["home-feed-scroll-view"]
+        let firstThread = app.buttons["确定性主帖：回复筛选与媒体布局"]
+        XCTAssertTrue(homeScrollView.waitForExistence(timeout: 10))
+        XCTAssertTrue(firstThread.waitForExistence(timeout: 45))
+        for _ in 0..<6 where firstThread.isHittable {
+            homeScrollView.swipeUp()
+        }
+        XCTAssertFalse(firstThread.isHittable, "测试必须先让首页明确离开顶部")
+
+        let refreshAnimation = app.descendants(matching: .any)["home-refresh-animation"]
+        XCTAssertFalse(refreshAnimation.exists)
+
+        let start = homeScrollView.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.48))
+        let end = homeScrollView.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.66))
+        start.press(forDuration: 0.1, thenDragTo: end)
+
+        XCTAssertFalse(
+            refreshAnimation.waitForExistence(timeout: 1.5),
+            "首页不在顶部时向下滑动不得触发刷新"
+        )
+    }
+
     func testPullingEmptyForumStateLoadsContent() {
         let app = launchApp(scenario: "emptyThenSuccess")
 
@@ -119,6 +172,30 @@ final class TiebaPureUITests: XCTestCase {
         XCTAssertTrue(
             loginButton.waitForExistence(timeout: 5) || followedForumsButton.waitForExistence(timeout: 5)
         )
+    }
+
+    func testVerifiedLoginSkipPasswordStaysInAppAndPublishesAccount() {
+        let app = launchApp(additionalArguments: ["UITEST_LOGIN_REDIRECT_FIXTURE"])
+
+        rootTab("我的", in: app).tap()
+        let loginButton = app.buttons["手机号验证码登录"]
+        XCTAssertTrue(loginButton.waitForExistence(timeout: 8))
+        loginButton.tap()
+
+        let skipPassword = app.links["跳过设置密码"]
+        XCTAssertTrue(skipPassword.waitForExistence(timeout: 8))
+        XCTAssertFalse(app.alerts["登录失败"].exists)
+        skipPassword.tap()
+
+        XCTAssertTrue(app.staticTexts["模拟登录用户"].waitForExistence(timeout: 8))
+        let loginNavigationBar = app.navigationBars["手机号验证码登录"]
+        let dismissed = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == false"),
+            object: loginNavigationBar
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [dismissed], timeout: 5), .completed)
+        XCTAssertFalse(app.alerts["登录失败"].exists)
+        XCTAssertTrue(app.state == .runningForeground)
     }
 
     func testSearchResultRoutesToMatchedReply() {
@@ -193,6 +270,45 @@ final class TiebaPureUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["首页"].exists)
     }
 
+    func testRightSwipeOnThreadImageDismissesWithoutOpeningPreview() {
+        let app = launchApp(scenario: "imageGesture")
+        openFirstThread(in: app)
+
+        let inlineImage = visibleThreadInlineImage(in: app)
+        XCTAssertNotNil(inlineImage)
+        guard let inlineImage else { return }
+
+        let imageFrame = inlineImage.frame
+        let appFrame = app.frame
+        let visibleY = min(max(imageFrame.midY, appFrame.minY + 140), appFrame.maxY - 120)
+        let localY = min(max((visibleY - imageFrame.minY) / imageFrame.height, 0.1), 0.9)
+        let start = inlineImage.coordinate(withNormalizedOffset: CGVector(dx: 0.4, dy: localY))
+        let end = app.coordinate(withNormalizedOffset: CGVector(
+            dx: 0.9,
+            dy: (visibleY - appFrame.minY) / appFrame.height
+        ))
+        start.press(forDuration: 0.05, thenDragTo: end)
+
+        let preview = app.descendants(matching: .any)["full-screen-image-pager"]
+        XCTAssertFalse(preview.waitForExistence(timeout: 1), "图片区域右划不得打开全屏预览")
+        XCTAssertTrue(app.navigationBars["首页"].waitForExistence(timeout: 5))
+    }
+
+    func testTappingThreadImageStillOpensPreview() {
+        let app = launchApp(scenario: "imageGesture")
+        openFirstThread(in: app)
+
+        let inlineImage = visibleThreadInlineImage(in: app)
+        XCTAssertNotNil(inlineImage)
+        guard let inlineImage else { return }
+        inlineImage.tap()
+
+        XCTAssertTrue(
+            app.descendants(matching: .any)["full-screen-image-pager"].waitForExistence(timeout: 5),
+            "真正点按图片仍应打开全屏预览"
+        )
+    }
+
     func testThreadDetailShowsReplyControls() {
         let app = launchApp()
 
@@ -223,6 +339,7 @@ final class TiebaPureUITests: XCTestCase {
         rootTab("我的", in: app).tap()
         XCTAssertTrue(waitForElement(named: "关于 TiebaPure", in: app, maxSwipes: 4))
         app.buttons["关于 TiebaPure"].tap()
+        XCTAssertTrue(waitForLabelContaining("infinityf4p", in: app, maxSwipes: 2))
         XCTAssertTrue(waitForLabelContaining("开源与来源", in: app, maxSwipes: 4))
         XCTAssertTrue(waitForLabelContaining("GPL-3.0-only", in: app, maxSwipes: 5))
         XCTAssertTrue(waitForLabelContaining("查看 TiebaLite 来源项目", in: app, maxSwipes: 5))
@@ -309,7 +426,7 @@ final class TiebaPureUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["thread-subpost-metadata"].exists)
     }
 
-    func testSubpostSheetSupportsMiddleRightSwipeDismissal() {
+    func testSubpostRightSwipeDismissesTheWholeSheet() {
         let app = launchApp(scenario: "subpostReference")
         openFirstThread(in: app)
 
@@ -321,15 +438,27 @@ final class TiebaPureUITests: XCTestCase {
         XCTAssertTrue(navigationBar.waitForExistence(timeout: 8))
         attachScreenshot(named: "fixture-subpost-reference-layout")
 
-        let swipeStart = app.coordinate(withNormalizedOffset: CGVector(dx: 0.45, dy: 0.55))
-        let swipeEnd = app.coordinate(withNormalizedOffset: CGVector(dx: 0.88, dy: 0.55))
-        swipeStart.press(forDuration: 0.05, thenDragTo: swipeEnd)
+        let downwardStart = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.32))
+        let downwardEnd = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.72))
+        downwardStart.press(forDuration: 0.05, thenDragTo: downwardEnd)
+        XCTAssertTrue(navigationBar.exists, "楼中楼下滑只能滚动内容，不应退出")
+
+        let swipeStart = app.coordinate(withNormalizedOffset: CGVector(dx: 0.35, dy: 0.45))
+        let swipeEnd = app.coordinate(withNormalizedOffset: CGVector(dx: 0.88, dy: 0.45))
+        swipeStart.press(
+            forDuration: 0.05,
+            thenDragTo: swipeEnd,
+            withVelocity: 300,
+            thenHoldForDuration: 0.4
+        )
 
         let dismissed = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "exists == false"),
             object: navigationBar
         )
         XCTAssertEqual(XCTWaiter.wait(for: [dismissed], timeout: 5), .completed)
+        XCTAssertTrue(app.buttons["更多"].waitForExistence(timeout: 3))
+        attachScreenshot(named: "fixture-subpost-returned-to-thread")
     }
 
     func testFullScreenImageOffersDownloadAndTapReturnsToSource() {
@@ -621,6 +750,15 @@ final class TiebaPureUITests: XCTestCase {
         }
         let didOpenDetail = app.buttons["更多"].waitForExistence(timeout: 8)
         XCTAssertTrue(didOpenDetail)
+    }
+
+    private func visibleThreadInlineImage(in app: XCUIApplication) -> XCUIElement? {
+        let inlineImage = app.descendants(matching: .any)["thread-inline-image"]
+        guard inlineImage.waitForExistence(timeout: 8) else { return nil }
+        for _ in 0..<8 where inlineImage.isHittable == false {
+            app.swipeUp()
+        }
+        return inlineImage.isHittable ? inlineImage : nil
     }
 
     private func waitForElement(named name: String, in app: XCUIApplication, maxSwipes: Int) -> Bool {
