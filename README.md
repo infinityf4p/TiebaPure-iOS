@@ -17,19 +17,16 @@ TiebaPure-iOS 是一个使用 SwiftUI 编写的非官方百度贴吧只读客户
 - 贴吧旧客户端协议请求字段、protobuf 组合、响应映射、内容过滤规则和部分阅读界面行为参考了 TiebaLite。
 - iOS/SwiftUI 代码是面向本项目的实现和修改，但可追溯衍生内容仍按 GPL 要求发布。
 
-代码、协议材料和可追溯衍生材料采用 [`GPL-3.0-only`](LICENSE)。修改日期为 **2026-07-14**。本软件不提供任何明示或暗示担保。
+代码、协议材料和可追溯衍生材料采用 [`GPL-3.0-only`](LICENSE)。修改日期为 **2026-07-15**。本软件不提供任何明示或暗示担保。
 
 另有 **54 个 PNG 表情资源的来源与再分发许可未知，本项目不声明这些文件受 GPL 授权**。保留这些文件是经明确选择后的兼容决定；披露并不能消除版权或再分发风险。逐文件 SHA-256、分类和完整说明见 [ASSET_MANIFEST.sha256](ASSET_MANIFEST.sha256) 与 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 ## 安全与隐私
 
-- 生产账号只保存在 Keychain，使用 `WhenUnlockedThisDeviceOnly`；旧版 `account.json` 仅允许一次性迁移，只有 Keychain 写入与明文删除均成功时才恢复账号，任何失败都要求重新登录且绝不回退到明文凭证。
-- 只保留经域边界、Secure、有效期和名称白名单验证的 `BDUSS`、`STOKEN`、`BAIDUID`，不保存浏览器完整 Cookie 头。
-- 登录 WebView 使用非持久数据仓库，仅允许百度 HTTPS 域，并只在精确的贴吧成功页面完成验证。
-- API 使用独立 ephemeral `URLSession`，关闭自动 Cookie、凭证和敏感响应缓存。
-- API 响应上限 16 MiB，图片上限 30 MiB；图片同时检查 MIME。
-- 媒体和网页 URL 仅允许安全 HTTPS 远程地址，拒绝 userinfo、本机、回环和私有 IP。
-- 完整隐私说明见 [PRIVACY.md](PRIVACY.md)。
+- 登录凭证只保存在 Keychain，不回退到明文文件；旧版明文账号数据仅用于一次性安全迁移。
+- 登录页面和网络请求限制为安全的 HTTPS 地址，并对 Cookie、缓存和响应大小进行约束。
+- 帖子浏览历史最多保存 500 条，仅保存在本机 UserDefaults，可在“我的 → 浏览历史”逐条删除或全部清空。
+- 更完整的存储、网络和数据处理说明见 [PRIVACY.md](PRIVACY.md)。
 
 ## 构建
 
@@ -49,21 +46,7 @@ xcodebuild -project TiebaPure.xcodeproj -scheme TiebaPure \
 
 ## 测试
 
-DEBUG 构建支持完全离线的确定性 UI 夹具。UI 测试使用启动参数 `UITEST_USE_FIXTURES`，场景通过 `TIEBAPURE_FIXTURE_SCENARIO` 选择：
-
-- `success`
-- `refreshUpdate`（第二次首页请求返回可识别的新内容）
-- `emptyThenSuccess`（吧页首次为空，下拉后返回内容）
-- `empty`
-- `error`
-- `expired`
-- `slow`
-- `paginationFailure`（同一失败页重试后成功）
-- `longContent`
-
-测试清单共 **120 个单元测试**和 **27 个 fixture UI 测试**。普通本地测试与 CI 运行 119 个离线单元测试，并按设计跳过 1 个必须显式启用的匿名线上冒烟测试；CI 不访问贴吧线上服务，也不使用真实百度账号。
-
-UI 测试含 1 个仅在 Reduce Motion 下运行及 2 个仅限 iPad 的条件测试，因此各设备的通过/跳过数量不同。为避免长时间连续重启应用触发 XCUITest Accessibility snapshot 超时，完整 UI 验收与 CI 将首页 Tab 重选测试单独运行，其余测试拆为两个分片，并按 27 项去重聚合结果。
+DEBUG 构建提供离线 fixture，单元测试和 CI UI 测试不依赖贴吧线上服务，也不使用真实百度账号。
 
 ```bash
 xcodebuild -project TiebaPure.xcodeproj -scheme TiebaPure \
@@ -72,8 +55,8 @@ xcodebuild -project TiebaPure.xcodeproj -scheme TiebaPure \
   test -only-testing:TiebaPureTests
 ```
 
-模拟器 XCTest 应保留正常签名配置，不要传入 `CODE_SIGNING_ALLOWED=NO`。完整 UI 分片、三设备矩阵、匿名线上冒烟结果及发布门禁状态见 [docs/verification.md](docs/verification.md)。
+完整测试方式、设备矩阵和验证结果见 [docs/verification.md](docs/verification.md)。
 
-## 明确不包含
+## 暂未包含的功能
 
-本项目不包含发帖/回复、多账号、个人资料编辑、帖子阅读历史、真实账号自动化测试、App Store 提交或整体视觉重设计。
+当前版本暂时不包含发帖与回复、多账号和个人资料编辑等功能，后续是否加入将根据维护情况决定。

@@ -17,6 +17,7 @@ struct ThreadDetailView: View {
     @State private var hasMore = true
     @State private var isLoading = false
     @State private var didLoad = false
+    @State private var didRecordBrowsingHistory = false
     @State private var errorMessage: String?
     @State private var seeLz = false
     @State private var sortType: ThreadReplySort = .hot
@@ -447,6 +448,14 @@ struct ThreadDetailView: View {
             if requestedPage == 1 {
                 posts = loaded.posts
                 pendingInitialPostID = nil
+                if didRecordBrowsingHistory == false {
+                    BrowsingHistoryStore.shared.record(
+                        thread: loaded.thread,
+                        forum: loaded.forum,
+                        fallbackForumID: forumID
+                    )
+                    didRecordBrowsingHistory = true
+                }
             } else {
                 let knownIDs = Set(posts.map(\.id))
                 posts.append(contentsOf: loaded.posts.filter { knownIDs.contains($0.id) == false })

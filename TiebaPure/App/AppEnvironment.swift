@@ -18,6 +18,9 @@ final class AppEnvironment: ObservableObject {
         if arguments.contains("UITEST_RESET_SEARCH_HISTORY") {
             SearchHistoryStore.shared.clear()
         }
+        if arguments.contains("UITEST_RESET_BROWSING_HISTORY") {
+            BrowsingHistoryStore.shared.clear()
+        }
         if arguments.contains("UITEST_USE_FIXTURES") {
             return fixture()
         }

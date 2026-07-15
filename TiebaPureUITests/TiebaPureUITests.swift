@@ -174,6 +174,30 @@ final class TiebaPureUITests: XCTestCase {
         )
     }
 
+    func testViewingThreadAddsBrowsingHistoryInMeAndReopensIt() {
+        let app = launchApp()
+        openFirstThread(in: app)
+        XCTAssertTrue(app.buttons["更多"].waitForExistence(timeout: 8))
+
+        let threadBackButton = app.navigationBars.buttons.firstMatch
+        XCTAssertTrue(threadBackButton.isHittable)
+        threadBackButton.tap()
+        XCTAssertTrue(rootTab("我的", in: app).waitForExistence(timeout: 8))
+
+        rootTab("我的", in: app).tap()
+        let historyEntry = app.buttons["browsing-history-entry"]
+        XCTAssertTrue(historyEntry.waitForExistence(timeout: 8))
+        historyEntry.tap()
+
+        XCTAssertTrue(app.navigationBars["浏览历史"].waitForExistence(timeout: 8))
+        let historyRow = app.buttons["browsing-history-row-1001"]
+        XCTAssertTrue(historyRow.waitForExistence(timeout: 8))
+        XCTAssertTrue(app.staticTexts["确定性主帖：回复筛选与媒体布局"].exists)
+
+        historyRow.tap()
+        XCTAssertTrue(app.buttons["更多"].waitForExistence(timeout: 8))
+    }
+
     func testVerifiedLoginSkipPasswordStaysInAppAndPublishesAccount() {
         let app = launchApp(additionalArguments: ["UITEST_LOGIN_REDIRECT_FIXTURE"])
 
@@ -715,7 +739,8 @@ final class TiebaPureUITests: XCTestCase {
         app.launchArguments = [
             "UITEST_USE_FIXTURES",
             "UITEST_DISABLE_ANIMATIONS",
-            "UITEST_RESET_SEARCH_HISTORY"
+            "UITEST_RESET_SEARCH_HISTORY",
+            "UITEST_RESET_BROWSING_HISTORY"
         ] + additionalArguments
         app.launchEnvironment["TIEBAPURE_FIXTURE_SCENARIO"] = scenario
         if let account {

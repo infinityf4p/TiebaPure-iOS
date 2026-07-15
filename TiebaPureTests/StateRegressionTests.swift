@@ -78,6 +78,78 @@ final class StateRegressionTests: XCTestCase {
         defaults.removePersistentDomain(forName: suiteName)
     }
 
+    @MainActor
+    func testBrowsingHistoryPersistsDeduplicatesLimitsAndDeletes() throws {
+        XCTAssertEqual(BrowsingHistoryPolicy.maximumStoredEntries, 500)
+        let suiteName = "BrowsingHistoryStoreTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defaults.removePersistentDomain(forName: suiteName)
+        var tick: TimeInterval = 0
+        let store = BrowsingHistoryStore(
+            defaults: defaults,
+            key: "browsing-history",
+            limit: 2
+        ) {
+            tick += 1
+            return Date(timeIntervalSince1970: tick)
+        }
+        let author = UserSummary(
+            id: 1,
+            name: "author",
+            displayName: "历史作者",
+            portrait: ""
+        )
+        let forum = Forum(
+            id: 101,
+            name: "测试",
+            displayName: "测试吧",
+            avatarURL: nil,
+            memberCount: 0,
+            threadCount: 0
+        )
+        func thread(id: Int64, title: String, forumID: Int64? = nil) -> ThreadSummary {
+            ThreadSummary(
+                id: id,
+                forumID: forumID,
+                title: title,
+                author: author,
+                forumName: forum.name,
+                replyCount: 0,
+                viewCount: 0,
+                blocks: []
+            )
+        }
+
+        store.record(thread: thread(id: 1, title: "第一条"), forum: forum)
+        store.record(thread: thread(id: 2, title: "第二条"), forum: forum)
+        store.record(thread: thread(id: 1, title: "更新后的第一条"), forum: forum)
+        store.record(
+            thread: thread(id: 3, title: "第三条"),
+            fallbackForumID: 303
+        )
+        store.record(thread: thread(id: 0, title: "无效帖子"), forum: forum)
+
+        XCTAssertEqual(store.items.map(\.threadID), [3, 1])
+        XCTAssertEqual(store.items.last?.title, "更新后的第一条")
+        XCTAssertEqual(store.items.first?.forumID, 303)
+        XCTAssertEqual(store.items.last?.forumDisplayName, "测试吧")
+        XCTAssertEqual(store.items.first?.visitedAt, Date(timeIntervalSince1970: 4))
+
+        let reloaded = BrowsingHistoryStore(
+            defaults: defaults,
+            key: "browsing-history",
+            limit: 2
+        )
+        XCTAssertEqual(reloaded.items, store.items)
+
+        reloaded.remove(threadIDs: [3])
+        XCTAssertEqual(reloaded.items.map(\.threadID), [1])
+        reloaded.clear()
+        XCTAssertTrue(reloaded.items.isEmpty)
+        XCTAssertNil(defaults.object(forKey: "browsing-history"))
+        defaults.removePersistentDomain(forName: suiteName)
+    }
+
     func testFixtureSearchCarriesPostIDAndCancellationPropagates() async throws {
         let api = FixtureTiebaAPI(scenario: .success)
         let page = try await api.searchThreads(

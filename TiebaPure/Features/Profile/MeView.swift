@@ -3,6 +3,7 @@ import SwiftUI
 struct MeView: View {
     let account: Account?
 
+    @ObservedObject private var browsingHistoryStore = BrowsingHistoryStore.shared
     @State private var showsLogin = false
     @State private var showsFollowedForums = false
 
@@ -79,6 +80,28 @@ struct MeView: View {
                     }
                 }
 
+                Section("浏览") {
+                    NavigationLink {
+                        BrowsingHistoryView(account: account)
+                    } label: {
+                        HStack(spacing: TiebaPureTheme.Spacing.sm) {
+                            Label("浏览历史", systemImage: "clock.arrow.circlepath")
+                            Spacer(minLength: TiebaPureTheme.Spacing.sm)
+                            if browsingHistoryStore.items.isEmpty == false {
+                                Text("\(browsingHistoryStore.items.count)")
+                                    .font(.subheadline.monospacedDigit())
+                                    .foregroundStyle(.secondary)
+                                    .accessibilityHidden(true)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                    }
+                    .accessibilityLabel(browsingHistoryAccessibilityLabel)
+                    .accessibilityHint("查看本机保存的帖子浏览记录")
+                    .accessibilityIdentifier("browsing-history-entry")
+                }
+
                 Section("应用") {
                     NavigationLink {
                         AboutView()
@@ -118,5 +141,10 @@ struct MeView: View {
                 }
             }
         }
+    }
+
+    private var browsingHistoryAccessibilityLabel: String {
+        guard browsingHistoryStore.items.isEmpty == false else { return "浏览历史" }
+        return "浏览历史，共 \(browsingHistoryStore.items.count) 条"
     }
 }
