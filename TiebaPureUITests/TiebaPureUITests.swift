@@ -469,6 +469,30 @@ final class TiebaPureUITests: XCTestCase {
         XCTAssertTrue(app.buttons["关闭图片"].exists)
         XCTAssertTrue(app.descendants(matching: .any)["full-screen-image-pager"].exists)
 
+        let zoomSurface = app.images["full-screen-image-zoom-surface-0"]
+        XCTAssertTrue(zoomSurface.waitForExistence(timeout: 5))
+        XCTAssertEqual(zoomSurface.value as? String, "缩放 100%")
+
+        app.pinch(withScale: 2, velocity: 2)
+        let zoomed = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "value != %@", "缩放 100%"),
+            object: zoomSurface
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [zoomed], timeout: 5), .completed)
+        XCTAssertTrue(app.buttons["关闭图片"].exists, "捏合缩放不应关闭图片页")
+
+        let enlargedPercentage = Int(
+            (zoomSurface.value as? String ?? "").filter(\.isNumber)
+        ) ?? 100
+        XCTAssertGreaterThan(enlargedPercentage, 100)
+
+        app.doubleTap()
+        let reset = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "value == %@", "缩放 100%"),
+            object: zoomSurface
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [reset], timeout: 5), .completed)
+
         saveButton.tap()
         XCTAssertTrue(app.alerts["图片已保存"].waitForExistence(timeout: 5))
         app.alerts["图片已保存"].buttons["好"].tap()

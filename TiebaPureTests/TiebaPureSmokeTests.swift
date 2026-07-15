@@ -385,6 +385,16 @@ final class TiebaPureSmokeTests: XCTestCase {
         )
     }
 
+    func testFullScreenImageZoomPolicyClampsAndTogglesAtStableScales() {
+        XCTAssertEqual(FullScreenImageZoomPolicy.clampedScale(0.5), 1)
+        XCTAssertEqual(FullScreenImageZoomPolicy.clampedScale(5), 4)
+        XCTAssertEqual(FullScreenImageZoomPolicy.normalizedScale(1.005), 1)
+        XCTAssertFalse(FullScreenImageZoomPolicy.isZoomed(1))
+        XCTAssertTrue(FullScreenImageZoomPolicy.isZoomed(1.5))
+        XCTAssertEqual(FullScreenImageZoomPolicy.doubleTapTarget(currentScale: 1), 2)
+        XCTAssertEqual(FullScreenImageZoomPolicy.doubleTapTarget(currentScale: 2), 1)
+    }
+
     func testFullScreenImageDownloadPrefersOriginalAndPreservesGIFExtension() throws {
         let original = try XCTUnwrap(URL(string: "https://example.com/photo.gif"))
         let thumbnail = try XCTUnwrap(URL(string: "https://example.com/photo-small.jpg"))
