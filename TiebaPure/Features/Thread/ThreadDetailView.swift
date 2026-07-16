@@ -6,6 +6,7 @@ struct ThreadDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @ObservedObject private var localThreadLibraryStore = LocalThreadLibraryStore.shared
     let account: Account?
     let threadID: Int64
     let forumID: Int64?
@@ -22,6 +23,7 @@ struct ThreadDetailView: View {
     @State private var seeLz = false
     @State private var sortType: ThreadReplySort = .hot
     @State private var selectedSubpostPost: Post?
+    @State private var selectedUser: UserSummary?
     @State private var isSearchActive = false
     @State private var didCopyLink = false
     @State private var pendingInitialPostID: UInt64?
@@ -32,6 +34,15 @@ struct ThreadDetailView: View {
     @State private var pullGestureStartedAtTop = false
     @State private var showsInlineRefreshAnimation = false
     @State private var showsPullRefreshIndicator = false
+    @State private var savedReadingPosition: ThreadReadingPosition?
+    @State private var didResolveSavedReadingPosition = false
+    @State private var isResumingReadingPosition = false
+    @State private var scrollRequest: ThreadPostScrollRequest?
+    @State private var lastRecordedReadingPostID: UInt64?
+    @State private var didMoveAwayFromTop = false
+    @State private var updatingPostLikeIDs = Set<UInt64>()
+    @State private var postLikeTasks: [UInt64: Task<Void, Never>] = [:]
+    @State private var likeActionError: String?
 
     init(account: Account?, threadID: Int64, forumID: Int64? = nil, initialPostID: UInt64? = nil) {
         self.account = account
@@ -58,15 +69,32 @@ struct ThreadDetailView: View {
             } else {
                 refreshablePostScrollView {
                     LazyVStack(spacing: 0) {
+                        if let savedReadingPosition {
+                            ContinueReadingButton(
+                                position: savedReadingPosition,
+                                isLoading: isResumingReadingPosition,
+                                action: continueFromSavedReadingPosition
+                            )
+                            .padding(.horizontal, TiebaPureTheme.Spacing.sm)
+                            .padding(.vertical, TiebaPureTheme.Spacing.xs)
+                        }
+
                         if let mainPost {
                             PostRowView(
                                 post: mainPost,
                                 threadTitle: threadPage?.thread.title,
                                 threadAuthorID: threadAuthorID,
                                 isMainPost: true,
-                                onOpenSubposts: openSubpostsIfPossible
+                                onOpenSubposts: openSubpostsIfPossible,
+                                onOpenUser: openUser,
+                                isLikeUpdating: updatingPostLikeIDs.contains(mainPost.id),
+                                onToggleLike: {
+                                    toggleLike(for: mainPost, objectType: .thread)
+                                }
                             )
                             .padding(.bottom, TiebaPureTheme.Spacing.xs)
+                            .threadReadingAnchor(post: mainPost)
+                            .id(mainPost.id)
                         }
 
                         Section {
@@ -79,8 +107,15 @@ struct ThreadDetailView: View {
                                     PostRowView(
                                         post: post,
                                         threadAuthorID: threadAuthorID,
-                                        onOpenSubposts: openSubpostsIfPossible
+                                        onOpenSubposts: openSubpostsIfPossible,
+                                        onOpenUser: openUser,
+                                        isLikeUpdating: updatingPostLikeIDs.contains(post.id),
+                                        onToggleLike: {
+                                            toggleLike(for: post, objectType: .post)
+                                        }
                                     )
+                                    .threadReadingAnchor(post: post)
+                                    .id(post.id)
                                     .onAppear {
                                         guard PaginationPrefetchPolicy.shouldLoadMore(
                                             currentIndex: index,
@@ -161,6 +196,17 @@ struct ThreadDetailView: View {
             }
             ToolbarItemGroup(placement: .topBarTrailing) {
                 Button {
+                    toggleFavorite()
+                } label: {
+                    Image(systemName: isFavorite ? "star.fill" : "star")
+                }
+                .disabled(threadPage == nil)
+                .accessibilityLabel(isFavorite ? "取消收藏帖子" : "收藏帖子")
+                .accessibilityValue(isFavorite ? "已收藏" : "未收藏")
+                .accessibilityHint(isFavorite ? "从本机帖子收藏中移除" : "保存到本机帖子收藏")
+                .accessibilityIdentifier("thread-favorite-button")
+
+                Button {
                     isSearchActive = true
                 } label: {
                     Image(systemName: "magnifyingglass")
@@ -199,8 +245,20 @@ struct ThreadDetailView: View {
         .navigationDestination(isPresented: $isSearchActive) {
             SearchResultsView(account: account, scope: searchScope, initialKeyword: "")
         }
+        .navigationDestination(isPresented: selectedUserIsActive) {
+            if let selectedUser {
+                UserProfileView(account: account, user: selectedUser)
+            }
+        }
         .alert("已复制链接", isPresented: $didCopyLink) {
             Button("好", role: .cancel) {}
+        }
+        .alert("提示", isPresented: likeActionErrorIsPresented) {
+            Button("好", role: .cancel) {
+                likeActionError = nil
+            }
+        } message: {
+            Text(likeActionError ?? "")
         }
         .sheet(item: $selectedSubpostPost) { post in
             if let forumID = resolvedForumID {
@@ -210,6 +268,7 @@ struct ThreadDetailView: View {
                     forumID: forumID,
                     post: post,
                     threadAuthorID: threadAuthorID,
+                    onPostLikeChanged: applyChangedPost,
                     onInteractiveDismiss: {
                         selectedSubpostPost = nil
                     }
@@ -236,10 +295,19 @@ struct ThreadDetailView: View {
             didLoad = false
             errorMessage = nil
             selectedSubpostPost = nil
+            selectedUser = nil
             showsInlineRefreshAnimation = false
             showsPullRefreshIndicator = false
             pendingInitialPostID = initialPostID
             scrollDistanceFromTop = 0
+            savedReadingPosition = nil
+            didResolveSavedReadingPosition = false
+            isResumingReadingPosition = false
+            scrollRequest = nil
+            lastRecordedReadingPostID = nil
+            didMoveAwayFromTop = false
+            cancelLikeTasks()
+            likeActionError = nil
             resetPullGestureState()
             Task { await reload() }
         }
@@ -250,65 +318,116 @@ struct ThreadDetailView: View {
             isLoading = false
             showsInlineRefreshAnimation = false
             showsPullRefreshIndicator = false
+            isResumingReadingPosition = false
+            scrollRequest = nil
+            cancelLikeTasks()
             resetPullGestureState()
         }
         .fullScreenInteractiveNavigationPop(isEnabled: selectedSubpostPost == nil)
     }
 
-    private func refreshablePostScrollView<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-        ScrollView {
-            VStack(spacing: 0) {
-                GeometryReader { proxy in
-                    Color.clear.preference(
-                        key: ThreadDetailScrollTopOffsetPreferenceKey.self,
-                        value: proxy.frame(in: .named(ThreadDetailScrollCoordinateSpace.name)).minY
+    private var selectedUserIsActive: Binding<Bool> {
+        Binding(
+            get: { selectedUser != nil },
+            set: { isActive in
+                if isActive == false { selectedUser = nil }
+            }
+        )
+    }
+
+    private var likeActionErrorIsPresented: Binding<Bool> {
+        Binding(
+            get: { likeActionError != nil },
+            set: { isPresented in
+                if isPresented == false { likeActionError = nil }
+            }
+        )
+    }
+
+    private func openUser(_ user: UserSummary) {
+        selectedUser = user
+    }
+
+    private func refreshablePostScrollView<Content: View>(
+        @ViewBuilder content: @escaping () -> Content
+    ) -> some View {
+        ScrollViewReader { scrollProxy in
+            ScrollView {
+                VStack(spacing: 0) {
+                    GeometryReader { proxy in
+                        Color.clear.preference(
+                            key: ThreadDetailScrollTopOffsetPreferenceKey.self,
+                            value: proxy.frame(in: .named(ThreadDetailScrollCoordinateSpace.name)).minY
+                        )
+                    }
+                    .frame(height: 0)
+
+                    content()
+                }
+                .contentShape(Rectangle())
+            }
+            .accessibilityIdentifier("thread-detail-scroll-view")
+            .coordinateSpace(name: ThreadDetailScrollCoordinateSpace.name)
+            .onPreferenceChange(ThreadDetailScrollTopOffsetPreferenceKey.self) { markerOffset in
+                if #unavailable(iOS 18.0) {
+                    scrollDistanceFromTop = ShortPullRefreshPolicy.distanceFromTop(
+                        markerOffset: markerOffset
                     )
                 }
-                .frame(height: 0)
-
-                content()
             }
-            .contentShape(Rectangle())
-        }
-        .coordinateSpace(name: ThreadDetailScrollCoordinateSpace.name)
-        .onPreferenceChange(ThreadDetailScrollTopOffsetPreferenceKey.self) { markerOffset in
-            if #unavailable(iOS 18.0) {
-                scrollDistanceFromTop = ShortPullRefreshPolicy.distanceFromTop(
-                    markerOffset: markerOffset
-                )
+            .onPreferenceChange(ThreadPostViewportPreferenceKey.self) { entries in
+                recordReadingPositionIfNeeded(entries: Array(entries.values))
             }
-        }
-        .trackVerticalScrollDistanceFromTop($scrollDistanceFromTop)
-        .simultaneousGesture(
-            DragGesture(minimumDistance: ShortPullRefreshPolicy.minimumTrackingDistance)
-                .onChanged { value in
-                    if isTrackingPullGesture == false {
-                        isTrackingPullGesture = true
-                        pullGestureStartedAtTop = ShortPullRefreshPolicy.shouldBegin(
-                            distanceFromTop: scrollDistanceFromTop,
-                            initialTranslation: value.translation
-                        )
-                        if pullGestureStartedAtTop, isLoading == false {
-                            setPullRefreshIndicator(visible: true)
+            .onChange(of: scrollDistanceFromTop) { distance in
+                handleReadingScrollDistanceChange(distance)
+            }
+            .onChange(of: scrollRequest) { request in
+                guard let request else { return }
+                DispatchQueue.main.async {
+                    if reduceMotion {
+                        scrollProxy.scrollTo(request.postID, anchor: .top)
+                    } else {
+                        withAnimation(.easeInOut(duration: 0.24)) {
+                            scrollProxy.scrollTo(request.postID, anchor: .top)
                         }
-                    } else if ShortPullRefreshPolicy.isAtTop(
-                        distanceFromTop: scrollDistanceFromTop
-                    ) == false {
-                        pullGestureStartedAtTop = false
-                        setPullRefreshIndicator(visible: false)
+                    }
+                    if scrollRequest?.id == request.id {
+                        scrollRequest = nil
                     }
                 }
-                .onEnded { value in
-                    let shouldRefresh = ShortPullRefreshPolicy.shouldTrigger(
-                        startedAtTop: pullGestureStartedAtTop,
-                        isRefreshing: isLoading,
-                        translation: value.translation
-                    )
-                    resetPullGestureState()
-                    guard shouldRefresh else { return }
-                    Task { await refreshFromPullGestureIfIdle() }
-                }
-        )
+            }
+            .trackVerticalScrollDistanceFromTop($scrollDistanceFromTop)
+            .simultaneousGesture(
+                DragGesture(minimumDistance: ShortPullRefreshPolicy.minimumTrackingDistance)
+                    .onChanged { value in
+                        if isTrackingPullGesture == false {
+                            isTrackingPullGesture = true
+                            pullGestureStartedAtTop = ShortPullRefreshPolicy.shouldBegin(
+                                distanceFromTop: scrollDistanceFromTop,
+                                initialTranslation: value.translation
+                            )
+                            if pullGestureStartedAtTop, isLoading == false {
+                                setPullRefreshIndicator(visible: true)
+                            }
+                        } else if ShortPullRefreshPolicy.isAtTop(
+                            distanceFromTop: scrollDistanceFromTop
+                        ) == false {
+                            pullGestureStartedAtTop = false
+                            setPullRefreshIndicator(visible: false)
+                        }
+                    }
+                    .onEnded { value in
+                        let shouldRefresh = ShortPullRefreshPolicy.shouldTrigger(
+                            startedAtTop: pullGestureStartedAtTop,
+                            isRefreshing: isLoading,
+                            translation: value.translation
+                        )
+                        resetPullGestureState()
+                        guard shouldRefresh else { return }
+                        Task { await refreshFromPullGestureIfIdle() }
+                    }
+            )
+        }
     }
 
     private func refreshFromPullGestureIfIdle() async {
@@ -401,6 +520,69 @@ struct ThreadDetailView: View {
         return components.url!
     }
 
+    private var isFavorite: Bool {
+        localThreadLibraryStore.isFavorite(threadID: threadID)
+    }
+
+    private func toggleFavorite() {
+        guard let threadPage else { return }
+        localThreadLibraryStore.toggleFavorite(
+            thread: threadPage.thread,
+            forum: threadPage.forum,
+            fallbackForumID: forumID
+        )
+    }
+
+    private func continueFromSavedReadingPosition() {
+        guard let position = savedReadingPosition,
+              isResumingReadingPosition == false else { return }
+        if posts.contains(where: { $0.id == position.postID }) {
+            savedReadingPosition = nil
+            requestScroll(to: position.postID)
+            return
+        }
+
+        isResumingReadingPosition = true
+        pendingInitialPostID = position.postID
+        Task { await reload() }
+    }
+
+    private func requestScroll(to postID: UInt64) {
+        guard postID > 0 else { return }
+        scrollRequest = ThreadPostScrollRequest(id: UUID(), postID: postID)
+    }
+
+    private func recordReadingPositionIfNeeded(entries: [ThreadPostViewportEntry]) {
+        guard didLoad,
+              let entry = ThreadReadingViewportPolicy.position(
+                entries: entries,
+                scrollDistanceFromTop: scrollDistanceFromTop
+              ),
+              entry.postID != lastRecordedReadingPostID else { return }
+
+        localThreadLibraryStore.recordReadingPosition(
+            threadID: threadID,
+            postID: entry.postID,
+            floor: entry.floor
+        )
+        lastRecordedReadingPostID = entry.postID
+        savedReadingPosition = nil
+        isResumingReadingPosition = false
+    }
+
+    private func handleReadingScrollDistanceChange(_ distance: CGFloat) {
+        if distance >= ThreadReadingViewportPolicy.minimumRecordingDistance {
+            didMoveAwayFromTop = true
+            return
+        }
+        guard didMoveAwayFromTop,
+              ShortPullRefreshPolicy.isAtTop(distanceFromTop: distance) else { return }
+        localThreadLibraryStore.clearReadingPosition(threadID: threadID)
+        savedReadingPosition = nil
+        lastRecordedReadingPostID = nil
+        didMoveAwayFromTop = false
+    }
+
     private func reload() async {
         loadTask?.cancel()
         requestGeneration += 1
@@ -448,6 +630,11 @@ struct ThreadDetailView: View {
             if requestedPage == 1 {
                 posts = loaded.posts
                 pendingInitialPostID = nil
+                localThreadLibraryStore.refreshFavoriteMetadata(
+                    thread: loaded.thread,
+                    forum: loaded.forum,
+                    fallbackForumID: forumID
+                )
                 if didRecordBrowsingHistory == false {
                     BrowsingHistoryStore.shared.record(
                         thread: loaded.thread,
@@ -455,6 +642,24 @@ struct ThreadDetailView: View {
                         fallbackForumID: forumID
                     )
                     didRecordBrowsingHistory = true
+                }
+                if didResolveSavedReadingPosition == false {
+                    didResolveSavedReadingPosition = true
+                    if initialPostID == nil {
+                        savedReadingPosition = localThreadLibraryStore.position(for: threadID)
+                    }
+                }
+                if let requestedPostID {
+                    let loadedPostIDs = Set(loaded.posts.map(\.id) + [loaded.mainPost?.id].compactMap { $0 })
+                    if loadedPostIDs.contains(requestedPostID) {
+                        requestScroll(to: requestedPostID)
+                    } else if isResumingReadingPosition {
+                        localThreadLibraryStore.clearReadingPosition(threadID: threadID)
+                    }
+                    if savedReadingPosition?.postID == requestedPostID {
+                        savedReadingPosition = nil
+                    }
+                    isResumingReadingPosition = false
                 }
             } else {
                 let knownIDs = Set(posts.map(\.id))
@@ -473,6 +678,7 @@ struct ThreadDetailView: View {
             guard generation == requestGeneration else { return }
             loadTask = nil
             isLoading = false
+            isResumingReadingPosition = false
             return
         } catch {
             guard generation == requestGeneration,
@@ -480,6 +686,7 @@ struct ThreadDetailView: View {
                   requestedSeeLz == seeLz,
                   requestedSort == sortType else { return }
             errorMessage = ReaderErrorMessage.message(for: error)
+            isResumingReadingPosition = false
         }
         guard generation == requestGeneration else { return }
         loadTask = nil
@@ -490,6 +697,89 @@ struct ThreadDetailView: View {
     private func openSubpostsIfPossible(_ post: Post) {
         guard post.subpostCount > 0 else { return }
         selectedSubpostPost = post
+    }
+
+    private func toggleLike(for post: Post, objectType: TiebaLikeObjectType) {
+        guard updatingPostLikeIDs.contains(post.id) == false else { return }
+        guard let account else {
+            likeActionError = "登录后才能点赞。"
+            return
+        }
+
+        let targetState = post.isLiked == false
+        updatingPostLikeIDs.insert(post.id)
+        likeActionError = nil
+
+        let task = Task {
+            do {
+                try await environment.api.setPostLiked(
+                    account: account,
+                    threadID: threadID,
+                    postID: post.id,
+                    objectType: objectType,
+                    liked: targetState
+                )
+                try Task.checkCancellation()
+                applyPostLikeState(postID: post.id, liked: targetState)
+            } catch is CancellationError {
+                // Leaving the screen or switching accounts intentionally cancels the action.
+            } catch {
+                likeActionError = ReaderErrorMessage.message(for: error)
+            }
+            updatingPostLikeIDs.remove(post.id)
+            postLikeTasks[post.id] = nil
+        }
+        postLikeTasks[post.id] = task
+    }
+
+    private func applyPostLikeState(postID: UInt64, liked: Bool) {
+        if var page = threadPage {
+            if var mainPost = page.mainPost, mainPost.id == postID {
+                updateLikeState(of: &mainPost, liked: liked)
+                page.mainPost = mainPost
+            }
+            for index in page.posts.indices where page.posts[index].id == postID {
+                updateLikeState(of: &page.posts[index], liked: liked)
+            }
+            threadPage = page
+        }
+        for index in posts.indices where posts[index].id == postID {
+            updateLikeState(of: &posts[index], liked: liked)
+        }
+        if var selectedPost = selectedSubpostPost, selectedPost.id == postID {
+            updateLikeState(of: &selectedPost, liked: liked)
+            selectedSubpostPost = selectedPost
+        }
+    }
+
+    private func applyChangedPost(_ changedPost: Post) {
+        if var page = threadPage {
+            if page.mainPost?.id == changedPost.id {
+                page.mainPost = changedPost
+            }
+            for index in page.posts.indices where page.posts[index].id == changedPost.id {
+                page.posts[index] = changedPost
+            }
+            threadPage = page
+        }
+        for index in posts.indices where posts[index].id == changedPost.id {
+            posts[index] = changedPost
+        }
+        if selectedSubpostPost?.id == changedPost.id {
+            selectedSubpostPost = changedPost
+        }
+    }
+
+    private func updateLikeState(of post: inout Post, liked: Bool) {
+        guard post.isLiked != liked else { return }
+        post.isLiked = liked
+        post.likeCount = max(post.likeCount + (liked ? 1 : -1), 0)
+    }
+
+    private func cancelLikeTasks() {
+        postLikeTasks.values.forEach { $0.cancel() }
+        postLikeTasks.removeAll()
+        updatingPostLikeIDs.removeAll()
     }
 }
 
@@ -502,6 +792,124 @@ private struct ThreadDetailScrollTopOffsetPreferenceKey: PreferenceKey {
 
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
         value = nextValue()
+    }
+}
+
+struct ThreadPostViewportEntry: Equatable, Sendable {
+    var postID: UInt64
+    var floor: Int
+    var minY: CGFloat
+    var maxY: CGFloat
+}
+
+enum ThreadReadingViewportPolicy {
+    static let minimumRecordingDistance: CGFloat = 44
+    static let captureLineY: CGFloat = 88
+
+    static func position(
+        entries: [ThreadPostViewportEntry],
+        scrollDistanceFromTop: CGFloat
+    ) -> ThreadPostViewportEntry? {
+        guard scrollDistanceFromTop >= minimumRecordingDistance else { return nil }
+        return entries
+            .filter { entry in
+                entry.postID > 0
+                    && entry.floor > 1
+                    && entry.minY.isFinite
+                    && entry.maxY.isFinite
+                    && entry.minY <= captureLineY
+                    && entry.maxY > captureLineY
+            }
+            .max(by: { $0.minY < $1.minY })
+    }
+}
+
+private struct ThreadPostScrollRequest: Equatable {
+    var id: UUID
+    var postID: UInt64
+}
+
+private struct ThreadPostViewportPreferenceKey: PreferenceKey {
+    static var defaultValue: [UInt64: ThreadPostViewportEntry] = [:]
+
+    static func reduce(
+        value: inout [UInt64: ThreadPostViewportEntry],
+        nextValue: () -> [UInt64: ThreadPostViewportEntry]
+    ) {
+        value.merge(nextValue(), uniquingKeysWith: { _, new in new })
+    }
+}
+
+private extension View {
+    func threadReadingAnchor(post: Post) -> some View {
+        background {
+            GeometryReader { proxy in
+                let frame = proxy.frame(in: .named(ThreadDetailScrollCoordinateSpace.name))
+                Color.clear.preference(
+                    key: ThreadPostViewportPreferenceKey.self,
+                    value: [
+                        post.id: ThreadPostViewportEntry(
+                            postID: post.id,
+                            floor: post.floor,
+                            minY: frame.minY,
+                            maxY: frame.maxY
+                        )
+                    ]
+                )
+            }
+        }
+    }
+}
+
+private struct ContinueReadingButton: View {
+    let position: ThreadReadingPosition
+    let isLoading: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: TiebaPureTheme.Spacing.sm) {
+                Image(systemName: "arrow.down.circle")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(Color.accentColor)
+                    .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: TiebaPureTheme.Spacing.xxs) {
+                    Text(isLoading ? "正在定位上次阅读位置" : "继续上次阅读")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                    Text("上次读到 \(position.floor)楼")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                if isLoading {
+                    ProgressView()
+                        .controlSize(.small)
+                        .accessibilityHidden(true)
+                } else {
+                    Image(systemName: "chevron.down")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .accessibilityHidden(true)
+                }
+            }
+            .padding(.horizontal, TiebaPureTheme.Spacing.sm)
+            .padding(.vertical, TiebaPureTheme.Spacing.xs)
+            .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: TiebaPureTheme.Radius.card, style: .continuous)
+                    .fill(TiebaPureTheme.ColorToken.readerSecondarySurface)
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(isLoading)
+        .accessibilityLabel(isLoading ? "正在定位上次阅读位置" : "继续上次阅读")
+        .accessibilityValue("\(position.floor)楼")
+        .accessibilityHint("跳转到上次阅读的回复")
+        .accessibilityIdentifier("continue-reading-button")
     }
 }
 
@@ -643,10 +1051,11 @@ private struct SubpostListSheet: View {
     let account: Account?
     let threadID: Int64
     let forumID: Int64
-    let post: Post
     let threadAuthorID: Int64?
+    let onPostLikeChanged: (Post) -> Void
     let onInteractiveDismiss: () -> Void
 
+    @State private var post: Post
     @State private var subposts: [Subpost] = []
     @State private var nextPage = 1
     @State private var isLoading = false
@@ -655,6 +1064,28 @@ private struct SubpostListSheet: View {
     @State private var errorMessage: String?
     @State private var requestGeneration = 0
     @State private var loadTask: Task<[Subpost], Error>?
+    @State private var selectedUser: UserSummary?
+    @State private var updatingLikeIDs = Set<UInt64>()
+    @State private var likeTasks: [UInt64: Task<Void, Never>] = [:]
+    @State private var likeActionError: String?
+
+    init(
+        account: Account?,
+        threadID: Int64,
+        forumID: Int64,
+        post: Post,
+        threadAuthorID: Int64?,
+        onPostLikeChanged: @escaping (Post) -> Void,
+        onInteractiveDismiss: @escaping () -> Void
+    ) {
+        self.account = account
+        self.threadID = threadID
+        self.forumID = forumID
+        self.threadAuthorID = threadAuthorID
+        self.onPostLikeChanged = onPostLikeChanged
+        self.onInteractiveDismiss = onInteractiveDismiss
+        _post = State(initialValue: post)
+    }
 
     var body: some View {
         NavigationStack {
@@ -676,7 +1107,12 @@ private struct SubpostListSheet: View {
                                         author: post.author,
                                         floor: post.floor,
                                         isThreadAuthor: post.author.id == threadAuthorID,
-                                        trailingLikeCount: post.likeCount
+                                        trailingLikeCount: post.likeCount,
+                                        isLiked: post.isLiked,
+                                        isLikeUpdating: updatingLikeIDs.contains(post.id),
+                                        onToggleLike: { togglePostLike() },
+                                        likeAccessibilityIdentifier: "thread-subpost-parent-like-button",
+                                        onOpenUser: { selectedUser = post.author }
                                     )
 
                                     VStack(alignment: .leading, spacing: TiebaPureTheme.Spacing.sm) {
@@ -705,7 +1141,13 @@ private struct SubpostListSheet: View {
                                 .accessibilityHidden(true)
 
                             ForEach(Array(subposts.enumerated()), id: \.element.id) { index, subpost in
-                                SubpostRowView(subpost: subpost, threadAuthorID: threadAuthorID)
+                                SubpostRowView(
+                                    subpost: subpost,
+                                    threadAuthorID: threadAuthorID,
+                                    onOpenUser: { selectedUser = subpost.author },
+                                    isLikeUpdating: updatingLikeIDs.contains(subpost.id),
+                                    onToggleLike: { toggleSubpostLike(subpost) }
+                                )
                                     .onAppear {
                                         guard PaginationPrefetchPolicy.shouldLoadMore(
                                             currentIndex: index,
@@ -744,6 +1186,18 @@ private struct SubpostListSheet: View {
                         Button("完成") { dismiss() }
                     }
                 }
+                .navigationDestination(isPresented: selectedUserIsActive) {
+                    if let selectedUser {
+                        UserProfileView(account: account, user: selectedUser)
+                    }
+                }
+                .alert("提示", isPresented: likeActionErrorIsPresented) {
+                    Button("好", role: .cancel) {
+                        likeActionError = nil
+                    }
+                } message: {
+                    Text(likeActionError ?? "")
+                }
             }
             .accessibilityAction(named: "关闭楼中楼") {
                 dismiss()
@@ -756,6 +1210,7 @@ private struct SubpostListSheet: View {
                 loadTask?.cancel()
                 requestGeneration += 1
                 isLoading = false
+                cancelLikeTasks()
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color(uiColor: .systemBackground))
@@ -764,6 +1219,24 @@ private struct SubpostListSheet: View {
                     onDismiss: onInteractiveDismiss
                 )
             }
+    }
+
+    private var selectedUserIsActive: Binding<Bool> {
+        Binding(
+            get: { selectedUser != nil },
+            set: { isActive in
+                if isActive == false { selectedUser = nil }
+            }
+        )
+    }
+
+    private var likeActionErrorIsPresented: Binding<Bool> {
+        Binding(
+            get: { likeActionError != nil },
+            set: { isPresented in
+                if isPresented == false { likeActionError = nil }
+            }
+        )
     }
 
     private func reload() async {
@@ -822,11 +1295,84 @@ private struct SubpostListSheet: View {
         isLoading = false
         didLoad = true
     }
+
+    private func togglePostLike() {
+        let objectType: TiebaLikeObjectType = post.floor == 1 ? .thread : .post
+        performLikeMutation(
+            id: post.id,
+            objectType: objectType,
+            currentlyLiked: post.isLiked
+        ) { liked in
+            guard post.isLiked != liked else { return }
+            post.isLiked = liked
+            post.likeCount = max(post.likeCount + (liked ? 1 : -1), 0)
+            onPostLikeChanged(post)
+        }
+    }
+
+    private func toggleSubpostLike(_ subpost: Subpost) {
+        performLikeMutation(
+            id: subpost.id,
+            objectType: .subpost,
+            currentlyLiked: subpost.isLiked
+        ) { liked in
+            guard let index = subposts.firstIndex(where: { $0.id == subpost.id }),
+                  subposts[index].isLiked != liked else { return }
+            subposts[index].isLiked = liked
+            subposts[index].likeCount = max(subposts[index].likeCount + (liked ? 1 : -1), 0)
+        }
+    }
+
+    private func performLikeMutation(
+        id: UInt64,
+        objectType: TiebaLikeObjectType,
+        currentlyLiked: Bool,
+        apply: @escaping (Bool) -> Void
+    ) {
+        guard updatingLikeIDs.contains(id) == false else { return }
+        guard let account else {
+            likeActionError = "登录后才能点赞。"
+            return
+        }
+
+        let targetState = currentlyLiked == false
+        updatingLikeIDs.insert(id)
+        likeActionError = nil
+        let task = Task {
+            do {
+                try await environment.api.setPostLiked(
+                    account: account,
+                    threadID: threadID,
+                    postID: id,
+                    objectType: objectType,
+                    liked: targetState
+                )
+                try Task.checkCancellation()
+                apply(targetState)
+            } catch is CancellationError {
+                // Closing the sheet intentionally cancels pending mutations.
+            } catch {
+                likeActionError = ReaderErrorMessage.message(for: error)
+            }
+            updatingLikeIDs.remove(id)
+            likeTasks[id] = nil
+        }
+        likeTasks[id] = task
+    }
+
+    private func cancelLikeTasks() {
+        likeTasks.values.forEach { $0.cancel() }
+        likeTasks.removeAll()
+        updatingLikeIDs.removeAll()
+    }
 }
 
 private struct SubpostRowView: View {
     let subpost: Subpost
     let threadAuthorID: Int64?
+    let onOpenUser: (() -> Void)?
+    let isLikeUpdating: Bool
+    let onToggleLike: (() -> Void)?
 
     var body: some View {
         ReaderCard {
@@ -836,7 +1382,12 @@ private struct SubpostRowView: View {
                     floor: subpost.floor,
                     isThreadAuthor: isThreadAuthor,
                     showsFloorBadge: true,
-                    trailingLikeCount: subpost.likeCount
+                    trailingLikeCount: subpost.likeCount,
+                    isLiked: subpost.isLiked,
+                    isLikeUpdating: isLikeUpdating,
+                    onToggleLike: onToggleLike,
+                    likeAccessibilityIdentifier: "thread-subpost-like-button-\(subpost.id)",
+                    onOpenUser: onOpenUser
                 )
 
                 VStack(alignment: .leading, spacing: TiebaPureTheme.Spacing.xs) {

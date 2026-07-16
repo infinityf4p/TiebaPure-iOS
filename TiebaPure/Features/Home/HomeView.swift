@@ -18,6 +18,7 @@ struct HomeView: View {
     @State private var navigationPath: [HomeNavigationRoute] = []
     @State private var selectedImagePreview: ImagePreviewSession?
     @State private var selectedVideoPreview: HomeVideoPreview?
+    @State private var selectedUser: UserSummary?
     @State private var showsInlineRefreshAnimation = false
     @State private var showsPullRefreshIndicator = false
     @State private var lastScenePhase: ScenePhase = .inactive
@@ -68,6 +69,7 @@ struct HomeView: View {
                                             RecentForumStore.shared.save(forum)
                                             navigationPath.append(.fromForum(forum))
                                         },
+                                        onOpenUser: { selectedUser = $0 },
                                         onOpenMedia: { item, mediaItems in
                                             switch HomeMediaActionPolicy.action(for: item, in: mediaItems) {
                                             case let .previewImages(images, index):
@@ -190,6 +192,11 @@ struct HomeView: View {
                     )
                 }
             }
+            .navigationDestination(isPresented: selectedUserIsActive) {
+                if let selectedUser {
+                    UserProfileView(account: account, user: selectedUser)
+                }
+            }
             .task {
                 guard didLoad == false else { return }
                 await reload(trigger: .initial)
@@ -213,6 +220,7 @@ struct HomeView: View {
                 scrollDistanceFromTop = 0
                 resetPullGestureState()
                 navigationPath = []
+                selectedUser = nil
                 Task { await reload(trigger: .initial) }
             }
             .onChange(of: scenePhase) { newPhase in
@@ -244,6 +252,7 @@ struct HomeView: View {
                 resetPullGestureState()
             }
         }
+        .toolbar(.visible, for: .tabBar)
     }
 
     private var searchIsActive: Binding<Bool> {
@@ -253,6 +262,15 @@ struct HomeView: View {
                 if isActive == false {
                     activeSearch = nil
                 }
+            }
+        )
+    }
+
+    private var selectedUserIsActive: Binding<Bool> {
+        Binding(
+            get: { selectedUser != nil },
+            set: { isActive in
+                if isActive == false { selectedUser = nil }
             }
         )
     }

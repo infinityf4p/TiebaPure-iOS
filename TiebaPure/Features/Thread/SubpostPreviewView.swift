@@ -5,17 +5,20 @@ struct SubpostPreviewView: View {
     let totalCount: Int
     let threadAuthorID: Int64?
     let onOpenAll: (() -> Void)?
+    let onOpenUser: ((UserSummary) -> Void)?
 
     init(
         subposts: [Subpost],
         totalCount: Int,
         threadAuthorID: Int64?,
-        onOpenAll: (() -> Void)? = nil
+        onOpenAll: (() -> Void)? = nil,
+        onOpenUser: ((UserSummary) -> Void)? = nil
     ) {
         self.subposts = Array(subposts.prefix(3))
         self.totalCount = totalCount
         self.threadAuthorID = threadAuthorID
         self.onOpenAll = onOpenAll
+        self.onOpenUser = onOpenUser
     }
 
     var body: some View {
@@ -25,7 +28,8 @@ struct SubpostPreviewView: View {
                     SubpostInlineRow(
                         subpost: subpost,
                         threadAuthorID: threadAuthorID,
-                        lineLimit: ThreadContentDisplayPolicy.detailLineLimit
+                        lineLimit: ThreadContentDisplayPolicy.detailLineLimit,
+                        onOpenUser: onOpenUser.map { open in { open(subpost.author) } }
                     )
                 }
 
@@ -76,6 +80,7 @@ struct SubpostInlineRow: View {
     let subpost: Subpost
     let threadAuthorID: Int64?
     var lineLimit: Int = ThreadContentDisplayPolicy.detailLineLimit
+    var onOpenUser: (() -> Void)?
 
     var body: some View {
         InlineContentText(
@@ -86,10 +91,29 @@ struct SubpostInlineRow: View {
                 authorName: subpost.author.displayNameResolved,
                 isThreadAuthor: isThreadAuthor
             ),
+            allowsTextSelection: ThreadContentInteractionPolicy.allowsTextSelection(
+                for: lineLimit
+            ),
             accessibilityIdentifier: "thread-subpost-preview-text"
         )
         .fixedSize(horizontal: false, vertical: true)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .overlay(alignment: .topLeading) {
+            if let onOpenUser {
+                Button(action: onOpenUser) {
+                    Text(subpost.author.displayNameResolved)
+                        .font(.subheadline)
+                        .foregroundStyle(.clear)
+                        .fixedSize()
+                        .frame(minHeight: 44, alignment: .top)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("查看用户\(subpost.author.displayNameResolved)的主页")
+                .accessibilityHint("打开用户主页")
+                .accessibilityIdentifier("thread-subpost-preview-user-\(subpost.author.id)")
+            }
+        }
     }
 
     private var isThreadAuthor: Bool {

@@ -215,15 +215,19 @@ jobs:
 
           reset_simulator
           run_ui_group \
+            -only-testing:TiebaPureUITests/TiebaPureUITests/testAppearanceSettingWorksForGuestAndPersistsAcrossRelaunch \
             -only-testing:TiebaPureUITests/TiebaPureUITests/testHomeAndThreadRefreshKeepTopIndicatorsVisible \
             -only-testing:TiebaPureUITests/TiebaPureUITests/testPullingDownAwayFromHomeTopDoesNotRefresh \
             -only-testing:TiebaPureUITests/TiebaPureUITests/testRightSwipeOnThreadImageDismissesWithoutOpeningPreview \
+            -only-testing:TiebaPureUITests/TiebaPureUITests/testSavedReadingPositionOffersContinueAndTargetsReply \
             -only-testing:TiebaPureUITests/TiebaPureUITests/testSearchBackButtonDismissesFocusedSearchInOneStepAndHistoryPersists \
             -only-testing:TiebaPureUITests/TiebaPureUITests/testSearchSupportsMiddleRightSwipeToPreviousPage \
             -only-testing:TiebaPureUITests/TiebaPureUITests/testShortPullRefreshesThreadDetailAtSameDistanceAsHome \
             -only-testing:TiebaPureUITests/TiebaPureUITests/testSubpostRightSwipeDismissesTheWholeSheet \
             -only-testing:TiebaPureUITests/TiebaPureUITests/testTappingThreadImageStillOpensPreview \
             -only-testing:TiebaPureUITests/TiebaPureUITests/testThreadDetailSupportsMiddleRightSwipeToPreviousPage \
+            -only-testing:TiebaPureUITests/TiebaPureUITests/testThreadDetailTextSupportsNativeCopySelection \
+            -only-testing:TiebaPureUITests/TiebaPureUITests/testThreadFavoriteAppearsInMeAndReopensIt \
             -only-testing:TiebaPureUITests/TiebaPureUITests/testVerifiedLoginSkipPasswordStaysInAppAndPublishesAccount \
             -only-testing:TiebaPureUITests/TiebaPureUITests/testViewingThreadAddsBrowsingHistoryInMeAndReopensIt
 

@@ -50,6 +50,7 @@ roots = [
     "ForumInfo.proto",
     "SimpleForum.proto",
     "User.proto",
+    "TiebaPureProfile/UserProfile.proto",
     "Media.proto",
     "VideoInfo.proto",
     "Page.proto",

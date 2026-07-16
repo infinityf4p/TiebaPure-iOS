@@ -1,0 +1,97 @@
+syntax = "proto3";
+
+package tiebapure.profile;
+
+import "Abstract.proto";
+import "CommonRequest.proto";
+import "Error.proto";
+import "Media.proto";
+import "PbContent.proto";
+import "User.proto";
+
+// Wire-compatible, deliberately small projections of Tieba's public profile
+// messages. Keeping only the fields used by this client avoids generating the
+// much larger collection of unrelated profile modules.
+message UserProfileRequestData {
+  optional int64 uid = 1;
+  uint32 need_post_count = 2;
+  optional int64 friend_uid = 3;
+  uint32 is_guest = 4;
+  uint32 pn = 6;
+  uint32 rn = 7;
+  uint32 has_plist = 8;
+  tieba.CommonRequest common = 9;
+  uint32 scr_w = 10;
+  uint32 scr_h = 11;
+  uint32 q_type = 12;
+  double scr_dip = 13;
+  int32 is_from_usercenter = 14;
+  int32 page = 15;
+  string friend_uid_portrait = 16;
+}
+
+message UserProfileRequest {
+  UserProfileRequestData data = 1;
+}
+
+message UserProfileResponseData {
+  tieba.User user = 1;
+}
+
+message UserProfileResponse {
+  tieba.Error error = 1;
+  UserProfileResponseData data = 2;
+}
+
+message UserThreadsRequestData {
+  int64 uid = 1;
+  uint32 rn = 2;
+  optional uint32 is_thread = 4;
+  uint32 need_content = 5;
+  uint32 pn = 26;
+  tieba.CommonRequest common = 27;
+  int32 scr_w = 29;
+  int32 scr_h = 30;
+  double scr_dip = 31;
+  int32 q_type = 32;
+  optional int32 is_view_card = 33;
+}
+
+message UserThreadsRequest {
+  UserThreadsRequestData data = 1;
+}
+
+message UserThreadItem {
+  uint64 forum_id = 1;
+  uint64 thread_id = 2;
+  uint64 post_id = 3;
+  uint32 is_thread = 4;
+  uint32 create_time = 5;
+  string forum_name = 6;
+  string title = 7;
+  string content_thread = 9;
+  string user_name = 10;
+  string ip = 11;
+  repeated tieba.Abstract abstract_thread = 15;
+  repeated tieba.Media media = 16;
+  uint32 reply_num = 17;
+  int64 user_id = 18;
+  string user_portrait = 19;
+  string name_show = 35;
+  int32 agree_num = 37;
+  int32 view_num = 38;
+  int32 share_num = 39;
+  repeated tieba.PbContent rich_title = 45;
+  repeated tieba.PbContent rich_abstract = 46;
+  repeated tieba.PbContent first_post_content = 49;
+}
+
+message UserThreadsResponseData {
+  repeated UserThreadItem post_list = 1;
+  uint32 hide_post = 2;
+}
+
+message UserThreadsResponse {
+  tieba.Error error = 1;
+  UserThreadsResponseData data = 2;
+}

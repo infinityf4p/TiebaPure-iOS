@@ -20,6 +20,163 @@ final class TiebaPureUITests: XCTestCase {
         XCTAssertTrue(threadRows(in: app).firstMatch.waitForExistence(timeout: 45))
     }
 
+    func testThreadAuthorOpensPublicUserProfile() {
+        let app = launchApp()
+        openFirstThread(in: app)
+
+        let userButton = app.buttons["thread-main-user-button"]
+        XCTAssertTrue(userButton.waitForExistence(timeout: 8))
+        XCTAssertTrue(userButton.isHittable)
+        userButton.tap()
+
+        XCTAssertTrue(app.descendants(matching: .any)["user-profile-screen"].waitForExistence(timeout: 8))
+        XCTAssertTrue(app.staticTexts["合成内容作者"].waitForExistence(timeout: 8))
+        XCTAssertTrue(app.staticTexts["user-profile-metadata"].waitForExistence(timeout: 8))
+        XCTAssertTrue(app.buttons["user-profile-follow-button"].exists)
+        XCTAssertTrue(app.buttons["user-profile-posts-tab"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["user-profile-thread-row"].waitForExistence(timeout: 8))
+        attachScreenshot(named: "fixture-public-user-profile-posts")
+
+        let forumsTab = app.buttons["user-profile-forums-tab"]
+        XCTAssertTrue(scrollToHittable(forumsTab, in: app.scrollViews["user-profile-screen"]))
+        forumsTab.tap()
+        XCTAssertTrue(app.buttons["user-profile-forum-row-0"].waitForExistence(timeout: 5))
+        attachScreenshot(named: "fixture-public-user-profile")
+    }
+
+    func testPrivateUserProfileShowsExplicitPrivacyStates() {
+        let app = launchApp(scenario: "privateProfile")
+        openFirstThread(in: app)
+
+        let userButton = app.buttons["thread-main-user-button"]
+        XCTAssertTrue(userButton.waitForExistence(timeout: 8))
+        userButton.tap()
+
+        XCTAssertTrue(app.descendants(matching: .any)["user-profile-private-posts"].waitForExistence(timeout: 8))
+        attachScreenshot(named: "fixture-private-user-profile-posts")
+        let forumsTab = app.buttons["user-profile-forums-tab"]
+        XCTAssertTrue(scrollToHittable(forumsTab, in: app.scrollViews["user-profile-screen"]))
+        forumsTab.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["user-profile-private-forums"].waitForExistence(timeout: 5))
+        attachScreenshot(named: "fixture-private-user-profile")
+    }
+
+    func testLoggedInAccountHeaderOpensOwnUserProfile() {
+        let app = launchApp(account: "loggedIn")
+        rootTab("我的", in: app).tap()
+
+        let profileButton = app.buttons["me-user-profile-button"]
+        XCTAssertTrue(profileButton.waitForExistence(timeout: 8))
+        XCTAssertTrue(profileButton.isHittable)
+        profileButton.tap()
+
+        XCTAssertTrue(app.descendants(matching: .any)["user-profile-screen"].waitForExistence(timeout: 8))
+        XCTAssertTrue(app.staticTexts["模拟登录用户"].waitForExistence(timeout: 8))
+        XCTAssertFalse(app.buttons["user-profile-follow-button"].exists)
+    }
+
+    func testLoggedInUserCanToggleProfileFollowState() {
+        let app = launchApp(account: "loggedIn")
+        openFirstThread(in: app)
+
+        let userButton = app.buttons["thread-main-user-button"]
+        XCTAssertTrue(userButton.waitForExistence(timeout: 8))
+        userButton.tap()
+
+        let followButton = app.buttons["user-profile-follow-button"]
+        XCTAssertTrue(followButton.waitForExistence(timeout: 8))
+        XCTAssertEqual(followButton.label, "关注用户")
+        followButton.tap()
+
+        let unfollowButton = app.buttons["user-profile-follow-button"]
+        let followed = NSPredicate(format: "label == %@", "取消关注")
+        expectation(for: followed, evaluatedWith: unfollowButton)
+        waitForExpectations(timeout: 5)
+        unfollowButton.tap()
+
+        let unfollowed = NSPredicate(format: "label == %@", "关注用户")
+        expectation(for: unfollowed, evaluatedWith: followButton)
+        waitForExpectations(timeout: 5)
+    }
+
+    func testLoggedInUserCanOpenFollowedUsersFromMe() {
+        let app = launchApp(account: "loggedIn")
+        rootTab("我的", in: app).tap()
+
+        let entry = app.buttons["followed-users-entry"]
+        XCTAssertTrue(entry.waitForExistence(timeout: 8))
+        XCTAssertTrue(entry.isHittable)
+        entry.tap()
+
+        XCTAssertTrue(
+            app.descendants(matching: .any)["followed-users-screen"]
+                .waitForExistence(timeout: 8)
+        )
+        let followedUser = app.buttons["followed-user-row-1"]
+        XCTAssertTrue(followedUser.waitForExistence(timeout: 8))
+        XCTAssertTrue(followedUser.isHittable)
+        XCTAssertTrue(app.staticTexts["另一个合成关注用户"].exists)
+
+        followedUser.tap()
+        XCTAssertTrue(
+            app.descendants(matching: .any)["user-profile-screen"]
+                .waitForExistence(timeout: 8)
+        )
+        XCTAssertTrue(app.staticTexts["合成内容作者"].waitForExistence(timeout: 8))
+    }
+
+    func testMeFollowRowsMatchBrowsingRowHeight() {
+        let app = launchApp(account: "loggedIn")
+        rootTab("我的", in: app).tap()
+
+        let followedUsers = app.buttons["followed-users-entry"]
+        let followedForums = app.buttons["我的关注吧"]
+        let favorites = app.buttons["thread-favorites-entry"]
+        let history = app.buttons["browsing-history-entry"]
+        XCTAssertTrue(followedUsers.waitForExistence(timeout: 8))
+        XCTAssertTrue(followedForums.exists)
+        XCTAssertTrue(favorites.exists)
+        XCTAssertTrue(history.exists)
+
+        let baselineHeight = favorites.frame.height
+        XCTAssertGreaterThanOrEqual(baselineHeight, 44)
+        XCTAssertEqual(history.frame.height, baselineHeight, accuracy: 1)
+        XCTAssertEqual(followedUsers.frame.height, baselineHeight, accuracy: 1)
+        XCTAssertEqual(followedForums.frame.height, baselineHeight, accuracy: 1)
+    }
+
+    func testLoggedInUserCanLikeThreadReplyAndSubpost() {
+        let app = launchApp(scenario: "subpostReference", account: "loggedIn")
+        openFirstThread(in: app)
+
+        let mainLikeButton = app.buttons["thread-main-like-button"]
+        XCTAssertTrue(mainLikeButton.waitForExistence(timeout: 8))
+        XCTAssertEqual(mainLikeButton.label, "点赞")
+        XCTAssertTrue(mainLikeButton.value as? String == "当前12个赞")
+        mainLikeButton.tap()
+        XCTAssertTrue(waitForLikeState(mainLikeButton, label: "取消点赞", count: 13))
+
+        XCTAssertTrue(waitForElement(named: "thread-like-button-2002", in: app, maxSwipes: 12))
+        let replyLikeButton = app.buttons["thread-like-button-2002"]
+        XCTAssertEqual(replyLikeButton.label, "点赞")
+        replyLikeButton.tap()
+        XCTAssertTrue(waitForLikeState(replyLikeButton, label: "取消点赞", count: 4))
+
+        XCTAssertTrue(waitForElement(named: "查看全部4条回复", in: app, maxSwipes: 8))
+        app.buttons["查看全部4条回复"].tap()
+        XCTAssertTrue(app.navigationBars["2楼的回复(4条)"].waitForExistence(timeout: 8))
+
+        let parentLikeButton = app.buttons["thread-subpost-parent-like-button"]
+        XCTAssertTrue(parentLikeButton.waitForExistence(timeout: 8))
+        XCTAssertTrue(waitForLikeState(parentLikeButton, label: "取消点赞", count: 4))
+
+        XCTAssertTrue(waitForElement(named: "thread-subpost-like-button-3051", in: app, maxSwipes: 8))
+        let subpostLikeButton = app.buttons["thread-subpost-like-button-3051"]
+        XCTAssertEqual(subpostLikeButton.label, "点赞")
+        subpostLikeButton.tap()
+        XCTAssertTrue(waitForLikeState(subpostLikeButton, label: "取消点赞", count: 1))
+    }
+
     func testPullingHomeFeedRefreshesContentAndPreservesExistingRows() {
         let app = launchApp(scenario: "refreshUpdate")
 
@@ -198,6 +355,61 @@ final class TiebaPureUITests: XCTestCase {
         XCTAssertTrue(app.buttons["更多"].waitForExistence(timeout: 8))
     }
 
+    func testThreadFavoriteAppearsInMeAndReopensIt() {
+        let app = launchApp()
+        openFirstThread(in: app)
+
+        let favoriteButton = app.buttons["thread-favorite-button"]
+        XCTAssertTrue(favoriteButton.waitForExistence(timeout: 8))
+        XCTAssertTrue(favoriteButton.isHittable)
+        favoriteButton.tap()
+        let favoriteUpdated = NSPredicate(format: "label == %@", "取消收藏帖子")
+        expectation(for: favoriteUpdated, evaluatedWith: favoriteButton)
+        waitForExpectations(timeout: 5)
+
+        let threadBackButton = app.navigationBars.buttons.firstMatch
+        XCTAssertTrue(threadBackButton.isHittable)
+        threadBackButton.tap()
+        rootTab("我的", in: app).tap()
+
+        let favoritesEntry = app.buttons["thread-favorites-entry"]
+        XCTAssertTrue(favoritesEntry.waitForExistence(timeout: 8))
+        favoritesEntry.tap()
+        XCTAssertTrue(app.navigationBars["帖子收藏"].waitForExistence(timeout: 8))
+
+        let favoriteRow = app.buttons["thread-favorite-row-1001"]
+        XCTAssertTrue(favoriteRow.waitForExistence(timeout: 8))
+        XCTAssertTrue(app.staticTexts["确定性主帖：回复筛选与媒体布局"].exists)
+        favoriteRow.tap()
+        XCTAssertTrue(app.buttons["thread-favorite-button"].waitForExistence(timeout: 8))
+    }
+
+    func testSavedReadingPositionOffersContinueAndTargetsReply() {
+        let app = launchApp(additionalArguments: ["UITEST_SEED_LOCAL_THREAD_LIBRARY"])
+        rootTab("我的", in: app).tap()
+
+        let favoritesEntry = app.buttons["thread-favorites-entry"]
+        XCTAssertTrue(favoritesEntry.waitForExistence(timeout: 8))
+        favoritesEntry.tap()
+        XCTAssertTrue(app.buttons["thread-library-manage"].waitForExistence(timeout: 8))
+        let favoriteRow = app.buttons["thread-favorite-row-1001"]
+        XCTAssertTrue(favoriteRow.waitForExistence(timeout: 8))
+        favoriteRow.tap()
+
+        let continueReading = app.buttons["continue-reading-button"]
+        XCTAssertTrue(continueReading.waitForExistence(timeout: 8))
+        XCTAssertEqual(continueReading.value as? String, "2楼")
+        let replyText = app.textViews["thread-reply-text"].firstMatch
+        XCTAssertTrue(replyText.waitForExistence(timeout: 8))
+        continueReading.tap()
+
+        let replyBecameVisible = NSPredicate(format: "hittable == true")
+        expectation(for: replyBecameVisible, evaluatedWith: replyText)
+        waitForExpectations(timeout: 5)
+        XCTAssertTrue((replyText.value as? String)?.contains("确定性回复内容") == true)
+        XCTAssertFalse(continueReading.exists)
+    }
+
     func testVerifiedLoginSkipPasswordStaysInAppAndPublishesAccount() {
         let app = launchApp(additionalArguments: ["UITEST_LOGIN_REDIRECT_FIXTURE"])
 
@@ -274,6 +486,39 @@ final class TiebaPureUITests: XCTestCase {
         )
         XCTAssertEqual(XCTWaiter.wait(for: [dismissed], timeout: 5), .completed)
         XCTAssertTrue(app.navigationBars["首页"].exists)
+        XCTAssertTrue(rootTab("首页", in: app).waitForExistence(timeout: 5))
+        XCTAssertTrue(rootTab("进吧", in: app).exists)
+        XCTAssertTrue(rootTab("我的", in: app).exists)
+    }
+
+    func testRootTabsRestoreAfterReturningFromFollowedUserProfileAndThread() {
+        let app = launchApp(account: "loggedIn")
+        openFirstThread(in: app)
+
+        let userButton = app.buttons["thread-main-user-button"]
+        XCTAssertTrue(userButton.waitForExistence(timeout: 8))
+        userButton.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["user-profile-screen"].waitForExistence(timeout: 8))
+
+        let followButton = app.buttons["user-profile-follow-button"]
+        XCTAssertTrue(followButton.waitForExistence(timeout: 5))
+        followButton.tap()
+        let followed = NSPredicate(format: "label == %@", "取消关注")
+        expectation(for: followed, evaluatedWith: followButton)
+        waitForExpectations(timeout: 5)
+
+        let profileNavigationBar = app.navigationBars["用户主页"]
+        XCTAssertTrue(profileNavigationBar.waitForExistence(timeout: 5))
+        let profileBackButton = profileNavigationBar.buttons.element(boundBy: 0)
+        XCTAssertTrue(profileBackButton.isHittable)
+        profileBackButton.tap()
+        XCTAssertTrue(app.buttons["更多"].waitForExistence(timeout: 5))
+
+        middleSwipeRight(in: app)
+        XCTAssertTrue(app.navigationBars["首页"].waitForExistence(timeout: 5))
+        XCTAssertTrue(rootTab("首页", in: app).waitForExistence(timeout: 5))
+        XCTAssertTrue(rootTab("进吧", in: app).exists)
+        XCTAssertTrue(rootTab("我的", in: app).exists)
     }
 
     func testThreadDetailSupportsMiddleRightSwipeToPreviousPage() {
@@ -292,6 +537,9 @@ final class TiebaPureUITests: XCTestCase {
         )
         XCTAssertEqual(XCTWaiter.wait(for: [dismissed], timeout: 5), .completed)
         XCTAssertTrue(app.navigationBars["首页"].exists)
+        XCTAssertTrue(rootTab("首页", in: app).waitForExistence(timeout: 5))
+        XCTAssertTrue(rootTab("进吧", in: app).exists)
+        XCTAssertTrue(rootTab("我的", in: app).exists)
     }
 
     func testRightSwipeOnThreadImageDismissesWithoutOpeningPreview() {
@@ -355,6 +603,45 @@ final class TiebaPureUITests: XCTestCase {
         XCTAssertTrue(app.buttons["搜索本吧"].exists)
         app.buttons["搜索本吧"].tap()
         XCTAssertTrue(app.textFields["search-input"].waitForExistence(timeout: 10))
+    }
+
+    func testThreadLevelBadgeStaysOnOneLine() {
+        let app = launchApp()
+        openFirstThread(in: app)
+
+        let referenceHeight = visibleLevelBadge(authorID: 1, in: app).frame.height
+        assertAuthorIdentityIsSingleRow(authorID: 1, isMainPost: true, includesThreadAuthorBadge: true, in: app)
+        let badge = visibleLevelBadge(authorID: 2, in: app)
+        XCTAssertEqual(badge.label, "贴吧等级13 血之磐涅")
+        XCTAssertEqual(
+            badge.frame.height,
+            referenceHeight,
+            accuracy: 1,
+            "长等级徽章应与同字号短徽章保持相同的单行高度"
+        )
+        assertAuthorIdentityIsSingleRow(authorID: 2, isMainPost: false, in: app)
+        attachScreenshot(named: "fixture-single-line-user-level-badge")
+    }
+
+    func testThreadLevelBadgeStaysOnOneLineAtAccessibilityXXXL() {
+        let app = launchApp(additionalArguments: [
+            "-UIPreferredContentSizeCategoryName",
+            "UICTContentSizeCategoryAccessibilityXXXL"
+        ])
+        openFirstThread(in: app)
+
+        let referenceHeight = visibleLevelBadge(authorID: 1, in: app).frame.height
+        assertAuthorIdentityIsSingleRow(authorID: 1, isMainPost: true, includesThreadAuthorBadge: true, in: app)
+        let badge = visibleLevelBadge(authorID: 2, in: app)
+        XCTAssertEqual(badge.label, "贴吧等级13 血之磐涅")
+        XCTAssertEqual(
+            badge.frame.height,
+            referenceHeight,
+            accuracy: 1,
+            "无障碍大字体下长等级徽章仍应保持单行高度"
+        )
+        assertAuthorIdentityIsSingleRow(authorID: 2, isMainPost: false, in: app)
+        attachScreenshot(named: "fixture-single-line-user-level-badge-axxxl")
     }
 
     func testAboutShowsTiebaLiteAttributionAndGPL() {
@@ -448,6 +735,25 @@ final class TiebaPureUITests: XCTestCase {
         XCTAssertNotNil(subpostText)
         XCTAssertGreaterThan(subpostText?.frame.height ?? 0, 80)
         XCTAssertTrue(app.descendants(matching: .any)["thread-subpost-metadata"].exists)
+    }
+
+    func testThreadDetailTextSupportsNativeCopySelection() {
+        let app = launchApp(scenario: "longContent")
+        openFirstThread(in: app)
+
+        let mainText = app.textViews["thread-main-text"]
+        XCTAssertTrue(mainText.waitForExistence(timeout: 8))
+        XCTAssertTrue(mainText.isHittable)
+        mainText.coordinate(withNormalizedOffset: CGVector(dx: 0.45, dy: 0.2))
+            .press(forDuration: 1.2)
+
+        let copyControl = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label IN %@", ["复制", "拷贝", "Copy"]))
+            .firstMatch
+        XCTAssertTrue(copyControl.waitForExistence(timeout: 5))
+        XCTAssertTrue(copyControl.isHittable)
+        copyControl.tap()
+        XCTAssertTrue(app.buttons["更多"].exists)
     }
 
     func testSubpostRightSwipeDismissesTheWholeSheet() {
@@ -597,6 +903,45 @@ final class TiebaPureUITests: XCTestCase {
         XCTAssertTrue(threadRows(in: app).firstMatch.waitForExistence(timeout: 8))
     }
 
+    func testAppearanceSettingWorksForGuestAndPersistsAcrossRelaunch() {
+        let expectedSystemAppearance = UITraitCollection.current.userInterfaceStyle == .dark
+            ? "深色"
+            : "浅色"
+        var app = launchApp()
+        rootTab("我的", in: app).tap()
+
+        let settingsEntry = app.descendants(matching: .any)["app-settings-entry"]
+        XCTAssertTrue(settingsEntry.waitForExistence(timeout: 8))
+        XCTAssertTrue(settingsEntry.isHittable)
+        settingsEntry.tap()
+        XCTAssertTrue(app.navigationBars["设置"].waitForExistence(timeout: 8))
+        XCTAssertTrue(waitForAppearance(expectedSystemAppearance, in: app))
+
+        let darkOption = appearanceOption("深色", in: app)
+        XCTAssertTrue(darkOption.waitForExistence(timeout: 5))
+        darkOption.tap()
+        XCTAssertTrue(waitForAppearance("深色", in: app))
+        attachScreenshot(named: "fixture-settings-dark")
+
+        app.terminate()
+        app = launchApp(resetAppearance: false)
+        rootTab("我的", in: app).tap()
+        XCTAssertTrue(app.descendants(matching: .any)["app-settings-entry"].waitForExistence(timeout: 8))
+        app.descendants(matching: .any)["app-settings-entry"].tap()
+        XCTAssertTrue(app.navigationBars["设置"].waitForExistence(timeout: 8))
+        XCTAssertTrue(waitForAppearance("深色", in: app))
+
+        let lightOption = appearanceOption("浅色", in: app)
+        XCTAssertTrue(lightOption.waitForExistence(timeout: 5))
+        lightOption.tap()
+        XCTAssertTrue(waitForAppearance("浅色", in: app))
+
+        let systemOption = appearanceOption("跟随系统", in: app)
+        XCTAssertTrue(systemOption.waitForExistence(timeout: 5))
+        systemOption.tap()
+        XCTAssertTrue(waitForAppearance(expectedSystemAppearance, in: app))
+    }
+
     func testFailedInlineImageRetryDoesNotOpenOrClosePreview() {
         let app = launchApp(scenario: "longContent")
         openFirstThread(in: app)
@@ -733,15 +1078,21 @@ final class TiebaPureUITests: XCTestCase {
     private func launchApp(
         scenario: String = "success",
         account: String? = nil,
-        additionalArguments: [String] = []
+        additionalArguments: [String] = [],
+        resetAppearance: Bool = true
     ) -> XCUIApplication {
         let app = XCUIApplication()
-        app.launchArguments = [
+        var launchArguments = [
             "UITEST_USE_FIXTURES",
             "UITEST_DISABLE_ANIMATIONS",
             "UITEST_RESET_SEARCH_HISTORY",
-            "UITEST_RESET_BROWSING_HISTORY"
-        ] + additionalArguments
+            "UITEST_RESET_BROWSING_HISTORY",
+            "UITEST_RESET_LOCAL_THREAD_LIBRARY"
+        ]
+        if resetAppearance {
+            launchArguments.append("UITEST_RESET_APPEARANCE")
+        }
+        app.launchArguments = launchArguments + additionalArguments
         app.launchEnvironment["TIEBAPURE_FIXTURE_SCENARIO"] = scenario
         if let account {
             app.launchEnvironment["TIEBAPURE_FIXTURE_ACCOUNT"] = account
@@ -750,8 +1101,90 @@ final class TiebaPureUITests: XCTestCase {
         return app
     }
 
+    private func waitForAppearance(_ appearance: String, in app: XCUIApplication) -> Bool {
+        let effectiveMode = app.descendants(matching: .any)["appearance-effective-mode"]
+        let predicate = NSPredicate(format: "label CONTAINS %@", appearance)
+        let expectation = XCTNSPredicateExpectation(predicate: predicate, object: effectiveMode)
+        return XCTWaiter.wait(for: [expectation], timeout: 5) == .completed
+    }
+
+    private func waitForLikeState(
+        _ button: XCUIElement,
+        label: String,
+        count: Int
+    ) -> Bool {
+        let predicate = NSPredicate(
+            format: "label == %@ AND value == %@",
+            label,
+            "当前\(count)个赞"
+        )
+        let expectation = XCTNSPredicateExpectation(predicate: predicate, object: button)
+        return XCTWaiter.wait(for: [expectation], timeout: 5) == .completed
+    }
+
+    private func visibleLevelBadge(authorID: Int64, in app: XCUIApplication) -> XCUIElement {
+        let badge = app.descendants(matching: .any)["thread-user-level-badge-\(authorID)"]
+        if badge.waitForExistence(timeout: 5) == false || badge.isHittable == false {
+            for _ in 0..<12 {
+                if badge.exists, badge.isHittable { break }
+                app.swipeUp()
+            }
+        }
+        XCTAssertTrue(badge.exists)
+        XCTAssertTrue(badge.isHittable)
+        return badge
+    }
+
+    private func assertAuthorIdentityIsSingleRow(
+        authorID: Int64,
+        isMainPost: Bool,
+        includesThreadAuthorBadge: Bool = false,
+        in app: XCUIApplication
+    ) {
+        let nameIdentifier = isMainPost ? "thread-main-user-name" : "thread-user-name-\(authorID)"
+        let name = app.descendants(matching: .any)[nameIdentifier]
+        let badge = app.descendants(matching: .any)["thread-user-level-badge-\(authorID)"]
+        XCTAssertTrue(name.waitForExistence(timeout: 5))
+        XCTAssertTrue(badge.waitForExistence(timeout: 5))
+        XCTAssertEqual(
+            name.frame.midY,
+            badge.frame.midY,
+            accuracy: 2,
+            "用户名和贴吧等级徽章必须保持在同一行"
+        )
+        if includesThreadAuthorBadge {
+            let threadAuthorBadge = app.descendants(matching: .any)["thread-author-badge-\(authorID)"]
+            XCTAssertTrue(threadAuthorBadge.waitForExistence(timeout: 5))
+            XCTAssertEqual(
+                name.frame.midY,
+                threadAuthorBadge.frame.midY,
+                accuracy: 2,
+                "用户名和楼主徽章必须保持在同一行"
+            )
+        }
+    }
+
+    private func appearanceOption(_ title: String, in app: XCUIApplication) -> XCUIElement {
+        app.buttons
+            .matching(identifier: "appearance-picker")
+            .matching(NSPredicate(format: "label == %@", title))
+            .firstMatch
+    }
+
     private func threadRows(in app: XCUIApplication) -> XCUIElementQuery {
         app.descendants(matching: .any).matching(identifier: "thread-row")
+    }
+
+    private func scrollToHittable(
+        _ element: XCUIElement,
+        in scrollView: XCUIElement,
+        maxSwipes: Int = 8
+    ) -> Bool {
+        guard element.waitForExistence(timeout: 2), scrollView.exists else { return false }
+        for _ in 0..<maxSwipes where element.isHittable == false {
+            scrollView.swipeUp()
+        }
+        return element.isHittable
     }
 
     private func openGlobalSearch(in app: XCUIApplication) -> XCUIElement {
@@ -799,6 +1232,12 @@ final class TiebaPureUITests: XCTestCase {
         }
         let didOpenDetail = app.buttons["更多"].waitForExistence(timeout: 8)
         XCTAssertTrue(didOpenDetail)
+    }
+
+    private func middleSwipeRight(in app: XCUIApplication) {
+        let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.45, dy: 0.38))
+        let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.88, dy: 0.38))
+        start.press(forDuration: 0.05, thenDragTo: end)
     }
 
     private func visibleThreadInlineImage(in app: XCUIApplication) -> XCUIElement? {

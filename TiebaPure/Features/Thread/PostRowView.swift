@@ -6,19 +6,28 @@ struct PostRowView: View {
     let threadAuthorID: Int64?
     let isMainPost: Bool
     let onOpenSubposts: ((Post) -> Void)?
+    let onOpenUser: ((UserSummary) -> Void)?
+    let isLikeUpdating: Bool
+    let onToggleLike: (() -> Void)?
 
     init(
         post: Post,
         threadTitle: String? = nil,
         threadAuthorID: Int64? = nil,
         isMainPost: Bool = false,
-        onOpenSubposts: ((Post) -> Void)? = nil
+        onOpenSubposts: ((Post) -> Void)? = nil,
+        onOpenUser: ((UserSummary) -> Void)? = nil,
+        isLikeUpdating: Bool = false,
+        onToggleLike: (() -> Void)? = nil
     ) {
         self.post = post
         self.threadTitle = threadTitle
         self.threadAuthorID = threadAuthorID
         self.isMainPost = isMainPost
         self.onOpenSubposts = onOpenSubposts
+        self.onOpenUser = onOpenUser
+        self.isLikeUpdating = isLikeUpdating
+        self.onToggleLike = onToggleLike
     }
 
     var body: some View {
@@ -33,7 +42,14 @@ struct PostRowView: View {
                     isThreadAuthor: isThreadAuthor,
                     isMainPost: isMainPost,
                     showsFloorBadge: isMainPost == false,
-                    trailingLikeCount: isMainPost ? nil : post.likeCount
+                    trailingLikeCount: post.likeCount,
+                    isLiked: post.isLiked,
+                    isLikeUpdating: isLikeUpdating,
+                    onToggleLike: onToggleLike,
+                    likeAccessibilityIdentifier: isMainPost
+                        ? "thread-main-like-button"
+                        : "thread-like-button-\(post.id)",
+                    onOpenUser: onOpenUser.map { open in { open(post.author) } }
                 )
 
                 VStack(alignment: .leading, spacing: TiebaPureTheme.Spacing.sm) {
@@ -42,6 +58,7 @@ struct PostRowView: View {
                             .font(.title2.weight(.semibold))
                             .lineSpacing(4)
                             .fixedSize(horizontal: false, vertical: true)
+                            .textSelection(.enabled)
                     }
 
                     ContentBlocksView(
@@ -66,7 +83,8 @@ struct PostRowView: View {
                             subposts: post.previewSubposts,
                             totalCount: post.subpostCount,
                             threadAuthorID: threadAuthorID,
-                            onOpenAll: onOpenSubposts.map { open in { open(post) } }
+                            onOpenAll: onOpenSubposts.map { open in { open(post) } },
+                            onOpenUser: onOpenUser
                         )
                     }
                 }
@@ -98,89 +116,137 @@ struct UserHeaderView: View {
     var isMainPost: Bool = false
     var showsFloorBadge = true
     var trailingLikeCount: Int?
+    var isLiked = false
+    var isLikeUpdating = false
+    var onToggleLike: (() -> Void)?
+    var likeAccessibilityIdentifier: String?
+    var onOpenUser: (() -> Void)?
 
     var body: some View {
-        ViewThatFits(in: .horizontal) {
-            regularLayout
-            compactLayout
+        HStack(alignment: .userNameCenter, spacing: TiebaPureTheme.Spacing.xs) {
+            userIdentity
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .layoutPriority(1)
+
+            trailingLikeControl
+                .alignmentGuide(.userNameCenter) { dimensions in
+                    dimensions[VerticalAlignment.center]
+                }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var avatar: some View {
         AvatarView(
             url: author.portraitURL,
             title: author.displayNameResolved,
-            size: isMainPost ? TiebaPureTheme.AvatarSize.large : TiebaPureTheme.AvatarSize.medium
+            size: ThreadAuthorIdentityLayout.avatarSize(isMainPost: isMainPost)
         )
         .alignmentGuide(.userNameCenter) { dimensions in
             dimensions[VerticalAlignment.center]
         }
     }
 
-    private var regularLayout: some View {
-        HStack(alignment: .userNameCenter, spacing: TiebaPureTheme.Spacing.sm) {
-            avatar
-            VStack(alignment: .leading, spacing: TiebaPureTheme.Spacing.xxs) {
-                HStack(alignment: .center, spacing: TiebaPureTheme.Spacing.xs) {
-                    Text(author.displayNameResolved)
-                        .font((isMainPost ? Font.body : Font.callout).weight(.semibold))
-                        .lineLimit(2)
-
-                    UserBadgesView(
-                        author: author,
-                        isThreadAuthor: isThreadAuthor,
-                        floor: floor,
-                        showsFloorBadge: showsFloorBadge
-                    )
-                }
-                .alignmentGuide(.userNameCenter) { dimensions in
-                    dimensions[VerticalAlignment.center]
-                }
-            }
-
-            Spacer(minLength: TiebaPureTheme.Spacing.sm)
-
-            if let trailingLikeCount {
-                CompactLikeCountView(count: trailingLikeCount)
-                    .alignmentGuide(.userNameCenter) { dimensions in
-                        dimensions[VerticalAlignment.center]
+    @ViewBuilder
+    private var trailingLikeControl: some View {
+        if let trailingLikeCount {
+            if let onToggleLike {
+                Button(action: onToggleLike) {
+                    HStack(spacing: TiebaPureTheme.Spacing.xxs) {
+                        if isLikeUpdating {
+                            ProgressView()
+                                .controlSize(.small)
+                                .accessibilityHidden(true)
+                        } else {
+                            Image(systemName: isLiked ? "hand.thumbsup.fill" : "hand.thumbsup")
+                                .font(.system(size: TiebaPureTheme.IconSize.inline, weight: .medium))
+                                .accessibilityHidden(true)
+                        }
+                        Text(compactCountText(trailingLikeCount))
+                            .font(.subheadline)
+                            .monospacedDigit()
                     }
+                    .foregroundStyle(isLiked ? Color.accentColor : Color.secondary)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .disabled(isLikeUpdating)
+                .accessibilityLabel(isLiked ? "取消点赞" : "点赞")
+                .accessibilityValue("当前\(trailingLikeCount)个赞")
+                .accessibilityHint(isLikeUpdating ? "正在提交" : "双击切换点赞状态")
+                .accessibilityIdentifier(likeAccessibilityIdentifier ?? "thread-like-button")
+            } else {
+                CompactLikeCountView(count: trailingLikeCount)
+                    .frame(minWidth: 44, minHeight: 44)
             }
         }
     }
 
-    private var compactLayout: some View {
-        HStack(alignment: .userNameCenter, spacing: TiebaPureTheme.Spacing.sm) {
+    private func compactCountText(_ value: Int) -> String {
+        guard value >= 10_000 else { return "\(max(value, 0))" }
+        let integerPart = value / 10_000
+        let decimalPart = value % 10_000 / 1_000
+        return decimalPart == 0 ? "\(integerPart)万" : "\(integerPart).\(decimalPart)万"
+    }
+
+    @ViewBuilder
+    private var userIdentity: some View {
+        let content = HStack(alignment: .userNameCenter, spacing: TiebaPureTheme.Spacing.sm) {
             avatar
-            VStack(alignment: .leading, spacing: TiebaPureTheme.Spacing.xxs) {
+            HStack(alignment: .center, spacing: TiebaPureTheme.Spacing.xs) {
                 Text(author.displayNameResolved)
-                    .font((isMainPost ? Font.body : Font.callout).weight(.semibold))
-                    .fixedSize(horizontal: false, vertical: true)
-                    .alignmentGuide(.userNameCenter) { dimensions in
-                        dimensions[VerticalAlignment.center]
-                    }
+                    .font((isMainPost ? Font.callout : Font.subheadline).weight(.semibold))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .minimumScaleFactor(0.85)
+                    .layoutPriority(0)
+                    .accessibilityIdentifier(
+                        isMainPost ? "thread-main-user-name" : "thread-user-name-\(author.id)"
+                    )
+
                 UserBadgesView(
                     author: author,
                     isThreadAuthor: isThreadAuthor,
                     floor: floor,
                     showsFloorBadge: showsFloorBadge
                 )
+                .fixedSize(horizontal: true, vertical: false)
+                .layoutPriority(2)
             }
-
-            Spacer(minLength: TiebaPureTheme.Spacing.xs)
-
-            if let trailingLikeCount {
-                CompactLikeCountView(count: trailingLikeCount)
-                    .alignmentGuide(.userNameCenter) { dimensions in
-                        dimensions[VerticalAlignment.center]
-                    }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .alignmentGuide(.userNameCenter) { dimensions in
+                dimensions[VerticalAlignment.center]
             }
+        }
+
+        if let onOpenUser {
+            Button(action: onOpenUser) {
+                content
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
+            .accessibilityLabel("查看用户\(author.displayNameResolved)的主页")
+            .accessibilityHint("打开用户主页")
+            .accessibilityIdentifier(isMainPost ? "thread-main-user-button" : "thread-user-button-\(author.id)")
+        } else {
+            content
         }
     }
 }
 
+enum ThreadAuthorIdentityLayout {
+    static let replyAvatarSize: CGFloat = 36
+
+    static func avatarSize(isMainPost: Bool) -> CGFloat {
+        isMainPost ? TiebaPureTheme.AvatarSize.medium : replyAvatarSize
+    }
+}
+
 enum ThreadReplyLayout {
-    static let bodyLeadingInset = TiebaPureTheme.AvatarSize.medium + TiebaPureTheme.Spacing.sm
+    static let bodyLeadingInset = ThreadAuthorIdentityLayout.replyAvatarSize + TiebaPureTheme.Spacing.sm
     static let headerContentSpacing: CGFloat = TiebaPureTheme.Spacing.xxs
     static let sectionSeparatorHeight: CGFloat = TiebaPureTheme.Spacing.xs
     static let previewTopPadding: CGFloat = TiebaPureTheme.Spacing.sm
@@ -247,30 +313,33 @@ struct UserBadgesView: View {
     var showsFloorBadge = false
 
     var body: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: TiebaPureTheme.Spacing.xxs) {
-                badges
-            }
-            VStack(alignment: .leading, spacing: TiebaPureTheme.Spacing.xxs) {
-                badges
-            }
+        HStack(spacing: TiebaPureTheme.Spacing.xxs) {
+            badges
         }
+        .dynamicTypeSize(.xSmall ... .xxxLarge)
     }
 
     @ViewBuilder
     private var badges: some View {
         if let level = author.level, level > 0 {
-            Text(author.levelName?.isEmpty == false ? "\(level) \(author.levelName ?? "")" : "Lv.\(level)")
+            let levelText = UserLevelBadgeLayout.text(
+                level: level,
+                levelName: author.levelName
+            )
+            Text(levelText)
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(.primary)
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
+                .lineLimit(UserLevelBadgeLayout.maximumLineCount)
+                .fixedSize(horizontal: true, vertical: false)
+                .layoutPriority(1)
                 .padding(.horizontal, 5)
                 .padding(.vertical, 2)
                 .background(
                     RoundedRectangle(cornerRadius: 4, style: .continuous)
                         .fill(Color.orange.opacity(0.18))
                 )
+                .accessibilityIdentifier("thread-user-level-badge-\(author.id)")
+                .accessibilityLabel("贴吧等级\(levelText)")
         }
 
         if showsFloorBadge, let floor, floor > 0 {
@@ -286,12 +355,26 @@ struct UserBadgesView: View {
         }
 
         if isThreadAuthor {
-            ThreadAuthorBadge()
+            ThreadAuthorBadge(accessibilityIdentifier: "thread-author-badge-\(author.id)")
         }
     }
 }
 
+enum UserLevelBadgeLayout {
+    static let maximumLineCount = 1
+
+    static func text(level: Int, levelName: String?) -> String {
+        let normalizedName = levelName?
+            .components(separatedBy: .newlines)
+            .joined()
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return normalizedName.isEmpty ? "Lv.\(level)" : "\(level) \(normalizedName)"
+    }
+}
+
 struct ThreadAuthorBadge: View {
+    var accessibilityIdentifier: String? = nil
+
     var body: some View {
         Text("楼主")
             .font(.caption2.weight(.bold))
@@ -305,5 +388,6 @@ struct ThreadAuthorBadge: View {
             )
             .fixedSize()
             .accessibilityLabel("楼主")
+            .accessibilityIdentifier(accessibilityIdentifier ?? "thread-author-badge")
     }
 }

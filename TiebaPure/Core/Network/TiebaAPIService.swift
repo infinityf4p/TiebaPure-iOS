@@ -30,6 +30,17 @@ protocol TiebaAPIService {
         page: Int,
         subpostID: UInt64
     ) async throws -> [Subpost]
+    func userProfile(account: Account?, user: UserSummary) async throws -> UserProfile
+    func userThreads(account: Account?, userID: Int64, page: Int) async throws -> UserThreadsPage
+    func setUserFollowed(account: Account, user: UserSummary, followed: Bool) async throws
+    func followedUsers(account: Account, page: Int) async throws -> FollowedUsersPage
+    func setPostLiked(
+        account: Account,
+        threadID: Int64,
+        postID: UInt64,
+        objectType: TiebaLikeObjectType,
+        liked: Bool
+    ) async throws
 }
 
 extension TiebaAPIService {

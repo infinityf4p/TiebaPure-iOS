@@ -51,6 +51,7 @@ struct SearchResultsView: View {
     @State private var sortType = 5
     @State private var activeThread: SearchThreadRoute?
     @State private var activeForum: Forum?
+    @State private var selectedUser: UserSummary?
     @State private var selectedImagePreview: ImagePreviewSession?
     @State private var selectedVideoPreview: HomeVideoPreview?
     @State private var requestGeneration = 0
@@ -108,6 +109,11 @@ struct SearchResultsView: View {
         .navigationDestination(isPresented: forumIsActive) {
             if let activeForum {
                 ForumThreadsView(account: account, forum: activeForum)
+            }
+        }
+        .navigationDestination(isPresented: userIsActive) {
+            if let selectedUser {
+                UserProfileView(account: account, user: selectedUser)
             }
         }
         .refreshable { await reload() }
@@ -296,6 +302,7 @@ struct SearchResultsView: View {
                                         RecentForumStore.shared.save(forum)
                                         activeForum = forum
                                     },
+                                    onOpenUser: { selectedUser = $0 },
                                     onOpenMedia: { item, mediaItems in
                                         switch HomeMediaActionPolicy.action(for: item, in: mediaItems) {
                                         case let .previewImages(images, index):
@@ -369,6 +376,15 @@ struct SearchResultsView: View {
                 if isActive == false {
                     activeForum = nil
                 }
+            }
+        )
+    }
+
+    private var userIsActive: Binding<Bool> {
+        Binding(
+            get: { selectedUser != nil },
+            set: { isActive in
+                if isActive == false { selectedUser = nil }
             }
         )
     }

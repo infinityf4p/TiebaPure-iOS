@@ -115,6 +115,7 @@ enum PostMapper {
             blocks: blocks(from: proto.content),
             subpostCount: Int(proto.subPostNumber),
             likeCount: likeCount(from: proto),
+            isLiked: proto.agree.hasAgree_p != 0,
             previewSubposts: proto.subPostList.subPostList.map { subpost($0, usersByID: usersByID) }
         )
     }
@@ -133,7 +134,8 @@ enum PostMapper {
             ipAddress: firstNonEmpty(author.ipAddress, proto.location.name),
             blocks: blocks(from: proto.content),
             createdAt: proto.time == 0 ? nil : Date(timeIntervalSince1970: TimeInterval(proto.time)),
-            likeCount: Int(proto.agree.agreeNum)
+            likeCount: Int(proto.agree.agreeNum),
+            isLiked: proto.agree.hasAgree_p != 0
         )
     }
 

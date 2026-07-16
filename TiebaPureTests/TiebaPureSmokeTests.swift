@@ -4,6 +4,36 @@ import XCTest
 @testable import TiebaPure
 
 final class TiebaPureSmokeTests: XCTestCase {
+    func testThreadAuthorIdentityUsesCompactVisualSizes() {
+        XCTAssertEqual(
+            ThreadAuthorIdentityLayout.avatarSize(isMainPost: true),
+            TiebaPureTheme.AvatarSize.medium
+        )
+        XCTAssertEqual(ThreadAuthorIdentityLayout.avatarSize(isMainPost: false), 36)
+        XCTAssertLessThan(
+            ThreadAuthorIdentityLayout.avatarSize(isMainPost: true),
+            TiebaPureTheme.AvatarSize.large
+        )
+        XCTAssertLessThan(
+            ThreadAuthorIdentityLayout.avatarSize(isMainPost: false),
+            TiebaPureTheme.AvatarSize.medium
+        )
+        XCTAssertEqual(
+            ThreadReplyLayout.bodyLeadingInset,
+            ThreadAuthorIdentityLayout.replyAvatarSize + TiebaPureTheme.Spacing.sm
+        )
+    }
+
+    func testUserLevelBadgeIsSingleLineAndNormalizesServerNewlines() {
+        XCTAssertEqual(UserLevelBadgeLayout.maximumLineCount, 1)
+        XCTAssertEqual(
+            UserLevelBadgeLayout.text(level: 13, levelName: "  血之\n磐涅  "),
+            "13 血之磐涅"
+        )
+        XCTAssertEqual(UserLevelBadgeLayout.text(level: 9, levelName: nil), "Lv.9")
+        XCTAssertEqual(UserLevelBadgeLayout.text(level: 9, levelName: "  "), "Lv.9")
+    }
+
     func testThreadDetailUsesUnlimitedWrappingWhileSummariesStillTruncate() {
         XCTAssertEqual(ThreadContentDisplayPolicy.detailLineLimit, 0)
         XCTAssertEqual(
@@ -26,6 +56,16 @@ final class TiebaPureSmokeTests: XCTestCase {
             .byTruncatingTail
         )
         XCTAssertEqual(ThreadContentDisplayPolicy.paragraphLineBreakMode, .byWordWrapping)
+        XCTAssertTrue(
+            ThreadContentInteractionPolicy.allowsTextSelection(
+                for: ThreadContentDisplayPolicy.detailLineLimit
+            )
+        )
+        XCTAssertFalse(
+            ThreadContentInteractionPolicy.allowsTextSelection(
+                for: ThreadContentDisplayPolicy.summaryLineLimit
+            )
+        )
     }
 
     func testThreadPaginationContinuesAfterServerLocatedPostPage() {
@@ -159,6 +199,7 @@ final class TiebaPureSmokeTests: XCTestCase {
 
     func testForumThreadTapPolicySeparatesForumIdentityFromThreadBody() {
         XCTAssertEqual(ForumThreadTapPolicy.destination(for: .forumIdentity), .forum)
+        XCTAssertEqual(ForumThreadTapPolicy.destination(for: .userIdentity), .user)
         XCTAssertEqual(ForumThreadTapPolicy.destination(for: .threadBody), .thread)
         XCTAssertEqual(ForumThreadTapPolicy.destination(for: .media), .media)
         XCTAssertEqual(ForumThreadTapPolicy.destination(for: .stats), .none)

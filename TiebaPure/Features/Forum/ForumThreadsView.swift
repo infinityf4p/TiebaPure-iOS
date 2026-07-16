@@ -13,6 +13,8 @@ struct ForumThreadsView: View {
     @State private var errorMessage: String?
     @State private var searchText = ""
     @State private var activeSearch: ForumSearchLaunchRoute?
+    @State private var activeThread: ForumThreadRoute?
+    @State private var selectedUser: UserSummary?
     @State private var requestGeneration = 0
     @State private var loadTask: Task<[ThreadSummary], Error>?
 
@@ -41,16 +43,17 @@ struct ForumThreadsView: View {
                 ScrollView {
                     LazyVStack(spacing: 0) {
                         ForEach(Array(visibleThreads.enumerated()), id: \.element.id) { index, thread in
-                            NavigationLink {
-                                ThreadDetailView(
-                                    account: account,
-                                    threadID: thread.id,
-                                    forumID: thread.forumID ?? forum.id
-                                )
-                            } label: {
-                                ForumThreadRow(thread: thread, showsForumInfo: false)
-                            }
-                            .buttonStyle(.plain)
+                            ForumThreadRow(
+                                thread: thread,
+                                showsForumInfo: false,
+                                onOpenThread: {
+                                    activeThread = ForumThreadRoute(
+                                        threadID: thread.id,
+                                        forumID: thread.forumID ?? forum.id
+                                    )
+                                },
+                                onOpenUser: { selectedUser = $0 }
+                            )
                                 .onAppear {
                                     guard searchText.isEmpty,
                                           PaginationPrefetchPolicy.shouldLoadMore(
@@ -97,6 +100,20 @@ struct ForumThreadsView: View {
                 SearchResultsView(account: account, scope: activeSearch.scope, initialKeyword: activeSearch.keyword)
             }
         }
+        .navigationDestination(isPresented: threadIsActive) {
+            if let activeThread {
+                ThreadDetailView(
+                    account: account,
+                    threadID: activeThread.threadID,
+                    forumID: activeThread.forumID
+                )
+            }
+        }
+        .navigationDestination(isPresented: userIsActive) {
+            if let selectedUser {
+                UserProfileView(account: account, user: selectedUser)
+            }
+        }
         .refreshable { await reload() }
         .task {
             RecentForumStore.shared.save(forum)
@@ -112,6 +129,8 @@ struct ForumThreadsView: View {
             isLoading = false
             didLoad = false
             errorMessage = nil
+            activeThread = nil
+            selectedUser = nil
             Task { await reload() }
         }
         .toolbar {
@@ -147,6 +166,24 @@ struct ForumThreadsView: View {
                 if isActive == false {
                     activeSearch = nil
                 }
+            }
+        )
+    }
+
+    private var threadIsActive: Binding<Bool> {
+        Binding(
+            get: { activeThread != nil },
+            set: { isActive in
+                if isActive == false { activeThread = nil }
+            }
+        )
+    }
+
+    private var userIsActive: Binding<Bool> {
+        Binding(
+            get: { selectedUser != nil },
+            set: { isActive in
+                if isActive == false { selectedUser = nil }
             }
         )
     }
@@ -214,6 +251,11 @@ struct ForumThreadsView: View {
     }
 }
 
+private struct ForumThreadRoute {
+    let threadID: Int64
+    let forumID: Int64?
+}
+
 struct ForumSearchLaunchRoute: Equatable {
     let keyword: String
     let scope: SearchScope
@@ -245,12 +287,13 @@ struct ForumThreadRow: View {
     enum Presentation {
         case list
         case homeFeed
+        case userProfile
 
         var showsDivider: Bool {
             switch self {
             case .list:
                 return true
-            case .homeFeed:
+            case .homeFeed, .userProfile:
                 return false
             }
         }
@@ -259,21 +302,21 @@ struct ForumThreadRow: View {
             switch self {
             case .list:
                 return 0
-            case .homeFeed:
+            case .homeFeed, .userProfile:
                 return TiebaPureTheme.Radius.card
             }
         }
 
         func mediaLimit(totalCount: Int) -> Int? {
             switch self {
-            case .list, .homeFeed:
+            case .list, .homeFeed, .userProfile:
                 return TiebaLiteMediaLayoutPolicy.visibleItemCount(totalCount: totalCount)
             }
         }
 
         var usesTiebaLiteMediaLayout: Bool {
             switch self {
-            case .list, .homeFeed:
+            case .list, .homeFeed, .userProfile:
                 return true
             }
         }
@@ -282,7 +325,7 @@ struct ForumThreadRow: View {
             switch self {
             case .list:
                 return nil
-            case .homeFeed:
+            case .homeFeed, .userProfile:
                 return itemCount == 1 ? 180 : 118
             }
         }
@@ -295,15 +338,29 @@ struct ForumThreadRow: View {
     var highlightKeyword: String?
     var onOpenThread: (() -> Void)?
     var onOpenForum: ((Forum) -> Void)?
+    var onOpenUser: ((UserSummary) -> Void)?
     var onOpenMedia: ((ReaderMediaItem, [ReaderMediaItem]) -> Void)?
 
     var body: some View {
         ReaderCard(showsDivider: presentation.showsDivider, cornerRadius: presentation.cardRadius) {
             VStack(alignment: .leading, spacing: TiebaPureTheme.Spacing.sm) {
-                if showsForumInfo, let forum = thread.forumRoute {
-                    ForumInfoHeader(thread: thread, forum: forum, onOpenForum: onOpenForum)
-                } else {
-                    AuthorHeader(thread: thread)
+                switch presentation {
+                case .userProfile:
+                    UserProfileThreadHeader(
+                        thread: thread,
+                        onOpenForum: onOpenForum
+                    )
+                case .list, .homeFeed:
+                    if showsForumInfo, let forum = thread.forumRoute {
+                        ForumInfoHeader(
+                            thread: thread,
+                            forum: forum,
+                            onOpenForum: onOpenForum,
+                            onOpenUser: onOpenUser
+                        )
+                    } else {
+                        AuthorHeader(thread: thread, onOpenUser: onOpenUser)
+                    }
                 }
 
                 if hasThreadBodyPreview {
@@ -371,7 +428,7 @@ struct ForumThreadRow: View {
                 if thread.title.isEmpty == false, inlinePreviewBlocks.isEmpty == false {
                     InlineContentText(
                         blocks: inlinePreviewBlocks,
-                        style: .preview,
+                        style: previewTextStyle,
                         lineLimit: ThreadContentDisplayPolicy.summaryLineLimit,
                         highlightKeyword: highlightKeyword,
                         allowsLinkInteraction: false
@@ -463,11 +520,74 @@ struct ForumThreadRow: View {
         return result
     }
 
+    private var previewTextStyle: InlineContentText.Style {
+        switch presentation {
+        case .userProfile:
+            return .body
+        case .list, .homeFeed:
+            return .preview
+        }
+    }
+
     private func mediaPreviewItems(from mediaItems: [ReaderMediaItem]) -> [ReaderMediaItem] {
         guard let limit = presentation.mediaLimit(totalCount: mediaItems.count) else {
             return mediaItems
         }
         return Array(mediaItems.prefix(limit))
+    }
+}
+
+private struct UserProfileThreadHeader: View {
+    let thread: ThreadSummary
+    let onOpenForum: ((Forum) -> Void)?
+
+    var body: some View {
+        HStack(alignment: .center, spacing: TiebaPureTheme.Spacing.sm) {
+            AvatarView(
+                url: thread.author.portraitURL,
+                title: thread.author.displayNameResolved,
+                size: TiebaPureTheme.AvatarSize.medium
+            )
+
+            VStack(alignment: .leading, spacing: TiebaPureTheme.Spacing.xxs) {
+                Text(thread.author.displayNameResolved)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                HStack(spacing: TiebaPureTheme.Spacing.xxs) {
+                    forumIdentity
+
+                    if let date = thread.createdAt ?? thread.lastReplyAt {
+                        Text("·")
+                            .accessibilityHidden(true)
+                        Text(ReaderDateText.string(from: date))
+                    }
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+        }
+        .frame(minHeight: 44)
+        .accessibilityIdentifier("user-profile-thread-header")
+    }
+
+    @ViewBuilder
+    private var forumIdentity: some View {
+        if let forum = thread.forumRoute, let onOpenForum {
+            Button {
+                onOpenForum(forum)
+            } label: {
+                Text(forum.displayName)
+                    .foregroundStyle(.secondary)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("进入\(forum.displayName)")
+        } else if let forum = thread.forumRoute {
+            Text(forum.displayName)
+        }
     }
 }
 
@@ -491,6 +611,7 @@ enum ForumThreadBadgePolicy {
 
 enum ForumThreadTapTarget {
     case forumIdentity
+    case userIdentity
     case threadBody
     case media
     case stats
@@ -498,6 +619,7 @@ enum ForumThreadTapTarget {
 
 enum ForumThreadTapDestination: Equatable {
     case forum
+    case user
     case thread
     case media
     case none
@@ -508,6 +630,8 @@ enum ForumThreadTapPolicy {
         switch target {
         case .forumIdentity:
             return .forum
+        case .userIdentity:
+            return .user
         case .threadBody:
             return .thread
         case .media:
@@ -522,19 +646,115 @@ private struct ForumInfoHeader: View {
     let thread: ThreadSummary
     let forum: Forum
     let onOpenForum: ((Forum) -> Void)?
+    let onOpenUser: ((UserSummary) -> Void)?
 
     var body: some View {
+        HStack(alignment: .center, spacing: TiebaPureTheme.Spacing.sm) {
+            forumAvatar
+
+            VStack(alignment: .leading, spacing: TiebaPureTheme.Spacing.xxs) {
+                forumName
+
+                HStack(spacing: TiebaPureTheme.Spacing.xxs) {
+                    userName
+                    if let dateText = thread.lastReplyAt.map({ ReaderDateText.string(from: $0) }),
+                       dateText.isEmpty == false {
+                        Text("·")
+                            .accessibilityHidden(true)
+                        Text(dateText)
+                    }
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var forumAvatar: some View {
+        if let onOpenForum {
+            Button {
+                onOpenForum(forum)
+            } label: {
+                AvatarView(
+                    url: forum.avatarURL,
+                    title: forum.displayName,
+                    size: TiebaPureTheme.AvatarSize.small
+                )
+            }
+            .buttonStyle(.plain)
+            .frame(width: 44, height: 44)
+            .contentShape(Rectangle())
+            .accessibilityLabel("进入\(forum.displayName)")
+        } else {
+            AvatarView(
+                url: forum.avatarURL,
+                title: forum.displayName,
+                size: TiebaPureTheme.AvatarSize.small
+            )
+        }
+    }
+
+    @ViewBuilder
+    private var forumName: some View {
         if let onOpenForum {
             Button {
                 guard ForumThreadTapPolicy.destination(for: .forumIdentity) == .forum else { return }
                 onOpenForum(forum)
             } label: {
+                Text(forum.displayName)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("进入\(forum.displayName)")
+        } else {
+            Text(forum.displayName)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+        }
+    }
+
+    @ViewBuilder
+    private var userName: some View {
+        if let onOpenUser {
+            Button {
+                guard ForumThreadTapPolicy.destination(for: .userIdentity) == .user else { return }
+                onOpenUser(thread.author)
+            } label: {
+                Text(thread.author.displayNameResolved)
+                    .lineLimit(1)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("查看用户\(thread.author.displayNameResolved)的主页")
+            .accessibilityIdentifier("feed-user-button-\(thread.author.id)")
+        } else {
+            Text(thread.author.displayNameResolved)
+                .lineLimit(1)
+        }
+    }
+}
+
+private struct AuthorHeader: View {
+    let thread: ThreadSummary
+    let onOpenUser: ((UserSummary) -> Void)?
+
+    var body: some View {
+        if let onOpenUser {
+            Button {
+                onOpenUser(thread.author)
+            } label: {
                 content
             }
             .buttonStyle(.plain)
-            .contentShape(Rectangle())
             .frame(minHeight: 44)
-            .accessibilityLabel("进入\(forum.displayName)")
+            .contentShape(Rectangle())
+            .accessibilityLabel("查看用户\(thread.author.displayNameResolved)的主页")
+            .accessibilityIdentifier("feed-user-button-\(thread.author.id)")
         } else {
             content
         }
@@ -542,31 +762,6 @@ private struct ForumInfoHeader: View {
 
     private var content: some View {
         HStack(alignment: .center, spacing: TiebaPureTheme.Spacing.sm) {
-            AvatarView(url: forum.avatarURL, title: forum.displayName, size: TiebaPureTheme.AvatarSize.small)
-
-            VStack(alignment: .leading, spacing: TiebaPureTheme.Spacing.xxs) {
-                Text(forum.displayName)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-
-                MetadataLine(
-                    [
-                        thread.author.displayNameResolved,
-                        thread.lastReplyAt.map { ReaderDateText.string(from: $0) } ?? ""
-                    ],
-                    systemImage: nil
-                )
-            }
-        }
-    }
-}
-
-private struct AuthorHeader: View {
-    let thread: ThreadSummary
-
-    var body: some View {
-        HStack(alignment: .top, spacing: TiebaPureTheme.Spacing.sm) {
             AvatarView(url: thread.author.portraitURL, title: thread.author.displayNameResolved, size: TiebaPureTheme.AvatarSize.small)
 
             VStack(alignment: .leading, spacing: TiebaPureTheme.Spacing.xxs) {

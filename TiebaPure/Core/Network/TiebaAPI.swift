@@ -10,7 +10,11 @@ struct TiebaAPI {
         }
         let loginResponse: LoginResponseDTO?
         do {
-            loginResponse = try await login(bduss: cookies.bduss, stoken: cookies.stoken)
+            loginResponse = try await login(
+                bduss: cookies.bduss,
+                stoken: cookies.stoken,
+                baiduID: cookies.baiduID ?? ""
+            )
         } catch is CancellationError {
             throw CancellationError()
         } catch {
@@ -20,7 +24,11 @@ struct TiebaAPI {
 
         let nickname: InitNicknameResponseDTO?
         do {
-            nickname = try await initNickname(bduss: cookies.bduss, stoken: cookies.stoken)
+            nickname = try await initNickname(
+                bduss: cookies.bduss,
+                stoken: cookies.stoken,
+                baiduID: cookies.baiduID ?? ""
+            )
         } catch is CancellationError {
             throw CancellationError()
         } catch {
@@ -39,37 +47,60 @@ struct TiebaAPI {
         return account
     }
 
-    func login(bduss: String, stoken: String) async throws -> LoginResponseDTO {
-        try await client.postForm(
+    func login(bduss: String, stoken: String, baiduID: String = "") async throws -> LoginResponseDTO {
+        let timestamp = Int64(Date().timeIntervalSince1970 * 1_000)
+        var fields = requestBuilder.officialCommonFields(
+            baiduID: baiduID,
+            clientVersion: "11.10.8.6",
+            timestamp: timestamp
+        )
+        fields["bdusstoken"] = "\(bduss)|"
+        fields["stoken"] = stoken
+        fields["channel_id"] = ""
+        fields["channel_uid"] = ""
+        fields["authsid"] = "null"
+
+        var headers = requestBuilder.officialHeaders(
+            baiduID: baiduID,
+            clientVersion: "11.10.8.6",
+            timestamp: timestamp
+        )
+        // TiebaLite removes these two official headers for the login route.
+        headers.removeValue(forKey: "Charset")
+        headers.removeValue(forKey: "client_type")
+
+        return try await client.postForm(
             .login,
-            fields: [
-                "bdusstoken": "\(bduss)|",
-                "stoken": stoken,
-                "channel_id": "",
-                "channel_uid": "",
-                "_client_version": "11.10.8.6",
-                "authsid": "null"
-            ],
-            headers: [
-                "Cookie": "ka=open",
-                "User-Agent": "bdtb for Android 11.10.8.6"
-            ],
+            fields: fields,
+            headers: headers,
+            signingSecret: "tiebaclient!!!",
             as: LoginResponseDTO.self
         )
     }
 
-    func initNickname(bduss: String, stoken: String) async throws -> InitNicknameResponseDTO {
-        try await client.postForm(
+    func initNickname(bduss: String, stoken: String, baiduID: String = "") async throws -> InitNicknameResponseDTO {
+        let timestamp = Int64(Date().timeIntervalSince1970 * 1_000)
+        var fields = requestBuilder.officialCommonFields(
+            baiduID: baiduID,
+            clientVersion: "11.10.8.6",
+            timestamp: timestamp
+        )
+        fields["BDUSS"] = bduss
+        fields["stoken"] = stoken
+
+        var headers = requestBuilder.officialHeaders(
+            baiduID: baiduID,
+            clientVersion: "11.10.8.6",
+            timestamp: timestamp
+        )
+        headers.removeValue(forKey: "Charset")
+        headers.removeValue(forKey: "client_type")
+
+        return try await client.postForm(
             .initNickname,
-            fields: [
-                "BDUSS": bduss,
-                "stoken": stoken,
-                "_client_version": "11.10.8.6"
-            ],
-            headers: [
-                "Cookie": "ka=open",
-                "User-Agent": "bdtb for Android 11.10.8.6"
-            ],
+            fields: fields,
+            headers: headers,
+            signingSecret: "tiebaclient!!!",
             as: InitNicknameResponseDTO.self
         )
     }
@@ -119,7 +150,7 @@ struct TiebaAPI {
         guard let data = webInfo.data,
               data.isLogin != false,
               let uid = firstNonEmpty(data.uid, data.id).nonEmpty,
-              let tbs = firstNonEmpty(data.tbs, data.itbTbs, fallbackTBS).nonEmpty else {
+              let tbs = firstNonEmpty(fallbackTBS, data.tbs, data.itbTbs).nonEmpty else {
             return nil
         }
 

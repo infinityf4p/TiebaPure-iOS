@@ -13,6 +13,7 @@ enum FixtureScenario: String {
     case longContent
     case subpostReference
     case imageGesture
+    case privateProfile
 }
 
 struct FixtureTiebaAPI: TiebaAPIService {
@@ -151,7 +152,14 @@ struct FixtureTiebaAPI: TiebaAPIService {
             likeCount: 12,
             previewSubposts: []
         )
-        let replyAuthor = UserSummary(id: 2, name: "fixture_reply", displayName: "很长很长的合成回复用户名用于布局测试", portrait: "", level: 12, levelName: "十二级")
+        let replyAuthor = UserSummary(
+            id: 2,
+            name: "fixture_reply",
+            displayName: "很长很长的合成回复用户名用于布局测试",
+            portrait: "",
+            level: 13,
+            levelName: "血之磐涅"
+        )
         let replyText: String
         if postID == 2002 {
             replyText = "已定位搜索命中回复"
@@ -211,6 +219,106 @@ struct FixtureTiebaAPI: TiebaAPIService {
         default:
             return Self.subpostFixtures
         }
+    }
+
+    func userProfile(account: Account?, user: UserSummary) async throws -> UserProfile {
+        try await prepare()
+        let isFollowed = await state.userFollowed()
+        let isCurrentUser = account.map { account in
+            (Int64(account.uid).map { $0 == user.id } ?? false)
+                || (user.name.isEmpty == false && user.name == account.name)
+        } ?? false
+        let resolvedUser = UserSummary(
+            id: user.id == 0 ? Self.author.id : user.id,
+            name: user.name.isEmpty ? Self.author.name : user.name,
+            displayName: user.displayName.isEmpty ? Self.author.displayName : user.displayName,
+            portrait: user.portrait,
+            level: user.level ?? 9,
+            levelName: user.levelName ?? "九级",
+            ipAddress: user.ipAddress ?? "北京"
+        )
+        let hidesForums = scenario == .privateProfile
+        return UserProfile(
+            user: resolvedUser,
+            isCurrentUser: isCurrentUser,
+            isFollowed: isFollowed,
+            tiebaID: "100000001",
+            tiebaAge: "12.5年",
+            sex: .unspecified,
+            location: "北京",
+            intro: "这是用于验证用户主页布局、隐私状态和深色模式的合成资料。",
+            backgroundURL: URL(string: "https://fixture-success.invalid/profile-background.png"),
+            agreeCount: 4_639,
+            followingCount: 74,
+            followerCount: 56,
+            threadCount: Self.threads.count,
+            followedForumCount: hidesForums ? 63 : 2,
+            followedForums: hidesForums ? [] : [Self.forum, Self.forumTwo],
+            followedForumsVisibility: hidesForums ? .privateContent : .visible
+        )
+    }
+
+    func setUserFollowed(account: Account, user: UserSummary, followed: Bool) async throws {
+        _ = account
+        _ = user
+        try await prepare()
+        await state.setUserFollowed(followed)
+    }
+
+    func followedUsers(account: Account, page: Int) async throws -> FollowedUsersPage {
+        _ = account
+        try await prepare(page: page)
+        let users = page == 1 ? [
+            Self.author,
+            UserSummary(
+                id: 2,
+                name: "fixture_followed_user",
+                displayName: "另一个合成关注用户",
+                portrait: "",
+                level: 12,
+                levelName: "十二级",
+                ipAddress: "上海"
+            )
+        ] : []
+        return FollowedUsersPage(
+            users: users,
+            currentPage: page,
+            totalCount: users.count,
+            hasMore: false
+        )
+    }
+
+    func setPostLiked(
+        account: Account,
+        threadID: Int64,
+        postID: UInt64,
+        objectType: TiebaLikeObjectType,
+        liked: Bool
+    ) async throws {
+        _ = account
+        _ = threadID
+        _ = postID
+        _ = objectType
+        _ = liked
+        try await prepare()
+    }
+
+    func userThreads(account: Account?, userID: Int64, page: Int) async throws -> UserThreadsPage {
+        try await prepare(page: page)
+        if scenario == .privateProfile {
+            return UserThreadsPage(
+                threads: [],
+                currentPage: page,
+                hasMore: false,
+                visibility: .privateContent
+            )
+        }
+        return UserThreadsPage(
+            threads: page == 1 ? Self.threads : [],
+            currentPage: page,
+            hasMore: page == 1,
+            visibility: .visible
+        )
     }
 
     private func prepare(page: Int = 1) async throws {
@@ -371,6 +479,7 @@ private actor FixtureRequestState {
     private var personalizedPageOneRequestCount = 0
     private var forumPageOneRequestCount = 0
     private var threadPageOneRequestCount = 0
+    private var isUserFollowed = false
 
     func shouldFail(page: Int) -> Bool {
         failedPages.insert(page).inserted
@@ -389,6 +498,14 @@ private actor FixtureRequestState {
     func nextThreadPageOneRequestNumber() -> Int {
         threadPageOneRequestCount += 1
         return threadPageOneRequestCount
+    }
+
+    func setUserFollowed(_ followed: Bool) {
+        isUserFollowed = followed
+    }
+
+    func userFollowed() -> Bool {
+        isUserFollowed
     }
 }
 #endif

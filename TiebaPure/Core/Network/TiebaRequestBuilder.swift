@@ -70,6 +70,70 @@ struct TiebaRequestBuilder {
         ]
     }
 
+    func officialCommonFields(
+        bduss: String? = nil,
+        baiduID: String? = nil,
+        clientVersion: String = "11.10.8.6",
+        timestamp: Int64 = Int64(Date().timeIntervalSince1970 * 1_000)
+    ) -> [String: String] {
+        let cuid = miniCUID
+        var fields = [
+            "_client_id": clientID,
+            "_client_type": "2",
+            "_client_version": clientVersion,
+            "_os_version": UIDevice.current.systemVersion,
+            "_phone_imei": "000000000000000",
+            "active_timestamp": "\(timestamp)",
+            "brand": "Apple",
+            "cmode": "1",
+            "cuid": cuid,
+            "cuid_galaxy2": cuid,
+            "cuid_gid": "",
+            "from": "tieba",
+            "is_teenager": "0",
+            "mac": "02:00:00:00:00:00",
+            "model": UIDevice.current.model,
+            "net_type": "1",
+            "start_scheme": "",
+            "start_type": "1",
+            "timestamp": "\(timestamp)"
+        ]
+        if let bduss, bduss.isEmpty == false {
+            fields["BDUSS"] = bduss
+        }
+        if let baiduID, baiduID.isEmpty == false {
+            fields["baiduid"] = baiduID
+        }
+        return fields
+    }
+
+    func officialHeaders(
+        baiduID: String? = nil,
+        clientVersion: String = "11.10.8.6",
+        timestamp: Int64 = Int64(Date().timeIntervalSince1970 * 1_000)
+    ) -> [String: String] {
+        let cuid = miniCUID
+        var cookieParts = [
+            "CUID=\(cuid)",
+            "ka=open",
+            "TBBRAND=Apple"
+        ]
+        if let baiduID, baiduID.isEmpty == false {
+            cookieParts.append("BAIDUID=\(baiduID)")
+        }
+        return [
+            "Charset": "UTF-8",
+            "Cookie": cookieParts.joined(separator: "; "),
+            "Pragma": "no-cache",
+            "User-Agent": "bdtb for Android \(clientVersion)",
+            "client_logid": "\(timestamp)",
+            "client_type": "2",
+            "cuid": cuid,
+            "cuid_galaxy2": cuid,
+            "cuid_gid": ""
+        ]
+    }
+
     var miniCUID: String {
         "\(clientID.uppercased())|000000000000000"
     }

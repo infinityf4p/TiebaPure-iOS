@@ -128,6 +128,7 @@ struct ForumHubView: View {
                 ForumThreadsView(account: account, forum: route.forum)
             }
         }
+        .toolbar(.visible, for: .tabBar)
     }
 
     private func openForum(named name: String) {

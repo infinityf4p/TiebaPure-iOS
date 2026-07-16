@@ -15,6 +15,12 @@ enum ThreadContentDisplayPolicy {
     }
 }
 
+enum ThreadContentInteractionPolicy {
+    static func allowsTextSelection(for lineLimit: Int) -> Bool {
+        ThreadContentDisplayPolicy.maximumNumberOfLines(for: lineLimit) == 0
+    }
+}
+
 struct ContentBlocksView: View {
     let blocks: [ContentBlock]
     var textStyle: InlineContentText.Style = .body
@@ -30,6 +36,9 @@ struct ContentBlocksView: View {
                         blocks: inlineBlocks,
                         style: textStyle,
                         lineLimit: lineLimit,
+                        allowsTextSelection: ThreadContentInteractionPolicy.allowsTextSelection(
+                            for: lineLimit
+                        ),
                         accessibilityIdentifier: inlineAccessibilityIdentifier
                     )
                     .fixedSize(horizontal: false, vertical: true)
@@ -161,7 +170,9 @@ struct KeywordHighlightedText: View {
 }
 
 struct InlineContentText: UIViewRepresentable {
-    private final class LinkOnlyTextView: UITextView {
+    private final class InteractiveTextView: UITextView {
+        var allowsTextSelection = false
+
         override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
             guard super.point(inside: point, with: event), isSelectable else {
                 return false
@@ -186,6 +197,9 @@ struct InlineContentText: UIViewRepresentable {
 
             let characterIndex = layoutManager.characterIndexForGlyph(at: glyphIndex)
             guard characterIndex < textStorage.length else { return false }
+            if allowsTextSelection {
+                return true
+            }
             return textStorage.attribute(.link, at: characterIndex, effectiveRange: nil) != nil
         }
     }
@@ -258,6 +272,7 @@ struct InlineContentText: UIViewRepresentable {
     var prefixParts: [PrefixPart] = []
     var highlightKeyword: String?
     var allowsLinkInteraction = true
+    var allowsTextSelection = false
     var accessibilityIdentifier: String?
 
     func makeCoordinator() -> Coordinator {
@@ -265,7 +280,7 @@ struct InlineContentText: UIViewRepresentable {
     }
 
     func makeUIView(context: Context) -> UITextView {
-        let textView = LinkOnlyTextView()
+        let textView = InteractiveTextView()
         textView.backgroundColor = .clear
         textView.isEditable = false
         textView.isScrollEnabled = false
@@ -295,8 +310,10 @@ struct InlineContentText: UIViewRepresentable {
         textView.textContainer.lineBreakMode =
             ThreadContentDisplayPolicy.lineBreakMode(for: lineLimit)
         textView.attributedText = attributedString()
-        textView.isSelectable = allowsLinkInteraction
-        textView.isUserInteractionEnabled = allowsLinkInteraction
+        let supportsInteraction = allowsLinkInteraction || allowsTextSelection
+        textView.isSelectable = supportsInteraction
+        textView.isUserInteractionEnabled = supportsInteraction
+        (textView as? InteractiveTextView)?.allowsTextSelection = allowsTextSelection
         textView.panGestureRecognizer.isEnabled = false
     }
 

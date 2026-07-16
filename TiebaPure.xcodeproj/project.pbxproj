@@ -82,6 +82,7 @@
 		3C76B30ACE505A1329C35516 /* SubpostSheetInteractiveDismiss.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58BC2EF1ED11AC6A71B3CED6 /* SubpostSheetInteractiveDismiss.swift */; };
 		3CC33074E89642F73FA11ADC /* image_emoticon39.webp in Resources */ = {isa = PBXBuildFile; fileRef = F7E888D44F39FD3129CE8836 /* image_emoticon39.webp */; };
 		3D820156023B2AAC2887E038 /* ManagerElection.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C7AF8D2E086E41911C724D3 /* ManagerElection.pb.swift */; };
+		3E83765E473D5A072792B006 /* TiebaPureProfile_UserProfile.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = 094A7B97C027D43346675B29 /* TiebaPureProfile_UserProfile.pb.swift */; };
 		3E9AEBF0D826281F5D16B564 /* image_emoticon45.webp in Resources */ = {isa = PBXBuildFile; fileRef = 6F45908F2160FA923C9E4D2C /* image_emoticon45.webp */; };
 		3EB0EE435886E637B29A9A1D /* Position.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = 921F0E46A72F4172DB39BE75 /* Position.pb.swift */; };
 		3F0E94381375C8E91ECFC5F4 /* ThreadMapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 946B2D7B6BCE7C2C716A3EB2 /* ThreadMapper.swift */; };
@@ -97,6 +98,7 @@
 		44D69A2FC81B924627F1FD04 /* image_emoticon16.webp in Resources */ = {isa = PBXBuildFile; fileRef = 4D098A81F1D57E276BEF56DC /* image_emoticon16.webp */; };
 		450F423517B8D1DEFD51B15B /* TiebaURLTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CE43843ABF0E6FE36F6A7BD /* TiebaURLTests.swift */; };
 		45524A0D3092DCB6E4F5CCA8 /* PbPresentList.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A5F27E65D2392DCD76DC980 /* PbPresentList.pb.swift */; };
+		470AA98A8CA5F65598F45AFF /* UserProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62D2754EBACAEEB97F2E3E7E /* UserProfileView.swift */; };
 		4713F05CFEC9DDD6A3ADDD91 /* PbPostZan.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0B7620C8D63F4B1A5755426 /* PbPostZan.pb.swift */; };
 		47217BE5D5AB4AAE3E85F39D /* image_emoticon84.png in Resources */ = {isa = PBXBuildFile; fileRef = 07DFF152C8E7533ED5E857CC /* image_emoticon84.png */; };
 		47E3181DC064EE9E61BED027 /* image_emoticon125.png in Resources */ = {isa = PBXBuildFile; fileRef = 167EAD2C6023CD5C45D73148 /* image_emoticon125.png */; };
@@ -118,6 +120,7 @@
 		511AACEDB8E5F78E6AEB0468 /* FrsPage_ActivityHead.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13E7B9A960A530170A79F124 /* FrsPage_ActivityHead.pb.swift */; };
 		51DAED095D45472EA89A34CA /* image_emoticon15.webp in Resources */ = {isa = PBXBuildFile; fileRef = 9D3C48E961B8D56030371E39 /* image_emoticon15.webp */; };
 		523FCD7E0AC8E40A81BA0C03 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 6443B9D2D0368D0B870565A7 /* Assets.xcassets */; };
+		53044332B9EB096132A2E15F /* LocalThreadLibrary.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B097E875FE8B825D77AD05F /* LocalThreadLibrary.swift */; };
 		5383197E0DF4C6C637653554 /* PbLinkInfo.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = A709F23F3D138D22D6135C8B /* PbLinkInfo.pb.swift */; };
 		53DEA982CB662F838F26F9BC /* ThreadAuthorBadgeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E7B54C9EC311DDB57FEBB4F /* ThreadAuthorBadgeTests.swift */; };
 		5475B5B5F91B990290F362C8 /* FrsPage_Group.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6BD4F667454C247002A6602 /* FrsPage_Group.pb.swift */; };
@@ -144,6 +147,7 @@
 		62F1822B8A069ACE7DB97D5C /* BawuThrones.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49330F78430C328A8FE412CF /* BawuThrones.pb.swift */; };
 		63663C75F53C934A2E48EEC8 /* FrsPage_SignInfo.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6562BBA8C1F1BEF0F0464E3 /* FrsPage_SignInfo.pb.swift */; };
 		66A73064A839726DC560A856 /* image_emoticon82.png in Resources */ = {isa = PBXBuildFile; fileRef = C8E046D7D93E96FC15AD0ACF /* image_emoticon82.png */; };
+		66CB3F6B00C11572EF7276D1 /* TiebaUserProfileAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = B55649E6AEA1AD2EF4813452 /* TiebaUserProfileAPI.swift */; };
 		688574045667315195491F21 /* Item.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = 995B0661B7F943148AC52FB8 /* Item.pb.swift */; };
 		68C20C05196303112C17A44F /* image_emoticon72.png in Resources */ = {isa = PBXBuildFile; fileRef = 1BD00A3791685AD1DF497241 /* image_emoticon72.png */; };
 		691639A3C4F64DE3F892A98D /* ContentBlockView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10B4550B620AEBC6B7EA4F46 /* ContentBlockView.swift */; };
@@ -198,6 +202,7 @@
 		98745C53558BE096E73E6148 /* image_emoticon129.png in Resources */ = {isa = PBXBuildFile; fileRef = DEF2D51F349B71974F1FB936 /* image_emoticon129.png */; };
 		98F305A111ACEBFB5002F308 /* App.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B55E15D5374560BF39FADC4 /* App.pb.swift */; };
 		9B52036E6AE40BDF0DB0F404 /* GodInfo.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84ED86CF774D9DC98895086 /* GodInfo.pb.swift */; };
+		9B869CC8E0EE590D0B003B40 /* FollowedUsersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68FBDB720D1FCC2A3138B0CC /* FollowedUsersView.swift */; };
 		9C5B50D17D5B2AC67647ADBF /* FrsTabInfo.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = B122AFB33812067EC87A5DE0 /* FrsTabInfo.pb.swift */; };
 		9CDDD3DBA9F027CA22290124 /* image_emoticon27.webp in Resources */ = {isa = PBXBuildFile; fileRef = E049C8EB39754597A96C0A59 /* image_emoticon27.webp */; };
 		9F034A740EE8C7A06F981F16 /* image_emoticon7.webp in Resources */ = {isa = PBXBuildFile; fileRef = 3AA9B4D3B588E2AB44E50C5C /* image_emoticon7.webp */; };
@@ -256,12 +261,15 @@
 		C56C54AF449260EA614B8D08 /* image_emoticon92.png in Resources */ = {isa = PBXBuildFile; fileRef = 242334FD5F724CD8ED7FC393 /* image_emoticon92.png */; };
 		C64939681389BD1CB978677C /* FrsPage_ForumInfo.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = 544D749BE17B561B797AF401 /* FrsPage_ForumInfo.pb.swift */; };
 		C688BDA6203F519CDC265CA3 /* Agree.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8567BF0F4AD60813192B13FB /* Agree.pb.swift */; };
+		C7A32644A038BA4FDE2C2864 /* TiebaSocialAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B099CE340C14B26B97B9E57 /* TiebaSocialAPI.swift */; };
 		C89136E4D72A263A2D5305DC /* ForumInfo.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2393AD5DAF6B37EA16751659 /* ForumInfo.pb.swift */; };
+		C9381BB37A6F1CDB5053291B /* UserProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A68DE1DD356B7AC4AB669F8 /* UserProfile.swift */; };
 		CAEE23418A46C30486C8A304 /* image_emoticon127.png in Resources */ = {isa = PBXBuildFile; fileRef = 0360AB64C556F71E78644F95 /* image_emoticon127.png */; };
 		CAFCAF6105FDFEA5A21E4A70 /* image_emoticon137.png in Resources */ = {isa = PBXBuildFile; fileRef = 1B3E4875BEC08A136A5603CE /* image_emoticon137.png */; };
 		CB0F89FADA488E36B598132C /* ThreadPicList.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ECA88FD4FD9566C6742CF78 /* ThreadPicList.pb.swift */; };
 		CBEFA9957FD305149BE29170 /* AlaChallengeInfo.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = 499D3FE08691B68F1CED6047 /* AlaChallengeInfo.pb.swift */; };
 		CCA17993A164DE84409AF929 /* InteractiveNavigationPop.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78FABF04E476AC1533EBDFA2 /* InteractiveNavigationPop.swift */; };
+		CDB537530EE8B4DF3E313407 /* ThreadFavoritesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42BC57D4AB4F3F67B48877D9 /* ThreadFavoritesView.swift */; };
 		CE70750547AFB3CB53EDE288 /* VideoPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AABE9716DCC2C5720A003041 /* VideoPlayerView.swift */; };
 		CF454E1295D97B7FE03A3DDA /* ContentMappingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA31C128D796A3D90D001643 /* ContentMappingTests.swift */; };
 		CFEA94941A929B26FBD03092 /* Timgs.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = 322281FC8FDCC6E16F231209 /* Timgs.pb.swift */; };
@@ -293,14 +301,17 @@
 		DD136FFB41E342149393636C /* TPointPost.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AF40430262A1B6B098ED1AD /* TPointPost.pb.swift */; };
 		DD171C64CDA0FED3CC222B0D /* PbPage_ForumHeadlineImgInfo.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C544CA6A9B987E8C2E937FA /* PbPage_ForumHeadlineImgInfo.pb.swift */; };
 		DE25C50FACC63AB5832F7C5A /* image_emoticon47.webp in Resources */ = {isa = PBXBuildFile; fileRef = 5110B3A066FBF0BBBBCE7A59 /* image_emoticon47.webp */; };
+		DE64CDA4FA60F57188F7BC53 /* UserProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A38AD5D710823BA66CAE23C /* UserProfileTests.swift */; };
 		DEA6359A9FCDF988668D3770 /* image_emoticon42.webp in Resources */ = {isa = PBXBuildFile; fileRef = CBDE6AB5B245723DF193169D /* image_emoticon42.webp */; };
 		DEA70B990FBB4F0B3A27998B /* SearchRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93DFFE894245E0C72DB94FFD /* SearchRoute.swift */; };
+		DEF7E4F5C3BB5C3AC25E89EF /* AppAppearance.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80C482CF17BA5520B13F1B03 /* AppAppearance.swift */; };
 		DF890A12EDB8DDDF8D3A49BB /* image_emoticon6.webp in Resources */ = {isa = PBXBuildFile; fileRef = C1AEA47B74F177EB895FA1B4 /* image_emoticon6.webp */; };
 		DF8E5D9BA417662561E1799F /* PbHotPost.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B04CAB15BF9BCBDD44F951C /* PbHotPost.pb.swift */; };
 		E07D30A4629A6B498C4C1D1D /* DelThreadText.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = F18A33F58D8EC7A5D3C5FD9E /* DelThreadText.pb.swift */; };
 		E0D1C42370CCFA5F77532A72 /* image_emoticon86.png in Resources */ = {isa = PBXBuildFile; fileRef = FC5E56587FC88F2A18EFDAC5 /* image_emoticon86.png */; };
 		E0D9634B5DA682E567DA5A59 /* image_emoticon75.png in Resources */ = {isa = PBXBuildFile; fileRef = B3F69C507BA79A259348210F /* image_emoticon75.png */; };
 		E28DE21B97910E227E869798 /* FrsPage_Size.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0252C18EE1252A246F1596D4 /* FrsPage_Size.pb.swift */; };
+		E3CF1C9A62133316FF6D93E2 /* UserProfileMapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = E65F7C671CDA66E5F18CEC24 /* UserProfileMapper.swift */; };
 		E4208A68FB96F9B2E97D630D /* image_emoticon99.png in Resources */ = {isa = PBXBuildFile; fileRef = B21C1A3B884AC90DFB42D20F /* image_emoticon99.png */; };
 		E4BC7D1B10FF88D762725986 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10E2287E1195B4261B0B88E8 /* SettingsView.swift */; };
 		E5AF89139E6AB4BFAE0769DC /* YyExt.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29DEDF58334211370AE7331E /* YyExt.pb.swift */; };
@@ -371,6 +382,7 @@
 		07F3825DC85F129E0853D2C3 /* image_emoticon74.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = image_emoticon74.png; sourceTree = "<group>"; };
 		08875C03EE5B1DD462F2A34D /* ThreadList_AdParam.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThreadList_AdParam.pb.swift; sourceTree = "<group>"; };
 		08DF496C6D5906E6676D2BEE /* PollInfo.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PollInfo.pb.swift; sourceTree = "<group>"; };
+		094A7B97C027D43346675B29 /* TiebaPureProfile_UserProfile.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TiebaPureProfile_UserProfile.pb.swift; sourceTree = "<group>"; };
 		0B55E15D5374560BF39FADC4 /* App.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.pb.swift; sourceTree = "<group>"; };
 		0B7AE7FC7F4B4326FDCA1CEE /* image_emoticon44.webp */ = {isa = PBXFileReference; path = image_emoticon44.webp; sourceTree = "<group>"; };
 		0BA843231F38F8A2AE9E1727 /* UserPics.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserPics.pb.swift; sourceTree = "<group>"; };
@@ -444,6 +456,7 @@
 		37E6671F9A9A069EADCFAFB9 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		38C03F493137163D7C610712 /* image_emoticon134.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = image_emoticon134.png; sourceTree = "<group>"; };
 		38D0F8FDED0AF8172B753E77 /* image_emoticon70.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = image_emoticon70.png; sourceTree = "<group>"; };
+		3A38AD5D710823BA66CAE23C /* UserProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfileTests.swift; sourceTree = "<group>"; };
 		3A549B7376793AB7B0CA40EA /* image_emoticon31.webp */ = {isa = PBXFileReference; path = image_emoticon31.webp; sourceTree = "<group>"; };
 		3A9AD6DE056AFF15E3FFBB4D /* GraffitiRankListInfo.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GraffitiRankListInfo.pb.swift; sourceTree = "<group>"; };
 		3AA9B4D3B588E2AB44E50C5C /* image_emoticon7.webp */ = {isa = PBXFileReference; path = image_emoticon7.webp; sourceTree = "<group>"; };
@@ -456,6 +469,7 @@
 		413A0ACA6711D45059020B20 /* image_emoticon133.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = image_emoticon133.png; sourceTree = "<group>"; };
 		414CE8FE917928D6063FCBCB /* image_emoticon18.webp */ = {isa = PBXFileReference; path = image_emoticon18.webp; sourceTree = "<group>"; };
 		41F406332470AF7C30B532A5 /* TiebaPureApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TiebaPureApp.swift; sourceTree = "<group>"; };
+		42BC57D4AB4F3F67B48877D9 /* ThreadFavoritesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThreadFavoritesView.swift; sourceTree = "<group>"; };
 		431A697F330BBEC18E2252D0 /* ReaderCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderCard.swift; sourceTree = "<group>"; };
 		448F9B9CB9F6CB9D5945EA54 /* LikeForumInfo.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LikeForumInfo.pb.swift; sourceTree = "<group>"; };
 		44C549F603F6A8B5988B0B31 /* BrowsingHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowsingHistory.swift; sourceTree = "<group>"; };
@@ -489,6 +503,7 @@
 		593F8799EA1D3C2CB3A1506C /* image_emoticon96.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = image_emoticon96.png; sourceTree = "<group>"; };
 		594CFFAE35B27CDF27D9B903 /* SecurityRegressionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecurityRegressionTests.swift; sourceTree = "<group>"; };
 		5A967D18B7F1F21562A66FCA /* PbFloor_PbFloorResponse.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PbFloor_PbFloorResponse.pb.swift; sourceTree = "<group>"; };
+		5B099CE340C14B26B97B9E57 /* TiebaSocialAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TiebaSocialAPI.swift; sourceTree = "<group>"; };
 		5B19A0BDE47D30C5EDF965FE /* SkinInfo.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkinInfo.pb.swift; sourceTree = "<group>"; };
 		5B874C6C95166F8A6533128E /* image_emoticon32.webp */ = {isa = PBXFileReference; path = image_emoticon32.webp; sourceTree = "<group>"; };
 		5C69F23D5B4D953F2876FBFA /* PbPage_GodCard.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PbPage_GodCard.pb.swift; sourceTree = "<group>"; };
@@ -506,13 +521,16 @@
 		62222E550591C170424C6866 /* ForumRuleStatus.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForumRuleStatus.pb.swift; sourceTree = "<group>"; };
 		6235DE3F163C87C968EE91DB /* image_emoticon131.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = image_emoticon131.png; sourceTree = "<group>"; };
 		62AC5166CE303980233DD55D /* image_emoticon13.webp */ = {isa = PBXFileReference; path = image_emoticon13.webp; sourceTree = "<group>"; };
+		62D2754EBACAEEB97F2E3E7E /* UserProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfileView.swift; sourceTree = "<group>"; };
 		6384E4BFADB18600F9243A15 /* image_emoticon91.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = image_emoticon91.png; sourceTree = "<group>"; };
 		6443B9D2D0368D0B870565A7 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		65099C710E20667AE686E5E7 /* Advertisement.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Advertisement.pb.swift; sourceTree = "<group>"; };
 		662282E29E15A08C1581FB66 /* PbPage_AddPost.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PbPage_AddPost.pb.swift; sourceTree = "<group>"; };
 		674313EBDA3BABF79049EF20 /* AvatarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvatarView.swift; sourceTree = "<group>"; };
 		678521123BE8F41A9263F2F5 /* PbPresent.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PbPresent.pb.swift; sourceTree = "<group>"; };
+		68FBDB720D1FCC2A3138B0CC /* FollowedUsersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FollowedUsersView.swift; sourceTree = "<group>"; };
 		6A110514A7A4582994C7B4DA /* PbFloor_PbFloorRequestData.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PbFloor_PbFloorRequestData.pb.swift; sourceTree = "<group>"; };
+		6A68DE1DD356B7AC4AB669F8 /* UserProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfile.swift; sourceTree = "<group>"; };
 		6AD842C2F8EBE015B4F98443 /* Abstract.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Abstract.pb.swift; sourceTree = "<group>"; };
 		6AF40430262A1B6B098ED1AD /* TPointPost.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TPointPost.pb.swift; sourceTree = "<group>"; };
 		6B9769DFBF55471E036C585C /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
@@ -537,6 +555,7 @@
 		7ECA88FD4FD9566C6742CF78 /* ThreadPicList.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThreadPicList.pb.swift; sourceTree = "<group>"; };
 		7F4A700D0BB079E5CEC104C1 /* FixtureDecodingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FixtureDecodingTests.swift; sourceTree = "<group>"; };
 		7F9A3625B3F19C2F07165809 /* TiebaRequestBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TiebaRequestBuilder.swift; sourceTree = "<group>"; };
+		80C482CF17BA5520B13F1B03 /* AppAppearance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppAppearance.swift; sourceTree = "<group>"; };
 		81C9E000B6A70DAE855C1F80 /* ThreadSummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThreadSummary.swift; sourceTree = "<group>"; };
 		826345E5F4986784C516D35A /* image_emoticon97.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = image_emoticon97.png; sourceTree = "<group>"; };
 		82ED58FCA7C1363B19E791E4 /* ActionControl.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionControl.pb.swift; sourceTree = "<group>"; };
@@ -550,6 +569,7 @@
 		892F9FF8B7FBD14B120999B9 /* FrsPage_NavTabInfo.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrsPage_NavTabInfo.pb.swift; sourceTree = "<group>"; };
 		8A03CAA35E5E179DE8B4A20F /* image_emoticon3.webp */ = {isa = PBXFileReference; path = image_emoticon3.webp; sourceTree = "<group>"; };
 		8ADF8B92CA2483FCA22CEEE6 /* PostRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostRowView.swift; sourceTree = "<group>"; };
+		8B097E875FE8B825D77AD05F /* LocalThreadLibrary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalThreadLibrary.swift; sourceTree = "<group>"; };
 		8CE2665A1A934F55AC6A202E /* Baijiahao.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Baijiahao.pb.swift; sourceTree = "<group>"; };
 		8D5BFD4EFAD7D98BA703D36C /* StateRegressionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StateRegressionTests.swift; sourceTree = "<group>"; };
 		8DCDC591E975F46DB097012C /* AddPostList.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddPostList.pb.swift; sourceTree = "<group>"; };
@@ -600,6 +620,7 @@
 		B3312A539F9532E1B21FD622 /* AppPosInfo.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPosInfo.pb.swift; sourceTree = "<group>"; };
 		B3D68A37B893B7ECCE635B10 /* DealInfo.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DealInfo.pb.swift; sourceTree = "<group>"; };
 		B3F69C507BA79A259348210F /* image_emoticon75.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = image_emoticon75.png; sourceTree = "<group>"; };
+		B55649E6AEA1AD2EF4813452 /* TiebaUserProfileAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TiebaUserProfileAPI.swift; sourceTree = "<group>"; };
 		B634F8DB4D11BBE2793C9024 /* image_emoticon20.webp */ = {isa = PBXFileReference; path = image_emoticon20.webp; sourceTree = "<group>"; };
 		B8606C99A4A56953BB1FA0ED /* TiebaSearchAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TiebaSearchAPI.swift; sourceTree = "<group>"; };
 		B87701ECE476838B1B10722C /* GoodsInfo.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoodsInfo.pb.swift; sourceTree = "<group>"; };
@@ -653,6 +674,7 @@
 		E425761E05D459199869361A /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
 		E4646B1C5802BA73F8DFC01D /* image_emoticon101.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = image_emoticon101.png; sourceTree = "<group>"; };
 		E49593132DB99F3E87F8EC4F /* AppTransmitData.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTransmitData.pb.swift; sourceTree = "<group>"; };
+		E65F7C671CDA66E5F18CEC24 /* UserProfileMapper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfileMapper.swift; sourceTree = "<group>"; };
 		E6BD4F667454C247002A6602 /* FrsPage_Group.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrsPage_Group.pb.swift; sourceTree = "<group>"; };
 		E7D98C38DD4DF0A6BBAEE14B /* User.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.pb.swift; sourceTree = "<group>"; };
 		E8C0D604D09595506AE1BB88 /* image_emoticon5.webp */ = {isa = PBXFileReference; path = image_emoticon5.webp; sourceTree = "<group>"; };
@@ -737,6 +759,8 @@
 				AFF65BFE5160CFC6F1F12CEF /* TiebaHTTPClient.swift */,
 				7F9A3625B3F19C2F07165809 /* TiebaRequestBuilder.swift */,
 				B8606C99A4A56953BB1FA0ED /* TiebaSearchAPI.swift */,
+				5B099CE340C14B26B97B9E57 /* TiebaSocialAPI.swift */,
+				B55649E6AEA1AD2EF4813452 /* TiebaUserProfileAPI.swift */,
 			);
 			path = Network;
 			sourceTree = "<group>";
@@ -899,6 +923,7 @@
 				1FE3D6E1E2CD3AB2324C0DB6 /* ThreadList_ThreadList.pb.swift */,
 				7ECA88FD4FD9566C6742CF78 /* ThreadPicList.pb.swift */,
 				9489619D412D660DF6072A0E /* TiebaPlusAd.pb.swift */,
+				094A7B97C027D43346675B29 /* TiebaPureProfile_UserProfile.pb.swift */,
 				322281FC8FDCC6E16F231209 /* Timgs.pb.swift */,
 				8722EE8BE39BCC6FF20D13D3 /* TogetherHi.pb.swift */,
 				6AF40430262A1B6B098ED1AD /* TPointPost.pb.swift */,
@@ -920,7 +945,10 @@
 			children = (
 				E425761E05D459199869361A /* AboutView.swift */,
 				2C32C727ADE31C67A3B02736 /* BrowsingHistoryView.swift */,
+				68FBDB720D1FCC2A3138B0CC /* FollowedUsersView.swift */,
 				D671D758CEF85777E7C7D8E4 /* MeView.swift */,
+				42BC57D4AB4F3F67B48877D9 /* ThreadFavoritesView.swift */,
+				62D2754EBACAEEB97F2E3E7E /* UserProfileView.swift */,
 			);
 			path = Profile;
 			sourceTree = "<group>";
@@ -939,15 +967,18 @@
 			isa = PBXGroup;
 			children = (
 				07566334FE43A9F9BF360D89 /* Account.swift */,
+				80C482CF17BA5520B13F1B03 /* AppAppearance.swift */,
 				44C549F603F6A8B5988B0B31 /* BrowsingHistory.swift */,
 				EDD67FF51E0529813111A68A /* ContentBlock.swift */,
 				5E92E90BB801373B85685DDD /* Forum.swift */,
+				8B097E875FE8B825D77AD05F /* LocalThreadLibrary.swift */,
 				CD2C30123EFF90A5F9BEE7C2 /* Post.swift */,
 				FDE02417BF13C2E0A1D7824E /* RecentForum.swift */,
 				16DDB351392A69BC42810B9E /* SearchResult.swift */,
 				81C9E000B6A70DAE855C1F80 /* ThreadSummary.swift */,
 				4EF25E73F880C6AD77740631 /* TiebaEmoticon.swift */,
 				1E3321457BFA9611243ABF93 /* TiebaURL.swift */,
+				6A68DE1DD356B7AC4AB669F8 /* UserProfile.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -1026,6 +1057,7 @@
 				12A3703C41D45165012736BB /* TiebaFormSignerTests.swift */,
 				53A22DDA746D43724E44B7D2 /* TiebaPureSmokeTests.swift */,
 				9CE43843ABF0E6FE36F6A7BD /* TiebaURLTests.swift */,
+				3A38AD5D710823BA66CAE23C /* UserProfileTests.swift */,
 			);
 			path = TiebaPureTests;
 			sourceTree = "<group>";
@@ -1194,6 +1226,7 @@
 				ED135C7D7263C882A3B2FF09 /* ForumMapper.swift */,
 				FB7052589118D7A5827C4467 /* PostMapper.swift */,
 				946B2D7B6BCE7C2C716A3EB2 /* ThreadMapper.swift */,
+				E65F7C671CDA66E5F18CEC24 /* UserProfileMapper.swift */,
 			);
 			path = Mapping;
 			sourceTree = "<group>";
@@ -1521,6 +1554,7 @@
 				F0FF2290BC0E84D98B000FF3 /* Anti.pb.swift in Sources */,
 				8BBB15ACF0AFC63C42906137 /* ApkDetail.pb.swift in Sources */,
 				98F305A111ACEBFB5002F308 /* App.pb.swift in Sources */,
+				DEF7E4F5C3BB5C3AC25E89EF /* AppAppearance.swift in Sources */,
 				89331B1C9CEFD4999D01A906 /* AppEnvironment.swift in Sources */,
 				F91AF0FEAF078DC66EA3C184 /* AppPosInfo.pb.swift in Sources */,
 				4C0F7FD71CECF391A00DA8F5 /* AppTransmitData.pb.swift in Sources */,
@@ -1548,6 +1582,7 @@
 				4AA9B6239E0CE2B3CB05F579 /* FeedForumInfo.pb.swift in Sources */,
 				0DCFE169E93E890EE1F49B55 /* FineBannerPb.pb.swift in Sources */,
 				4ED79FF1DB72B276E756EBF2 /* FixtureTiebaAPI.swift in Sources */,
+				9B869CC8E0EE590D0B003B40 /* FollowedUsersView.swift in Sources */,
 				F81A17ADFC8827935D28CB43 /* Forum.swift in Sources */,
 				C144376E190882BF6A323835 /* ForumHubView.swift in Sources */,
 				C89136E4D72A263A2D5305DC /* ForumInfo.pb.swift in Sources */,
@@ -1592,6 +1627,7 @@
 				4472BBD1F093E3A7DF10A514 /* LikeForumInfo.pb.swift in Sources */,
 				573ADF9688176701B8A26AA5 /* LinkInfo.pb.swift in Sources */,
 				30936BFF1A51A1079667B5DF /* LiveCoverStatus.pb.swift in Sources */,
+				53044332B9EB096132A2E15F /* LocalThreadLibrary.swift in Sources */,
 				48D079846A66652EED2BC55A /* LoginView.swift in Sources */,
 				4CC783BD1274CE79745DE038 /* LoginWebView.swift in Sources */,
 				1D73C1F9246A5740B5D63601 /* LogoutCoordinator.swift in Sources */,
@@ -1676,6 +1712,7 @@
 				EF025B768FF3C3C34F74BAFA /* TailInfo.pb.swift in Sources */,
 				751BF89DC90AF644D4457738 /* Terminal.pb.swift in Sources */,
 				06132F36C724DF5F6A7409D5 /* ThreadDetailView.swift in Sources */,
+				CDB537530EE8B4DF3E313407 /* ThreadFavoritesView.swift in Sources */,
 				A918F9AD31F8563BBA483DDE /* ThreadInfo.pb.swift in Sources */,
 				B4D560A653105D71581F50D2 /* ThreadList_AdParam.pb.swift in Sources */,
 				F7E441F15E23958945840B57 /* ThreadList_ThreadList.pb.swift in Sources */,
@@ -1690,15 +1727,21 @@
 				EAADABB00751D25DB084C26D /* TiebaHTTPClient.swift in Sources */,
 				D420D9FC2242F4B114D2926E /* TiebaPlusAd.pb.swift in Sources */,
 				B5EC9216076BE5E4C2EF8721 /* TiebaPureApp.swift in Sources */,
+				3E83765E473D5A072792B006 /* TiebaPureProfile_UserProfile.pb.swift in Sources */,
 				736CA9D7B75258F513F36463 /* TiebaPureTheme.swift in Sources */,
 				A6537596454795C265B252AD /* TiebaRequestBuilder.swift in Sources */,
 				5DF9D42AF53D712C923B9A3D /* TiebaSearchAPI.swift in Sources */,
+				C7A32644A038BA4FDE2C2864 /* TiebaSocialAPI.swift in Sources */,
 				61AC96A8DF8D9A6671239F30 /* TiebaURL.swift in Sources */,
+				66CB3F6B00C11572EF7276D1 /* TiebaUserProfileAPI.swift in Sources */,
 				CFEA94941A929B26FBD03092 /* Timgs.pb.swift in Sources */,
 				87DD38880AE78E44F313809A /* TogetherHi.pb.swift in Sources */,
 				18AFF86FF34F7B3BFC789CD0 /* TwZhiBoAnti.pb.swift in Sources */,
 				F2FE7D83BA305985F7A5600D /* User.pb.swift in Sources */,
 				B0EB2D4667A96AF1DC28E2E5 /* UserPics.pb.swift in Sources */,
+				C9381BB37A6F1CDB5053291B /* UserProfile.swift in Sources */,
+				E3CF1C9A62133316FF6D93E2 /* UserProfileMapper.swift in Sources */,
+				470AA98A8CA5F65598F45AFF /* UserProfileView.swift in Sources */,
 				AA3AF8E9A9956DD4FAEA8638 /* VideoInfo.pb.swift in Sources */,
 				CE70750547AFB3CB53EDE288 /* VideoPlayerView.swift in Sources */,
 				B4A335E483F17819940BE505 /* Voice.pb.swift in Sources */,
@@ -1727,6 +1770,7 @@
 				A9A2CC0EE649F6C31E920713 /* TiebaFormSignerTests.swift in Sources */,
 				C0E5134C9E23DDD474D84DDA /* TiebaPureSmokeTests.swift in Sources */,
 				450F423517B8D1DEFD51B15B /* TiebaURLTests.swift in Sources */,
+				DE64CDA4FA60F57188F7BC53 /* UserProfileTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

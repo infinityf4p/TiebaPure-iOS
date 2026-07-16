@@ -215,6 +215,14 @@ enum ReaderErrorMessage {
             return loginError.description
         }
 
+        if let profileError = error as? UserProfileAPIError {
+            return profileError.description
+        }
+
+        if let mutationError = error as? TiebaMutationError {
+            return mutationError.description
+        }
+
         if error is KeychainError || error is AccountMigrationError || error is AccountStoreError {
             return "本机账号数据处理失败，请重新登录或稍后重试。"
         }

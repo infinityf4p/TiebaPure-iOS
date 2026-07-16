@@ -539,6 +539,29 @@ final class AuthSessionTests: XCTestCase {
         XCTAssertEqual(account.minimalCookieHeader, "BDUSS=bduss; STOKEN=stoken; BAIDUID=baiduid")
     }
 
+    func testWebFallbackPrefersClientTBSOverWebTBS() async throws {
+        let api = makeAPI { request in
+            let path = try XCTUnwrap(request.url?.path)
+            switch path {
+            case "/c/s/login":
+                return Data(#"{"error_code":"0","anti":{"tbs":"client-tbs"}}"#.utf8)
+            case "/c/s/initNickname":
+                return Data("{}".utf8)
+            case "/mo/q/newmoindex":
+                return Self.webMyInfoJSON
+            default:
+                XCTFail("Unexpected request path: \(path)")
+                return Data()
+            }
+        }
+
+        let account = try await api.validateLogin(
+            cookies: BaiduCookies(bduss: "bduss", stoken: "stoken", baiduID: "baiduid")
+        )
+
+        XCTAssertEqual(account.tbs, "client-tbs")
+    }
+
     private func makeAPI(handler: @escaping (URLRequest) throws -> Data) -> TiebaAPI {
         AuthMockURLProtocol.handler = handler
         let configuration = URLSessionConfiguration.ephemeral

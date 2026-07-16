@@ -21,6 +21,20 @@ final class AppEnvironment: ObservableObject {
         if arguments.contains("UITEST_RESET_BROWSING_HISTORY") {
             BrowsingHistoryStore.shared.clear()
         }
+        if arguments.contains("UITEST_RESET_LOCAL_THREAD_LIBRARY") {
+            LocalThreadLibraryStore.shared.clearAll()
+        }
+        if arguments.contains("UITEST_SEED_LOCAL_THREAD_LIBRARY") {
+            LocalThreadLibraryStore.shared.addFavorite(
+                thread: FixtureTiebaAPI.threads[0],
+                forum: FixtureTiebaAPI.forum
+            )
+            LocalThreadLibraryStore.shared.recordReadingPosition(
+                threadID: FixtureTiebaAPI.threads[0].id,
+                postID: 2002,
+                floor: 2
+            )
+        }
         if arguments.contains("UITEST_USE_FIXTURES") {
             return fixture()
         }

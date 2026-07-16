@@ -39,6 +39,7 @@ struct Post: Identifiable, Equatable, Sendable {
     var blocks: [ContentBlock]
     var subpostCount: Int
     var likeCount: Int
+    var isLiked: Bool = false
     var previewSubposts: [Subpost]
 
     var contentPreview: String {
@@ -54,4 +55,11 @@ struct Subpost: Identifiable, Equatable, Sendable {
     var blocks: [ContentBlock]
     var createdAt: Date?
     var likeCount: Int
+    var isLiked: Bool = false
+}
+
+enum TiebaLikeObjectType: Int, Equatable, Sendable {
+    case thread = 3
+    case post = 1
+    case subpost = 2
 }

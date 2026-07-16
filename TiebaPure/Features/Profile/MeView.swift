@@ -4,61 +4,72 @@ struct MeView: View {
     let account: Account?
 
     @ObservedObject private var browsingHistoryStore = BrowsingHistoryStore.shared
+    @ObservedObject private var localThreadLibraryStore = LocalThreadLibraryStore.shared
     @State private var showsLogin = false
     @State private var showsFollowedForums = false
+    @State private var showsOwnProfile = false
 
     var body: some View {
         NavigationStack {
             Form {
                 if let account {
                     Section("账号") {
-                        HStack(spacing: TiebaPureTheme.Spacing.sm) {
-                            AvatarView(
-                                url: account.portraitURL,
-                                title: account.displayName,
-                                size: TiebaPureTheme.AvatarSize.large
-                            )
+                        Button {
+                            showsOwnProfile = true
+                        } label: {
+                            HStack(spacing: TiebaPureTheme.Spacing.sm) {
+                                AvatarView(
+                                    url: account.portraitURL,
+                                    title: account.displayName,
+                                    size: TiebaPureTheme.AvatarSize.large
+                                )
 
-                            VStack(alignment: .leading, spacing: TiebaPureTheme.Spacing.xxs) {
-                                Text(account.displayName)
-                                    .font(.body.weight(.semibold))
+                                VStack(alignment: .leading, spacing: TiebaPureTheme.Spacing.xxs) {
+                                    Text(account.displayName)
+                                        .font(.body.weight(.semibold))
+                                        .foregroundStyle(.primary)
 
-                                Text("UID \(account.uid)")
-                                    .font(.footnote)
-                                    .foregroundStyle(.secondary)
+                                    Text("UID \(account.uid)")
+                                        .font(.footnote)
+                                        .foregroundStyle(.secondary)
+                                }
+
+                                Spacer(minLength: TiebaPureTheme.Spacing.sm)
+
+                                Image(systemName: "chevron.right")
+                                    .font(.footnote.weight(.semibold))
+                                    .foregroundStyle(.tertiary)
+                                    .accessibilityHidden(true)
                             }
-                        }
-                        .padding(.vertical, TiebaPureTheme.Spacing.xs)
-
-                        ZStack(alignment: .leading) {
-                            Label("我的关注吧", systemImage: "star")
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .allowsHitTesting(false)
-                                .accessibilityHidden(true)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .frame(minHeight: 44)
-                        .overlay {
-                            Button {
-                                showsFollowedForums = true
-                            } label: {
-                                Color.clear
-                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                    .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
+                            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                             .contentShape(Rectangle())
-                            .accessibilityLabel("我的关注吧")
-                            .accessibilityHint("打开已关注的贴吧列表")
                         }
+                        .buttonStyle(.plain)
+                        .padding(.vertical, TiebaPureTheme.Spacing.xs)
+                        .accessibilityLabel("查看\(account.displayName)的用户主页")
+                        .accessibilityHint("打开自己的用户主页")
+                        .accessibilityIdentifier("me-user-profile-button")
 
                         NavigationLink {
-                            SettingsView(account: account)
+                            FollowedUsersView(account: account)
                         } label: {
-                            Label("设置", systemImage: "gearshape")
+                            Label("关注的用户", systemImage: "person.2")
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .contentShape(Rectangle())
                         }
+                        .accessibilityHint("查看当前账号关注的用户")
+                        .accessibilityIdentifier("followed-users-entry")
+
+                        Button {
+                            showsFollowedForums = true
+                        } label: {
+                            Label("我的关注吧", systemImage: "star")
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("我的关注吧")
+                        .accessibilityHint("打开已关注的贴吧列表")
                     }
                 } else {
                     Section("账号") {
@@ -82,6 +93,26 @@ struct MeView: View {
 
                 Section("浏览") {
                     NavigationLink {
+                        ThreadFavoritesView(account: account)
+                    } label: {
+                        HStack(spacing: TiebaPureTheme.Spacing.sm) {
+                            Label("帖子收藏", systemImage: "star")
+                            Spacer(minLength: TiebaPureTheme.Spacing.sm)
+                            if localThreadLibraryStore.favorites.isEmpty == false {
+                                Text("\(localThreadLibraryStore.favorites.count)")
+                                    .font(.subheadline.monospacedDigit())
+                                    .foregroundStyle(.secondary)
+                                    .accessibilityHidden(true)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                    }
+                    .accessibilityLabel(threadFavoritesAccessibilityLabel)
+                    .accessibilityHint("查看本机收藏的帖子")
+                    .accessibilityIdentifier("thread-favorites-entry")
+
+                    NavigationLink {
                         BrowsingHistoryView(account: account)
                     } label: {
                         HStack(spacing: TiebaPureTheme.Spacing.sm) {
@@ -104,6 +135,16 @@ struct MeView: View {
 
                 Section("应用") {
                     NavigationLink {
+                        SettingsView(account: account)
+                    } label: {
+                        Label("设置", systemImage: "gearshape")
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
+                    }
+                    .accessibilityHint("调整显示模式和其他应用设置")
+                    .accessibilityIdentifier("app-settings-entry")
+
+                    NavigationLink {
                         AboutView()
                     } label: {
                         Label("关于 TiebaPure", systemImage: "info.circle")
@@ -117,6 +158,11 @@ struct MeView: View {
             .navigationDestination(isPresented: $showsFollowedForums) {
                 if let account {
                     ForumListView(account: account)
+                }
+            }
+            .navigationDestination(isPresented: $showsOwnProfile) {
+                if let account {
+                    UserProfileView(account: account, user: userSummary(for: account))
                 }
             }
             .sheet(isPresented: $showsLogin) {
@@ -138,13 +184,29 @@ struct MeView: View {
                     showsLogin = false
                 } else {
                     showsFollowedForums = false
+                    showsOwnProfile = false
                 }
             }
         }
+        .toolbar(.visible, for: .tabBar)
+    }
+
+    private var threadFavoritesAccessibilityLabel: String {
+        guard localThreadLibraryStore.favorites.isEmpty == false else { return "帖子收藏" }
+        return "帖子收藏，共 \(localThreadLibraryStore.favorites.count) 条"
     }
 
     private var browsingHistoryAccessibilityLabel: String {
         guard browsingHistoryStore.items.isEmpty == false else { return "浏览历史" }
         return "浏览历史，共 \(browsingHistoryStore.items.count) 条"
+    }
+
+    private func userSummary(for account: Account) -> UserSummary {
+        UserSummary(
+            id: Int64(account.uid) ?? 0,
+            name: account.name,
+            displayName: account.displayName,
+            portrait: account.portrait
+        )
     }
 }

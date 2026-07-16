@@ -417,6 +417,7 @@ final class ContentMappingTests: XCTestCase {
         subpost.location = subpostLocation
         subpost.content = [content]
         subpost.agree.agreeNum = 6
+        subpost.agree.hasAgree_p = 1
 
         var subpostList = Tieba_SubPost()
         subpostList.subPostList = [subpost]
@@ -427,6 +428,7 @@ final class ContentMappingTests: XCTestCase {
         post.subPostList = subpostList
         post.subPostNumber = 1
         post.agree.agreeNum = 5
+        post.agree.hasAgree_p = 1
         var postLocation = Tieba_Lbs()
         postLocation.name = "北京"
         post.lbsInfo = postLocation
@@ -434,11 +436,13 @@ final class ContentMappingTests: XCTestCase {
         let mapped = PostMapper.post(from: post, usersByID: [8: author], threadID: 123)
 
         XCTAssertEqual(mapped.likeCount, 5)
+        XCTAssertTrue(mapped.isLiked)
         XCTAssertEqual(mapped.ipAddress, "北京")
         XCTAssertEqual(mapped.previewSubposts.first?.floor, 3)
         XCTAssertEqual(mapped.previewSubposts.first?.ipAddress, "陕西")
         XCTAssertEqual(mapped.previewSubposts.first?.author.displayNameResolved, "楼中楼用户")
         XCTAssertEqual(mapped.previewSubposts.first?.likeCount, 6)
+        XCTAssertEqual(mapped.previewSubposts.first?.isLiked, true)
         XCTAssertEqual(mapped.previewSubposts.first?.author.portraitURL?.absoluteString, "https://himg.bdimg.com/sys/portrait/item/tb.1.reply")
         XCTAssertEqual(mapped.previewSubposts.first?.blocks.compactMap(\.plainText).joined(), "回复内容")
     }
