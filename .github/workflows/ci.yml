@@ -91,7 +91,9 @@ jobs:
 
       - name: Verify source and attribution manifests
         run: |
-          test "$(find Protos -type f -name '*.proto' | wc -l | tr -d ' ')" = "302"
+          # Protos/TiebaPureProfile is original to this project; the 302-file
+          # assertion pins only the schemas copied from TiebaLite.
+          test "$(find Protos -type f -name '*.proto' -not -path 'Protos/TiebaPureProfile/*' | wc -l | tr -d ' ')" = "302"
           grep -Fq '4.0-dev@2885b2aabbbf47aba7bf12b1cd7cbc03b1f5ec15' README.md
           grep -Fq '4.0-dev@2885b2aabbbf47aba7bf12b1cd7cbc03b1f5ec15' THIRD_PARTY_NOTICES.md
           grep -Fq '2885b2aabbbf47aba7bf12b1cd7cbc03b1f5ec15' Protos/README.md

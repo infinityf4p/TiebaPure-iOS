@@ -1,10 +1,13 @@
 # Tieba Protobuf Inputs
 
-All 302 source schemas were copied from
+302 source schemas were copied from
 [`HuanCheng65/TiebaLite`](https://github.com/HuanCheng65/TiebaLite/tree/4.0-dev/app/src/main/protos)
 at `4.0-dev@2885b2aabbbf47aba7bf12b1cd7cbc03b1f5ec15`. They were verified
 byte-for-byte when this repository was prepared. The generator reads only this
 repository's `Protos/` directory and never requires an external checkout.
+
+`TiebaPureProfile/` is original to this project and is not part of the
+TiebaLite-copied set; CI counts the copied schemas excluding that directory.
 
 Only reader-required root schemas are selected for iOS:
 
