@@ -1994,6 +1994,38 @@ final class TiebaPureUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["被回复用户"].waitForExistence(timeout: 5))
     }
 
+    func testExpandedSubpostSeparatesParentAndReplySections() {
+        let app = launchApp(scenario: "subpostReference")
+        openFirstThread(in: app)
+
+        XCTAssertTrue(waitForElement(named: "查看全部4条回复", in: app, maxSwipes: 20))
+        app.buttons["查看全部4条回复"].tap()
+        XCTAssertTrue(app.navigationBars["2楼的回复(4条)"].waitForExistence(timeout: 8))
+
+        let parentHeader = app.descendants(matching: .any)["subpost-parent-section-header"]
+        let parentMetadata = app.descendants(matching: .any)["thread-subpost-parent-metadata"]
+        let repliesHeader = app.descendants(matching: .any)["subpost-replies-section-header"]
+        let firstReply = app.descendants(matching: .any)
+            .matching(identifier: "thread-subpost-text")
+            .firstMatch
+
+        XCTAssertTrue(parentHeader.waitForExistence(timeout: 5))
+        XCTAssertEqual(parentHeader.label, "层主内容")
+        XCTAssertTrue(parentMetadata.waitForExistence(timeout: 5))
+        XCTAssertTrue(repliesHeader.waitForExistence(timeout: 5))
+        XCTAssertEqual(repliesHeader.label, "楼中楼回复，共4条")
+        XCTAssertTrue(firstReply.waitForExistence(timeout: 5))
+
+        XCTAssertLessThan(parentHeader.frame.maxY, parentMetadata.frame.minY)
+        XCTAssertLessThan(parentMetadata.frame.maxY, repliesHeader.frame.minY)
+        XCTAssertGreaterThanOrEqual(
+            repliesHeader.frame.minY - parentMetadata.frame.maxY,
+            12
+        )
+        XCTAssertLessThan(repliesHeader.frame.maxY, firstReply.frame.minY)
+        attachScreenshot(named: "fixture-expanded-subpost-section-boundary")
+    }
+
     func testSubpostUserProfileRightSwipeReturnsOnlyToSubpostSheet() {
         let app = launchApp(scenario: "subpostReference")
         openFirstThread(in: app)
@@ -2073,10 +2105,14 @@ final class TiebaPureUITests: XCTestCase {
         XCTAssertTrue(navigationBar.exists, "楼中楼下滑只能滚动内容，不应退出")
 
         let restingFrame = navigationBar.frame
-        let partialSwipeStart = app.coordinate(
+        let neutralSectionHeader = app.descendants(matching: .any)[
+            "subpost-parent-section-header"
+        ]
+        XCTAssertTrue(neutralSectionHeader.waitForExistence(timeout: 5))
+        let partialSwipeStart = neutralSectionHeader.coordinate(
             withNormalizedOffset: CGVector(dx: 0.35, dy: 0.45)
         )
-        let partialSwipeEnd = app.coordinate(
+        let partialSwipeEnd = neutralSectionHeader.coordinate(
             withNormalizedOffset: CGVector(dx: 0.49, dy: 0.45)
         )
         partialSwipeStart.press(

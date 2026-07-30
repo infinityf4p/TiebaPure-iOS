@@ -29,8 +29,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: dev.infinityf4p.tiebapure
         INFOPLIST_FILE: TiebaPure/Resources/Info.plist
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        MARKETING_VERSION: 1.2.4
-        CURRENT_PROJECT_VERSION: 14
+        MARKETING_VERSION: 1.2.5
+        CURRENT_PROJECT_VERSION: 15
   TiebaPureTests:
     type: bundle.unit-test
     platform: iOS
