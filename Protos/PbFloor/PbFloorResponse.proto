@@ -2,12 +2,24 @@ syntax = "proto3";
 
 package tieba.pbFloor;
 
-option java_package = "com.huanchengfly.tieba.post.api.models.protos.pbFloor";
-
 import "Error.proto";
-import "PbFloor/PbFloorResponseData.proto";
+import "Anti.proto";
+import "Page.proto";
+import "Post.proto";
+import "SimpleForum.proto";
+import "SubPostList.proto";
+import "ThreadInfo.proto";
+
+message PbFloorResponseData {
+  tieba.Page page = 1;
+  tieba.Anti anti = 2;
+  tieba.Post post = 3;
+  repeated tieba.SubPostList subpost_list = 4;
+  tieba.ThreadInfo thread = 5;
+  tieba.SimpleForum forum = 6;
+}
 
 message PbFloorResponse {
-  Error error = 1;
+  tieba.Error error = 1;
   PbFloorResponseData data = 2;
 }

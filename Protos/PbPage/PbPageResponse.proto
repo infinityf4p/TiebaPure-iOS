@@ -2,12 +2,25 @@ syntax = "proto3";
 
 package tieba.pbPage;
 
-option java_package = "com.huanchengfly.tieba.post.api.models.protos.pbPage";
-
 import "Error.proto";
-import "PbPage/PbPageResponseData.proto";
+import "Anti.proto";
+import "Page.proto";
+import "Post.proto";
+import "SimpleForum.proto";
+import "ThreadInfo.proto";
+import "User.proto";
+
+message PbPageResponseData {
+  tieba.SimpleForum forum = 2;
+  tieba.Page page = 3;
+  tieba.Anti anti = 4;
+  repeated tieba.Post post_list = 6;
+  tieba.ThreadInfo thread = 8;
+  repeated tieba.User user_list = 13;
+  tieba.Post first_floor_post = 38;
+}
 
 message PbPageResponse {
-  Error error = 1;
+  tieba.Error error = 1;
   PbPageResponseData data = 2;
 }

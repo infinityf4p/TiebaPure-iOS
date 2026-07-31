@@ -20,44 +20,106 @@ fileprivate nonisolated struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobu
   typealias Version = _2
 }
 
-nonisolated struct Tieba_PbFloor_PbFloorResponse: Sendable {
+nonisolated struct Tieba_PbFloor_PbFloorResponseData: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var error: Tieba_Error {
-    get {_error ?? Tieba_Error()}
-    set {_error = newValue}
+  var page: Tieba_Page {
+    get {_page ?? Tieba_Page()}
+    set {_page = newValue}
   }
-  /// Returns true if `error` has been explicitly set.
-  var hasError: Bool {self._error != nil}
-  /// Clears the value of `error`. Subsequent reads from it will return its default value.
-  mutating func clearError() {self._error = nil}
+  /// Returns true if `page` has been explicitly set.
+  var hasPage: Bool {self._page != nil}
+  /// Clears the value of `page`. Subsequent reads from it will return its default value.
+  mutating func clearPage() {self._page = nil}
 
-  var data: Tieba_PbFloor_PbFloorResponseData {
-    get {_data ?? Tieba_PbFloor_PbFloorResponseData()}
-    set {_data = newValue}
+  var anti: Tieba_Anti {
+    get {_anti ?? Tieba_Anti()}
+    set {_anti = newValue}
   }
-  /// Returns true if `data` has been explicitly set.
-  var hasData: Bool {self._data != nil}
-  /// Clears the value of `data`. Subsequent reads from it will return its default value.
-  mutating func clearData() {self._data = nil}
+  /// Returns true if `anti` has been explicitly set.
+  var hasAnti: Bool {self._anti != nil}
+  /// Clears the value of `anti`. Subsequent reads from it will return its default value.
+  mutating func clearAnti() {self._anti = nil}
+
+  var post: Tieba_Post {
+    get {_post ?? Tieba_Post()}
+    set {_post = newValue}
+  }
+  /// Returns true if `post` has been explicitly set.
+  var hasPost: Bool {self._post != nil}
+  /// Clears the value of `post`. Subsequent reads from it will return its default value.
+  mutating func clearPost() {self._post = nil}
+
+  var subpostList: [Tieba_SubPostList] = []
+
+  var thread: Tieba_ThreadInfo {
+    get {_thread ?? Tieba_ThreadInfo()}
+    set {_thread = newValue}
+  }
+  /// Returns true if `thread` has been explicitly set.
+  var hasThread: Bool {self._thread != nil}
+  /// Clears the value of `thread`. Subsequent reads from it will return its default value.
+  mutating func clearThread() {self._thread = nil}
+
+  var forum: Tieba_SimpleForum {
+    get {_forum ?? Tieba_SimpleForum()}
+    set {_forum = newValue}
+  }
+  /// Returns true if `forum` has been explicitly set.
+  var hasForum: Bool {self._forum != nil}
+  /// Clears the value of `forum`. Subsequent reads from it will return its default value.
+  mutating func clearForum() {self._forum = nil}
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
 
-  fileprivate var _error: Tieba_Error? = nil
-  fileprivate var _data: Tieba_PbFloor_PbFloorResponseData? = nil
+  fileprivate var _page: Tieba_Page? = nil
+  fileprivate var _anti: Tieba_Anti? = nil
+  fileprivate var _post: Tieba_Post? = nil
+  fileprivate var _thread: Tieba_ThreadInfo? = nil
+  fileprivate var _forum: Tieba_SimpleForum? = nil
+}
+
+nonisolated struct Tieba_PbFloor_PbFloorResponse: @unchecked Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var error: Tieba_Error {
+    get {_storage._error ?? Tieba_Error()}
+    set {_uniqueStorage()._error = newValue}
+  }
+  /// Returns true if `error` has been explicitly set.
+  var hasError: Bool {_storage._error != nil}
+  /// Clears the value of `error`. Subsequent reads from it will return its default value.
+  mutating func clearError() {_uniqueStorage()._error = nil}
+
+  var data: Tieba_PbFloor_PbFloorResponseData {
+    get {_storage._data ?? Tieba_PbFloor_PbFloorResponseData()}
+    set {_uniqueStorage()._data = newValue}
+  }
+  /// Returns true if `data` has been explicitly set.
+  var hasData: Bool {_storage._data != nil}
+  /// Clears the value of `data`. Subsequent reads from it will return its default value.
+  mutating func clearData() {_uniqueStorage()._data = nil}
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+
+  fileprivate var _storage = _StorageClass.defaultInstance
 }
 
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate nonisolated let _protobuf_package = "tieba.pbFloor"
 
-nonisolated extension Tieba_PbFloor_PbFloorResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".PbFloorResponse"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}error\0\u{1}data\0")
+nonisolated extension Tieba_PbFloor_PbFloorResponseData: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".PbFloorResponseData"
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}page\0\u{1}anti\0\u{1}post\0\u{3}subpost_list\0\u{1}thread\0\u{1}forum\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -65,8 +127,12 @@ nonisolated extension Tieba_PbFloor_PbFloorResponse: SwiftProtobuf.Message, Swif
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularMessageField(value: &self._error) }()
-      case 2: try { try decoder.decodeSingularMessageField(value: &self._data) }()
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._page) }()
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._anti) }()
+      case 3: try { try decoder.decodeSingularMessageField(value: &self._post) }()
+      case 4: try { try decoder.decodeRepeatedMessageField(value: &self.subpostList) }()
+      case 5: try { try decoder.decodeSingularMessageField(value: &self._thread) }()
+      case 6: try { try decoder.decodeSingularMessageField(value: &self._forum) }()
       default: break
       }
     }
@@ -77,18 +143,111 @@ nonisolated extension Tieba_PbFloor_PbFloorResponse: SwiftProtobuf.Message, Swif
     // allocates stack space for every if/case branch local when no optimizations
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
     // https://github.com/apple/swift-protobuf/issues/1182
-    try { if let v = self._error {
+    try { if let v = self._page {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
     } }()
-    try { if let v = self._data {
+    try { if let v = self._anti {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    } }()
+    try { if let v = self._post {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    } }()
+    if !self.subpostList.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.subpostList, fieldNumber: 4)
+    }
+    try { if let v = self._thread {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+    } }()
+    try { if let v = self._forum {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
     } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
+  static func ==(lhs: Tieba_PbFloor_PbFloorResponseData, rhs: Tieba_PbFloor_PbFloorResponseData) -> Bool {
+    if lhs._page != rhs._page {return false}
+    if lhs._anti != rhs._anti {return false}
+    if lhs._post != rhs._post {return false}
+    if lhs.subpostList != rhs.subpostList {return false}
+    if lhs._thread != rhs._thread {return false}
+    if lhs._forum != rhs._forum {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Tieba_PbFloor_PbFloorResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".PbFloorResponse"
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}error\0\u{1}data\0")
+
+  fileprivate class _StorageClass {
+    var _error: Tieba_Error? = nil
+    var _data: Tieba_PbFloor_PbFloorResponseData? = nil
+
+      // This property is used as the initial default value for new instances of the type.
+      // The type itself is protecting the reference to its storage via CoW semantics.
+      // This will force a copy to be made of this reference when the first mutation occurs;
+      // hence, it is safe to mark this as `nonisolated(unsafe)`.
+      static nonisolated(unsafe) let defaultInstance = _StorageClass()
+
+    private init() {}
+
+    init(copying source: _StorageClass) {
+      _error = source._error
+      _data = source._data
+    }
+  }
+
+  fileprivate mutating func _uniqueStorage() -> _StorageClass {
+    if !isKnownUniquelyReferenced(&_storage) {
+      _storage = _StorageClass(copying: _storage)
+    }
+    return _storage
+  }
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    _ = _uniqueStorage()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      while let fieldNumber = try decoder.nextFieldNumber() {
+        // The use of inline closures is to circumvent an issue where the compiler
+        // allocates stack space for every case branch when no optimizations are
+        // enabled. https://github.com/apple/swift-protobuf/issues/1034
+        switch fieldNumber {
+        case 1: try { try decoder.decodeSingularMessageField(value: &_storage._error) }()
+        case 2: try { try decoder.decodeSingularMessageField(value: &_storage._data) }()
+        default: break
+        }
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every if/case branch local when no optimizations
+      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+      // https://github.com/apple/swift-protobuf/issues/1182
+      try { if let v = _storage._error {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+      } }()
+      try { if let v = _storage._data {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+      } }()
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
   static func ==(lhs: Tieba_PbFloor_PbFloorResponse, rhs: Tieba_PbFloor_PbFloorResponse) -> Bool {
-    if lhs._error != rhs._error {return false}
-    if lhs._data != rhs._data {return false}
+    if lhs._storage !== rhs._storage {
+      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
+        let _storage = _args.0
+        let rhs_storage = _args.1
+        if _storage._error != rhs_storage._error {return false}
+        if _storage._data != rhs_storage._data {return false}
+        return true
+      }
+      if !storagesAreEqual {return false}
+    }
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

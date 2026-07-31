@@ -25,8 +25,6 @@ nonisolated struct Tieba_VideoInfo: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var videoMd5: String = String()
-
   var videoURL: String = String()
 
   var videoDuration: UInt32 = 0
@@ -36,12 +34,6 @@ nonisolated struct Tieba_VideoInfo: Sendable {
   var videoHeight: UInt32 = 0
 
   var thumbnailURL: String = String()
-
-  var thumbnailWidth: UInt32 = 0
-
-  var thumbnailHeight: UInt32 = 0
-
-  var mediaSubtitle: String = String()
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -54,7 +46,7 @@ fileprivate nonisolated let _protobuf_package = "tieba"
 
 nonisolated extension Tieba_VideoInfo: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".VideoInfo"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}videoMD5\0\u{1}videoUrl\0\u{1}videoDuration\0\u{1}videoWidth\0\u{1}videoHeight\0\u{1}thumbnailUrl\0\u{1}thumbnailWidth\0\u{1}thumbnailHeight\0\u{2}\u{3}mediaSubtitle\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\u{2}videoUrl\0\u{1}videoDuration\0\u{1}videoWidth\0\u{1}videoHeight\0\u{1}thumbnailUrl\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -62,24 +54,17 @@ nonisolated extension Tieba_VideoInfo: SwiftProtobuf.Message, SwiftProtobuf._Mes
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.videoMd5) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.videoURL) }()
       case 3: try { try decoder.decodeSingularUInt32Field(value: &self.videoDuration) }()
       case 4: try { try decoder.decodeSingularUInt32Field(value: &self.videoWidth) }()
       case 5: try { try decoder.decodeSingularUInt32Field(value: &self.videoHeight) }()
       case 6: try { try decoder.decodeSingularStringField(value: &self.thumbnailURL) }()
-      case 7: try { try decoder.decodeSingularUInt32Field(value: &self.thumbnailWidth) }()
-      case 8: try { try decoder.decodeSingularUInt32Field(value: &self.thumbnailHeight) }()
-      case 11: try { try decoder.decodeSingularStringField(value: &self.mediaSubtitle) }()
       default: break
       }
     }
   }
 
   func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.videoMd5.isEmpty {
-      try visitor.visitSingularStringField(value: self.videoMd5, fieldNumber: 1)
-    }
     if !self.videoURL.isEmpty {
       try visitor.visitSingularStringField(value: self.videoURL, fieldNumber: 2)
     }
@@ -95,28 +80,15 @@ nonisolated extension Tieba_VideoInfo: SwiftProtobuf.Message, SwiftProtobuf._Mes
     if !self.thumbnailURL.isEmpty {
       try visitor.visitSingularStringField(value: self.thumbnailURL, fieldNumber: 6)
     }
-    if self.thumbnailWidth != 0 {
-      try visitor.visitSingularUInt32Field(value: self.thumbnailWidth, fieldNumber: 7)
-    }
-    if self.thumbnailHeight != 0 {
-      try visitor.visitSingularUInt32Field(value: self.thumbnailHeight, fieldNumber: 8)
-    }
-    if !self.mediaSubtitle.isEmpty {
-      try visitor.visitSingularStringField(value: self.mediaSubtitle, fieldNumber: 11)
-    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Tieba_VideoInfo, rhs: Tieba_VideoInfo) -> Bool {
-    if lhs.videoMd5 != rhs.videoMd5 {return false}
     if lhs.videoURL != rhs.videoURL {return false}
     if lhs.videoDuration != rhs.videoDuration {return false}
     if lhs.videoWidth != rhs.videoWidth {return false}
     if lhs.videoHeight != rhs.videoHeight {return false}
     if lhs.thumbnailURL != rhs.thumbnailURL {return false}
-    if lhs.thumbnailWidth != rhs.thumbnailWidth {return false}
-    if lhs.thumbnailHeight != rhs.thumbnailHeight {return false}
-    if lhs.mediaSubtitle != rhs.mediaSubtitle {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

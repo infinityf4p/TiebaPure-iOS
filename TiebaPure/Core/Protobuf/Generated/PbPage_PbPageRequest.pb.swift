@@ -20,6 +20,115 @@ fileprivate nonisolated struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobu
   typealias Version = _2
 }
 
+nonisolated struct Tieba_PbPage_PbPageRequestData: @unchecked Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var mark: Int32 {
+    get {_storage._mark}
+    set {_uniqueStorage()._mark = newValue}
+  }
+
+  var kz: Int64 {
+    get {_storage._kz}
+    set {_uniqueStorage()._kz = newValue}
+  }
+
+  var lz: Int32 {
+    get {_storage._lz}
+    set {_uniqueStorage()._lz = newValue}
+  }
+
+  var r: Int32 {
+    get {_storage._r}
+    set {_uniqueStorage()._r = newValue}
+  }
+
+  var pid: Int64 {
+    get {_storage._pid ?? 0}
+    set {_uniqueStorage()._pid = newValue}
+  }
+  /// Returns true if `pid` has been explicitly set.
+  var hasPid: Bool {_storage._pid != nil}
+  /// Clears the value of `pid`. Subsequent reads from it will return its default value.
+  mutating func clearPid() {_uniqueStorage()._pid = nil}
+
+  var withFloor: Int32 {
+    get {_storage._withFloor}
+    set {_uniqueStorage()._withFloor = newValue}
+  }
+
+  var floorRn: Int32 {
+    get {_storage._floorRn}
+    set {_uniqueStorage()._floorRn = newValue}
+  }
+
+  var rn: Int32 {
+    get {_storage._rn}
+    set {_uniqueStorage()._rn = newValue}
+  }
+
+  var scrW: Int32 {
+    get {_storage._scrW}
+    set {_uniqueStorage()._scrW = newValue}
+  }
+
+  var scrH: Int32 {
+    get {_storage._scrH}
+    set {_uniqueStorage()._scrH = newValue}
+  }
+
+  var scrDip: Double {
+    get {_storage._scrDip}
+    set {_uniqueStorage()._scrDip = newValue}
+  }
+
+  var qType: Int32 {
+    get {_storage._qType}
+    set {_uniqueStorage()._qType = newValue}
+  }
+
+  var pn: Int32 {
+    get {_storage._pn}
+    set {_uniqueStorage()._pn = newValue}
+  }
+
+  var common: Tieba_CommonRequest {
+    get {_storage._common ?? Tieba_CommonRequest()}
+    set {_uniqueStorage()._common = newValue}
+  }
+  /// Returns true if `common` has been explicitly set.
+  var hasCommon: Bool {_storage._common != nil}
+  /// Clears the value of `common`. Subsequent reads from it will return its default value.
+  mutating func clearCommon() {_uniqueStorage()._common = nil}
+
+  var forumID: Int64 {
+    get {_storage._forumID ?? 0}
+    set {_uniqueStorage()._forumID = newValue}
+  }
+  /// Returns true if `forumID` has been explicitly set.
+  var hasForumID: Bool {_storage._forumID != nil}
+  /// Clears the value of `forumID`. Subsequent reads from it will return its default value.
+  mutating func clearForumID() {_uniqueStorage()._forumID = nil}
+
+  var floorSortType: Int32 {
+    get {_storage._floorSortType}
+    set {_uniqueStorage()._floorSortType = newValue}
+  }
+
+  var sourceType: Int32 {
+    get {_storage._sourceType}
+    set {_uniqueStorage()._sourceType = newValue}
+  }
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+
+  fileprivate var _storage = _StorageClass.defaultInstance
+}
+
 nonisolated struct Tieba_PbPage_PbPageRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -44,6 +153,188 @@ nonisolated struct Tieba_PbPage_PbPageRequest: Sendable {
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate nonisolated let _protobuf_package = "tieba.pbPage"
+
+nonisolated extension Tieba_PbPage_PbPageRequestData: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".PbPageRequestData"
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\u{2}mark\0\u{2}\u{2}kz\0\u{1}lz\0\u{1}r\0\u{1}pid\0\u{3}with_floor\0\u{3}floor_rn\0\u{2}\u{4}rn\0\u{3}scr_w\0\u{3}scr_h\0\u{3}scr_dip\0\u{3}q_type\0\u{1}pn\0\u{2}\u{7}common\0\u{4}\u{1f}forum_id\0\u{4}\u{12}floor_sort_type\0\u{3}source_type\0")
+
+  fileprivate class _StorageClass {
+    var _mark: Int32 = 0
+    var _kz: Int64 = 0
+    var _lz: Int32 = 0
+    var _r: Int32 = 0
+    var _pid: Int64? = nil
+    var _withFloor: Int32 = 0
+    var _floorRn: Int32 = 0
+    var _rn: Int32 = 0
+    var _scrW: Int32 = 0
+    var _scrH: Int32 = 0
+    var _scrDip: Double = 0
+    var _qType: Int32 = 0
+    var _pn: Int32 = 0
+    var _common: Tieba_CommonRequest? = nil
+    var _forumID: Int64? = nil
+    var _floorSortType: Int32 = 0
+    var _sourceType: Int32 = 0
+
+      // This property is used as the initial default value for new instances of the type.
+      // The type itself is protecting the reference to its storage via CoW semantics.
+      // This will force a copy to be made of this reference when the first mutation occurs;
+      // hence, it is safe to mark this as `nonisolated(unsafe)`.
+      static nonisolated(unsafe) let defaultInstance = _StorageClass()
+
+    private init() {}
+
+    init(copying source: _StorageClass) {
+      _mark = source._mark
+      _kz = source._kz
+      _lz = source._lz
+      _r = source._r
+      _pid = source._pid
+      _withFloor = source._withFloor
+      _floorRn = source._floorRn
+      _rn = source._rn
+      _scrW = source._scrW
+      _scrH = source._scrH
+      _scrDip = source._scrDip
+      _qType = source._qType
+      _pn = source._pn
+      _common = source._common
+      _forumID = source._forumID
+      _floorSortType = source._floorSortType
+      _sourceType = source._sourceType
+    }
+  }
+
+  fileprivate mutating func _uniqueStorage() -> _StorageClass {
+    if !isKnownUniquelyReferenced(&_storage) {
+      _storage = _StorageClass(copying: _storage)
+    }
+    return _storage
+  }
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    _ = _uniqueStorage()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      while let fieldNumber = try decoder.nextFieldNumber() {
+        // The use of inline closures is to circumvent an issue where the compiler
+        // allocates stack space for every case branch when no optimizations are
+        // enabled. https://github.com/apple/swift-protobuf/issues/1034
+        switch fieldNumber {
+        case 2: try { try decoder.decodeSingularInt32Field(value: &_storage._mark) }()
+        case 4: try { try decoder.decodeSingularInt64Field(value: &_storage._kz) }()
+        case 5: try { try decoder.decodeSingularInt32Field(value: &_storage._lz) }()
+        case 6: try { try decoder.decodeSingularInt32Field(value: &_storage._r) }()
+        case 7: try { try decoder.decodeSingularInt64Field(value: &_storage._pid) }()
+        case 8: try { try decoder.decodeSingularInt32Field(value: &_storage._withFloor) }()
+        case 9: try { try decoder.decodeSingularInt32Field(value: &_storage._floorRn) }()
+        case 13: try { try decoder.decodeSingularInt32Field(value: &_storage._rn) }()
+        case 14: try { try decoder.decodeSingularInt32Field(value: &_storage._scrW) }()
+        case 15: try { try decoder.decodeSingularInt32Field(value: &_storage._scrH) }()
+        case 16: try { try decoder.decodeSingularDoubleField(value: &_storage._scrDip) }()
+        case 17: try { try decoder.decodeSingularInt32Field(value: &_storage._qType) }()
+        case 18: try { try decoder.decodeSingularInt32Field(value: &_storage._pn) }()
+        case 25: try { try decoder.decodeSingularMessageField(value: &_storage._common) }()
+        case 56: try { try decoder.decodeSingularInt64Field(value: &_storage._forumID) }()
+        case 74: try { try decoder.decodeSingularInt32Field(value: &_storage._floorSortType) }()
+        case 75: try { try decoder.decodeSingularInt32Field(value: &_storage._sourceType) }()
+        default: break
+        }
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every if/case branch local when no optimizations
+      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+      // https://github.com/apple/swift-protobuf/issues/1182
+      if _storage._mark != 0 {
+        try visitor.visitSingularInt32Field(value: _storage._mark, fieldNumber: 2)
+      }
+      if _storage._kz != 0 {
+        try visitor.visitSingularInt64Field(value: _storage._kz, fieldNumber: 4)
+      }
+      if _storage._lz != 0 {
+        try visitor.visitSingularInt32Field(value: _storage._lz, fieldNumber: 5)
+      }
+      if _storage._r != 0 {
+        try visitor.visitSingularInt32Field(value: _storage._r, fieldNumber: 6)
+      }
+      try { if let v = _storage._pid {
+        try visitor.visitSingularInt64Field(value: v, fieldNumber: 7)
+      } }()
+      if _storage._withFloor != 0 {
+        try visitor.visitSingularInt32Field(value: _storage._withFloor, fieldNumber: 8)
+      }
+      if _storage._floorRn != 0 {
+        try visitor.visitSingularInt32Field(value: _storage._floorRn, fieldNumber: 9)
+      }
+      if _storage._rn != 0 {
+        try visitor.visitSingularInt32Field(value: _storage._rn, fieldNumber: 13)
+      }
+      if _storage._scrW != 0 {
+        try visitor.visitSingularInt32Field(value: _storage._scrW, fieldNumber: 14)
+      }
+      if _storage._scrH != 0 {
+        try visitor.visitSingularInt32Field(value: _storage._scrH, fieldNumber: 15)
+      }
+      if _storage._scrDip.bitPattern != 0 {
+        try visitor.visitSingularDoubleField(value: _storage._scrDip, fieldNumber: 16)
+      }
+      if _storage._qType != 0 {
+        try visitor.visitSingularInt32Field(value: _storage._qType, fieldNumber: 17)
+      }
+      if _storage._pn != 0 {
+        try visitor.visitSingularInt32Field(value: _storage._pn, fieldNumber: 18)
+      }
+      try { if let v = _storage._common {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 25)
+      } }()
+      try { if let v = _storage._forumID {
+        try visitor.visitSingularInt64Field(value: v, fieldNumber: 56)
+      } }()
+      if _storage._floorSortType != 0 {
+        try visitor.visitSingularInt32Field(value: _storage._floorSortType, fieldNumber: 74)
+      }
+      if _storage._sourceType != 0 {
+        try visitor.visitSingularInt32Field(value: _storage._sourceType, fieldNumber: 75)
+      }
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Tieba_PbPage_PbPageRequestData, rhs: Tieba_PbPage_PbPageRequestData) -> Bool {
+    if lhs._storage !== rhs._storage {
+      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
+        let _storage = _args.0
+        let rhs_storage = _args.1
+        if _storage._mark != rhs_storage._mark {return false}
+        if _storage._kz != rhs_storage._kz {return false}
+        if _storage._lz != rhs_storage._lz {return false}
+        if _storage._r != rhs_storage._r {return false}
+        if _storage._pid != rhs_storage._pid {return false}
+        if _storage._withFloor != rhs_storage._withFloor {return false}
+        if _storage._floorRn != rhs_storage._floorRn {return false}
+        if _storage._rn != rhs_storage._rn {return false}
+        if _storage._scrW != rhs_storage._scrW {return false}
+        if _storage._scrH != rhs_storage._scrH {return false}
+        if _storage._scrDip != rhs_storage._scrDip {return false}
+        if _storage._qType != rhs_storage._qType {return false}
+        if _storage._pn != rhs_storage._pn {return false}
+        if _storage._common != rhs_storage._common {return false}
+        if _storage._forumID != rhs_storage._forumID {return false}
+        if _storage._floorSortType != rhs_storage._floorSortType {return false}
+        if _storage._sourceType != rhs_storage._sourceType {return false}
+        return true
+      }
+      if !storagesAreEqual {return false}
+    }
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
 
 nonisolated extension Tieba_PbPage_PbPageRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".PbPageRequest"

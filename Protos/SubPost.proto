@@ -2,8 +2,6 @@ syntax = "proto3";
 
 package tieba;
 
-option java_package = "com.huanchengfly.tieba.post.api.models.protos";
-
 import "SubPostList.proto";
 
 message SubPost {

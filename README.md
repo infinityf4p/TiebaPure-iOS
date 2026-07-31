@@ -4,19 +4,17 @@
 [![License](https://img.shields.io/badge/license-GPL--3.0--only-blue)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/infinityf4p/TiebaPure-iOS)](https://github.com/infinityf4p/TiebaPure-iOS/releases/latest)
 
-> 本项目基于 [HuanCheng65/TiebaLite](https://github.com/HuanCheng65/TiebaLite/tree/4.0-dev) 的 `4.0-dev` 分支移植并重写，感谢原作者及贡献者。追溯基线：`2885b2aabbbf47aba7bf12b1cd7cbc03b1f5ec15`。
-
 基于 SwiftUI 的第三方百度贴吧客户端，支持 iOS 18.0 及更高版本。
 
 ## 截图
 
 <p align="center">
-  <img src="docs/images/forum-light.png" width="31%" alt="贴吧公开帖子列表" />
-  <img src="docs/images/thread-light.png" width="31%" alt="公开帖子详情" />
-  <img src="docs/images/search-dark.png" width="31%" alt="深色模式搜索结果" />
+  <img src="docs/images/forum-light.png" width="31%" alt="浅色模式合成首页" />
+  <img src="docs/images/thread-light.png" width="31%" alt="浅色模式合成帖子详情" />
+  <img src="docs/images/search-dark.png" width="31%" alt="深色模式合成搜索结果" />
 </p>
 
-<p align="center"><sub>未登录访客模式下的公开内容</sub></p>
+<p align="center"><sub>使用内置测试数据生成，不含真实账号信息</sub></p>
 
 ## 功能
 
@@ -47,7 +45,7 @@
 
 ## 下载
 
-当前 `main` 源码版本为 `1.2.6`；[Releases](https://github.com/infinityf4p/TiebaPure-iOS/releases/latest) 提供已发布版本的 **未签名** IPA，功能可能落后于 `main`，安装前需要使用自己的证书重新签名。
+[Releases](https://github.com/infinityf4p/TiebaPure-iOS/releases/latest) 提供已发布版本的 **未签名** IPA，功能可能落后于 `main`，安装前需要使用自己的证书重新签名。
 
 ## 构建
 
@@ -62,10 +60,16 @@ xcodebuild -project TiebaPure.xcodeproj -scheme TiebaPure \
   -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.5' build
 ```
 
-更多开发信息见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+## 开源许可
+
+TiebaPure-iOS 以 [GPL-3.0-only](LICENSE) 发布，不提供任何担保。项目使用的 [SwiftProtobuf](https://github.com/apple/swift-protobuf) 采用 [Apache-2.0 许可证及 Runtime Library Exception](LICENSES/SwiftProtobuf-Apache-2.0.txt)。
 
 ## 声明
 
 本项目与百度公司、百度贴吧官方无隶属、授权或认可关系。
 
-项目以 [GPL-3.0-only](LICENSE) 发布，不提供任何担保。协议定义、表情资源等第三方材料的来源与许可说明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+“百度”“贴吧”及相关名称与标识归其各自权利人所有。
+
+## 感谢
+
+感谢 [TiebaLite](https://github.com/HuanCheng65/TiebaLite) 为项目早期开发提供参考，也感谢 [aiotieba](https://github.com/lumina37/aiotieba) 对贴吧协议的整理与开源实现。

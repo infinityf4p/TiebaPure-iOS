@@ -2,9 +2,21 @@ syntax = "proto3";
 
 package tieba.pbFloor;
 
-option java_package = "com.huanchengfly.tieba.post.api.models.protos.pbFloor";
+import "CommonRequest.proto";
 
-import "PbFloor/PbFloorRequestData.proto";
+message PbFloorRequestData {
+  int64 kz = 1;
+  optional int64 pid = 2;
+  optional int64 spid = 3;
+  int32 pn = 4;
+  int32 scr_w = 5;
+  int32 scr_h = 6;
+  double scr_dip = 7;
+  tieba.CommonRequest common = 9;
+  optional int32 is_comm_reverse = 10;
+  int64 forum_id = 11;
+  optional int32 ori_ugc_type = 15;
+}
 
 message PbFloorRequest {
   PbFloorRequestData data = 1;

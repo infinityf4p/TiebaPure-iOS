@@ -25,25 +25,6 @@ nonisolated struct Tieba_PersonalizedRequestData: @unchecked Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var adContextList: String {
-    get {_storage._adContextList}
-    set {_uniqueStorage()._adContextList = newValue}
-  }
-
-  var adExtParams: String {
-    get {_storage._adExtParams}
-    set {_uniqueStorage()._adExtParams = newValue}
-  }
-
-  var appPos: Tieba_AppPosInfo {
-    get {_storage._appPos ?? Tieba_AppPosInfo()}
-    set {_uniqueStorage()._appPos = newValue}
-  }
-  /// Returns true if `appPos` has been explicitly set.
-  var hasAppPos: Bool {_storage._appPos != nil}
-  /// Clears the value of `appPos`. Subsequent reads from it will return its default value.
-  mutating func clearAppPos() {_uniqueStorage()._appPos = nil}
-
   var common: Tieba_CommonRequest {
     get {_storage._common ?? Tieba_CommonRequest()}
     set {_uniqueStorage()._common = newValue}
@@ -53,19 +34,9 @@ nonisolated struct Tieba_PersonalizedRequestData: @unchecked Sendable {
   /// Clears the value of `common`. Subsequent reads from it will return its default value.
   mutating func clearCommon() {_uniqueStorage()._common = nil}
 
-  var invokeSource: String {
-    get {_storage._invokeSource}
-    set {_uniqueStorage()._invokeSource = newValue}
-  }
-
-  var loadType: UInt32 {
-    get {_storage._loadType}
-    set {_uniqueStorage()._loadType = newValue}
-  }
-
-  var needForumlist: UInt32 {
-    get {_storage._needForumlist}
-    set {_uniqueStorage()._needForumlist = newValue}
+  var tagCode: UInt32 {
+    get {_storage._tagCode}
+    set {_uniqueStorage()._tagCode = newValue}
   }
 
   var needTags: UInt32 {
@@ -73,14 +44,9 @@ nonisolated struct Tieba_PersonalizedRequestData: @unchecked Sendable {
     set {_uniqueStorage()._needTags = newValue}
   }
 
-  var newInstall: Int32 {
-    get {_storage._newInstall}
-    set {_uniqueStorage()._newInstall = newValue}
-  }
-
-  var newNetType: UInt32 {
-    get {_storage._newNetType}
-    set {_uniqueStorage()._newNetType = newValue}
+  var loadType: UInt32 {
+    get {_storage._loadType}
+    set {_uniqueStorage()._loadType = newValue}
   }
 
   var pageThreadCount: UInt32 {
@@ -93,29 +59,9 @@ nonisolated struct Tieba_PersonalizedRequestData: @unchecked Sendable {
     set {_uniqueStorage()._pn = newValue}
   }
 
-  var preAdThreadCount: Int32 {
-    get {_storage._preAdThreadCount}
-    set {_uniqueStorage()._preAdThreadCount = newValue}
-  }
-
-  var qType: Int32 {
-    get {_storage._qType}
-    set {_uniqueStorage()._qType = newValue}
-  }
-
-  var requestTimes: Int32 {
-    get {_storage._requestTimes}
-    set {_uniqueStorage()._requestTimes = newValue}
-  }
-
-  var scrDip: Double {
-    get {_storage._scrDip}
-    set {_uniqueStorage()._scrDip = newValue}
-  }
-
-  var scrH: Int32 {
-    get {_storage._scrH}
-    set {_uniqueStorage()._scrH = newValue}
+  var sugCount: UInt32 {
+    get {_storage._sugCount}
+    set {_uniqueStorage()._sugCount = newValue}
   }
 
   var scrW: Int32 {
@@ -123,15 +69,59 @@ nonisolated struct Tieba_PersonalizedRequestData: @unchecked Sendable {
     set {_uniqueStorage()._scrW = newValue}
   }
 
-  var sugCount: UInt32 {
-    get {_storage._sugCount}
-    set {_uniqueStorage()._sugCount = newValue}
+  var scrH: Int32 {
+    get {_storage._scrH}
+    set {_uniqueStorage()._scrH = newValue}
   }
 
-  var tagCode: UInt32 {
-    get {_storage._tagCode}
-    set {_uniqueStorage()._tagCode = newValue}
+  var scrDip: Double {
+    get {_storage._scrDip}
+    set {_uniqueStorage()._scrDip = newValue}
   }
+
+  var qType: Int32 {
+    get {_storage._qType}
+    set {_uniqueStorage()._qType = newValue}
+  }
+
+  var needForumlist: UInt32 {
+    get {_storage._needForumlist}
+    set {_uniqueStorage()._needForumlist = newValue}
+  }
+
+  var newNetType: UInt32 {
+    get {_storage._newNetType}
+    set {_uniqueStorage()._newNetType = newValue}
+  }
+
+  var preAdThreadCount: Int32 {
+    get {_storage._preAdThreadCount}
+    set {_uniqueStorage()._preAdThreadCount = newValue}
+  }
+
+  var newInstall: Int32 {
+    get {_storage._newInstall}
+    set {_uniqueStorage()._newInstall = newValue}
+  }
+
+  var requestTimes: Int32 {
+    get {_storage._requestTimes}
+    set {_uniqueStorage()._requestTimes = newValue}
+  }
+
+  var invokeSource: String {
+    get {_storage._invokeSource}
+    set {_uniqueStorage()._invokeSource = newValue}
+  }
+
+  var appPos: Tieba_AppPosInfo {
+    get {_storage._appPos ?? Tieba_AppPosInfo()}
+    set {_uniqueStorage()._appPos = newValue}
+  }
+  /// Returns true if `appPos` has been explicitly set.
+  var hasAppPos: Bool {_storage._appPos != nil}
+  /// Clears the value of `appPos`. Subsequent reads from it will return its default value.
+  mutating func clearAppPos() {_uniqueStorage()._appPos = nil}
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -167,8 +157,6 @@ nonisolated struct Tieba_PersonalizedResponseData: Sendable {
   // methods supported on all messages.
 
   var threadList: [Tieba_ThreadInfo] = []
-
-  var threadPersonalized: [Tieba_ThreadPersonalized] = []
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -206,71 +194,33 @@ nonisolated struct Tieba_PersonalizedResponse: Sendable {
   fileprivate var _data: Tieba_PersonalizedResponseData? = nil
 }
 
-nonisolated struct Tieba_ThreadPersonalized: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  var tid: UInt64 = 0
-
-  var weight: String = String()
-
-  var source: String = String()
-
-  var dislikeResource: [Tieba_DislikeReason] = []
-
-  var extra: String = String()
-
-  var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  init() {}
-}
-
-nonisolated struct Tieba_DislikeReason: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  var dislikeReason: String = String()
-
-  var dislikeID: UInt32 = 0
-
-  var extra: String = String()
-
-  var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  init() {}
-}
-
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate nonisolated let _protobuf_package = "tieba"
 
 nonisolated extension Tieba_PersonalizedRequestData: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".PersonalizedRequestData"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}common\0\u{3}tag_code\0\u{3}need_tags\0\u{3}load_type\0\u{3}page_thread_count\0\u{1}pn\0\u{3}sug_count\0\u{3}scr_w\0\u{3}scr_h\0\u{3}scr_dip\0\u{3}q_type\0\u{4}\u{b}need_forumlist\0\u{3}new_net_type\0\u{4}\u{3}pre_ad_thread_count\0\u{3}new_install\0\u{3}request_times\0\u{3}invoke_source\0\u{3}ad_context_list\0\u{4}\u{6}app_pos\0\u{3}ad_ext_params\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}common\0\u{3}tag_code\0\u{3}need_tags\0\u{3}load_type\0\u{3}page_thread_count\0\u{1}pn\0\u{3}sug_count\0\u{3}scr_w\0\u{3}scr_h\0\u{3}scr_dip\0\u{3}q_type\0\u{4}\u{b}need_forumlist\0\u{3}new_net_type\0\u{4}\u{3}pre_ad_thread_count\0\u{3}new_install\0\u{3}request_times\0\u{3}invoke_source\0\u{4}\u{7}app_pos\0")
 
   fileprivate class _StorageClass {
-    var _adContextList: String = String()
-    var _adExtParams: String = String()
-    var _appPos: Tieba_AppPosInfo? = nil
     var _common: Tieba_CommonRequest? = nil
-    var _invokeSource: String = String()
-    var _loadType: UInt32 = 0
-    var _needForumlist: UInt32 = 0
+    var _tagCode: UInt32 = 0
     var _needTags: UInt32 = 0
-    var _newInstall: Int32 = 0
-    var _newNetType: UInt32 = 0
+    var _loadType: UInt32 = 0
     var _pageThreadCount: UInt32 = 0
     var _pn: UInt32 = 0
-    var _preAdThreadCount: Int32 = 0
-    var _qType: Int32 = 0
-    var _requestTimes: Int32 = 0
-    var _scrDip: Double = 0
-    var _scrH: Int32 = 0
-    var _scrW: Int32 = 0
     var _sugCount: UInt32 = 0
-    var _tagCode: UInt32 = 0
+    var _scrW: Int32 = 0
+    var _scrH: Int32 = 0
+    var _scrDip: Double = 0
+    var _qType: Int32 = 0
+    var _needForumlist: UInt32 = 0
+    var _newNetType: UInt32 = 0
+    var _preAdThreadCount: Int32 = 0
+    var _newInstall: Int32 = 0
+    var _requestTimes: Int32 = 0
+    var _invokeSource: String = String()
+    var _appPos: Tieba_AppPosInfo? = nil
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -281,26 +231,24 @@ nonisolated extension Tieba_PersonalizedRequestData: SwiftProtobuf.Message, Swif
     private init() {}
 
     init(copying source: _StorageClass) {
-      _adContextList = source._adContextList
-      _adExtParams = source._adExtParams
-      _appPos = source._appPos
       _common = source._common
-      _invokeSource = source._invokeSource
-      _loadType = source._loadType
-      _needForumlist = source._needForumlist
+      _tagCode = source._tagCode
       _needTags = source._needTags
-      _newInstall = source._newInstall
-      _newNetType = source._newNetType
+      _loadType = source._loadType
       _pageThreadCount = source._pageThreadCount
       _pn = source._pn
-      _preAdThreadCount = source._preAdThreadCount
-      _qType = source._qType
-      _requestTimes = source._requestTimes
-      _scrDip = source._scrDip
-      _scrH = source._scrH
-      _scrW = source._scrW
       _sugCount = source._sugCount
-      _tagCode = source._tagCode
+      _scrW = source._scrW
+      _scrH = source._scrH
+      _scrDip = source._scrDip
+      _qType = source._qType
+      _needForumlist = source._needForumlist
+      _newNetType = source._newNetType
+      _preAdThreadCount = source._preAdThreadCount
+      _newInstall = source._newInstall
+      _requestTimes = source._requestTimes
+      _invokeSource = source._invokeSource
+      _appPos = source._appPos
     }
   }
 
@@ -336,9 +284,7 @@ nonisolated extension Tieba_PersonalizedRequestData: SwiftProtobuf.Message, Swif
         case 27: try { try decoder.decodeSingularInt32Field(value: &_storage._newInstall) }()
         case 28: try { try decoder.decodeSingularInt32Field(value: &_storage._requestTimes) }()
         case 29: try { try decoder.decodeSingularStringField(value: &_storage._invokeSource) }()
-        case 30: try { try decoder.decodeSingularStringField(value: &_storage._adContextList) }()
         case 36: try { try decoder.decodeSingularMessageField(value: &_storage._appPos) }()
-        case 37: try { try decoder.decodeSingularStringField(value: &_storage._adExtParams) }()
         default: break
         }
       }
@@ -402,15 +348,9 @@ nonisolated extension Tieba_PersonalizedRequestData: SwiftProtobuf.Message, Swif
       if !_storage._invokeSource.isEmpty {
         try visitor.visitSingularStringField(value: _storage._invokeSource, fieldNumber: 29)
       }
-      if !_storage._adContextList.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._adContextList, fieldNumber: 30)
-      }
       try { if let v = _storage._appPos {
         try visitor.visitSingularMessageField(value: v, fieldNumber: 36)
       } }()
-      if !_storage._adExtParams.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._adExtParams, fieldNumber: 37)
-      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -420,26 +360,24 @@ nonisolated extension Tieba_PersonalizedRequestData: SwiftProtobuf.Message, Swif
       let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
         let _storage = _args.0
         let rhs_storage = _args.1
-        if _storage._adContextList != rhs_storage._adContextList {return false}
-        if _storage._adExtParams != rhs_storage._adExtParams {return false}
-        if _storage._appPos != rhs_storage._appPos {return false}
         if _storage._common != rhs_storage._common {return false}
-        if _storage._invokeSource != rhs_storage._invokeSource {return false}
-        if _storage._loadType != rhs_storage._loadType {return false}
-        if _storage._needForumlist != rhs_storage._needForumlist {return false}
+        if _storage._tagCode != rhs_storage._tagCode {return false}
         if _storage._needTags != rhs_storage._needTags {return false}
-        if _storage._newInstall != rhs_storage._newInstall {return false}
-        if _storage._newNetType != rhs_storage._newNetType {return false}
+        if _storage._loadType != rhs_storage._loadType {return false}
         if _storage._pageThreadCount != rhs_storage._pageThreadCount {return false}
         if _storage._pn != rhs_storage._pn {return false}
-        if _storage._preAdThreadCount != rhs_storage._preAdThreadCount {return false}
-        if _storage._qType != rhs_storage._qType {return false}
-        if _storage._requestTimes != rhs_storage._requestTimes {return false}
-        if _storage._scrDip != rhs_storage._scrDip {return false}
-        if _storage._scrH != rhs_storage._scrH {return false}
-        if _storage._scrW != rhs_storage._scrW {return false}
         if _storage._sugCount != rhs_storage._sugCount {return false}
-        if _storage._tagCode != rhs_storage._tagCode {return false}
+        if _storage._scrW != rhs_storage._scrW {return false}
+        if _storage._scrH != rhs_storage._scrH {return false}
+        if _storage._scrDip != rhs_storage._scrDip {return false}
+        if _storage._qType != rhs_storage._qType {return false}
+        if _storage._needForumlist != rhs_storage._needForumlist {return false}
+        if _storage._newNetType != rhs_storage._newNetType {return false}
+        if _storage._preAdThreadCount != rhs_storage._preAdThreadCount {return false}
+        if _storage._newInstall != rhs_storage._newInstall {return false}
+        if _storage._requestTimes != rhs_storage._requestTimes {return false}
+        if _storage._invokeSource != rhs_storage._invokeSource {return false}
+        if _storage._appPos != rhs_storage._appPos {return false}
         return true
       }
       if !storagesAreEqual {return false}
@@ -485,7 +423,7 @@ nonisolated extension Tieba_PersonalizedRequest: SwiftProtobuf.Message, SwiftPro
 
 nonisolated extension Tieba_PersonalizedResponseData: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".PersonalizedResponseData"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{2}thread_list\0\u{4}\u{5}thread_personalized\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{2}thread_list\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -494,7 +432,6 @@ nonisolated extension Tieba_PersonalizedResponseData: SwiftProtobuf.Message, Swi
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 2: try { try decoder.decodeRepeatedMessageField(value: &self.threadList) }()
-      case 7: try { try decoder.decodeRepeatedMessageField(value: &self.threadPersonalized) }()
       default: break
       }
     }
@@ -504,15 +441,11 @@ nonisolated extension Tieba_PersonalizedResponseData: SwiftProtobuf.Message, Swi
     if !self.threadList.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.threadList, fieldNumber: 2)
     }
-    if !self.threadPersonalized.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.threadPersonalized, fieldNumber: 7)
-    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Tieba_PersonalizedResponseData, rhs: Tieba_PersonalizedResponseData) -> Bool {
     if lhs.threadList != rhs.threadList {return false}
-    if lhs.threadPersonalized != rhs.threadPersonalized {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -552,96 +485,6 @@ nonisolated extension Tieba_PersonalizedResponse: SwiftProtobuf.Message, SwiftPr
   static func ==(lhs: Tieba_PersonalizedResponse, rhs: Tieba_PersonalizedResponse) -> Bool {
     if lhs._error != rhs._error {return false}
     if lhs._data != rhs._data {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Tieba_ThreadPersonalized: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".ThreadPersonalized"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}tid\0\u{1}weight\0\u{1}source\0\u{2}\u{2}dislikeResource\0\u{1}extra\0")
-
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularUInt64Field(value: &self.tid) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.weight) }()
-      case 3: try { try decoder.decodeSingularStringField(value: &self.source) }()
-      case 5: try { try decoder.decodeRepeatedMessageField(value: &self.dislikeResource) }()
-      case 6: try { try decoder.decodeSingularStringField(value: &self.extra) }()
-      default: break
-      }
-    }
-  }
-
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if self.tid != 0 {
-      try visitor.visitSingularUInt64Field(value: self.tid, fieldNumber: 1)
-    }
-    if !self.weight.isEmpty {
-      try visitor.visitSingularStringField(value: self.weight, fieldNumber: 2)
-    }
-    if !self.source.isEmpty {
-      try visitor.visitSingularStringField(value: self.source, fieldNumber: 3)
-    }
-    if !self.dislikeResource.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.dislikeResource, fieldNumber: 5)
-    }
-    if !self.extra.isEmpty {
-      try visitor.visitSingularStringField(value: self.extra, fieldNumber: 6)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  static func ==(lhs: Tieba_ThreadPersonalized, rhs: Tieba_ThreadPersonalized) -> Bool {
-    if lhs.tid != rhs.tid {return false}
-    if lhs.weight != rhs.weight {return false}
-    if lhs.source != rhs.source {return false}
-    if lhs.dislikeResource != rhs.dislikeResource {return false}
-    if lhs.extra != rhs.extra {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Tieba_DislikeReason: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".DislikeReason"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}dislikeReason\0\u{1}dislikeId\0\u{1}extra\0")
-
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.dislikeReason) }()
-      case 2: try { try decoder.decodeSingularUInt32Field(value: &self.dislikeID) }()
-      case 3: try { try decoder.decodeSingularStringField(value: &self.extra) }()
-      default: break
-      }
-    }
-  }
-
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.dislikeReason.isEmpty {
-      try visitor.visitSingularStringField(value: self.dislikeReason, fieldNumber: 1)
-    }
-    if self.dislikeID != 0 {
-      try visitor.visitSingularUInt32Field(value: self.dislikeID, fieldNumber: 2)
-    }
-    if !self.extra.isEmpty {
-      try visitor.visitSingularStringField(value: self.extra, fieldNumber: 3)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  static func ==(lhs: Tieba_DislikeReason, rhs: Tieba_DislikeReason) -> Bool {
-    if lhs.dislikeReason != rhs.dislikeReason {return false}
-    if lhs.dislikeID != rhs.dislikeID {return false}
-    if lhs.extra != rhs.extra {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

@@ -25,9 +25,9 @@ nonisolated struct Tieba_Error: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var errorMsg: String = String()
-
   var errorCode: Int32 = 0
+
+  var errorMsg: String = String()
 
   var userMsg: String = String()
 
@@ -72,8 +72,8 @@ nonisolated extension Tieba_Error: SwiftProtobuf.Message, SwiftProtobuf._Message
   }
 
   static func ==(lhs: Tieba_Error, rhs: Tieba_Error) -> Bool {
-    if lhs.errorMsg != rhs.errorMsg {return false}
     if lhs.errorCode != rhs.errorCode {return false}
+    if lhs.errorMsg != rhs.errorMsg {return false}
     if lhs.userMsg != rhs.userMsg {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true

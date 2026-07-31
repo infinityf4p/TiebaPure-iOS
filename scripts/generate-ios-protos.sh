@@ -19,12 +19,9 @@ if [[ "$ACTUAL_SWIFT_PROTOBUF_VERSION" != "$EXPECTED_SWIFT_PROTOBUF_VERSION" ]];
   exit 1
 fi
 
-mkdir -p "$OUT"
-find "$OUT" -type f -name '*.pb*.swift' -delete
-find "$OUT" -type f -name '* [0-9].swift' -delete
-
 PROTO_FILE_LIST="$(mktemp)"
-trap 'rm -f "$PROTO_FILE_LIST"' EXIT
+TEMP_OUT="$(mktemp -d)"
+trap 'rm -f "$PROTO_FILE_LIST"; rm -rf "$TEMP_OUT"' EXIT
 
 python3 - "$PROTO_ROOT" > "$PROTO_FILE_LIST" <<'PY'
 import pathlib
@@ -33,29 +30,13 @@ import sys
 
 root = pathlib.Path(sys.argv[1])
 roots = [
-    "CommonRequest.proto",
-    "AppPosInfo.proto",
     "Personalized.proto",
     "FrsPage/FrsPage.proto",
-    "ThreadList/ThreadList.proto",
     "PbPage/PbPageRequest.proto",
     "PbPage/PbPageResponse.proto",
     "PbFloor/PbFloorRequest.proto",
     "PbFloor/PbFloorResponse.proto",
-    "Post.proto",
-    "SubPost.proto",
-    "SubPostList.proto",
-    "PbContent.proto",
-    "ThreadInfo.proto",
-    "ForumInfo.proto",
-    "SimpleForum.proto",
-    "User.proto",
     "TiebaPureProfile/UserProfile.proto",
-    "Media.proto",
-    "VideoInfo.proto",
-    "Page.proto",
-    "Anti.proto",
-    "Error.proto",
 ]
 
 import_pattern = re.compile(r'^\s*import\s+(?:public\s+|weak\s+)?"([^"]+)";', re.MULTILINE)
@@ -78,6 +59,14 @@ while stack:
         if imported not in seen:
             stack.append(imported)
 
+all_schemas = {
+    path.relative_to(root).as_posix()
+    for path in root.rglob("*.proto")
+}
+unused = sorted(all_schemas - seen)
+if unused:
+    raise SystemExit("Proto schemas outside the generated closure: " + ", ".join(unused))
+
 for relative in ordered:
     print(root / relative)
 PY
@@ -90,7 +79,12 @@ done < "$PROTO_FILE_LIST"
 protoc \
   --proto_path="$PROTO_ROOT" \
   --swift_opt=FileNaming=PathToUnderscores \
-  --swift_out="$OUT" \
+  --swift_out="$TEMP_OUT" \
   "${PROTO_FILES[@]}"
+
+mkdir -p "$OUT"
+find "$OUT" -type f -name '*.pb*.swift' -delete
+find "$OUT" -type f -name '* [0-9].swift' -delete
+find "$TEMP_OUT" -type f -name '*.swift' -exec cp {} "$OUT"/ \;
 
 echo "Generated ${#PROTO_FILES[@]} protobuf schemas into $OUT"

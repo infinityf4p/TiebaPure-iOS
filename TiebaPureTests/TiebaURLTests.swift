@@ -70,6 +70,30 @@ final class TiebaURLTests: XCTestCase {
         XCTAssertFalse(SecureRemoteRedirectScope.baiduHTTPS.allows(URL(string: "https://baidu.com.attacker.example/collect")))
     }
 
+    func testEmoticonRedirectPolicyAllowsOnlyExactCDNAndValidArtworkPath() {
+        XCTAssertTrue(SecureRemoteRedirectScope.bdStaticHTTPS.allows(URL(
+            string: "https://tb2.bdstatic.com/tb/editor/images/client/image_emoticon125.png"
+        )))
+        XCTAssertFalse(SecureRemoteRedirectScope.bdStaticHTTPS.allows(URL(
+            string: "https://tb1.bdstatic.com/tb/editor/images/client/image_emoticon125.png"
+        )))
+        XCTAssertFalse(SecureRemoteRedirectScope.bdStaticHTTPS.allows(URL(
+            string: "https://bdstatic.com/tb/editor/images/client/image_emoticon125.png"
+        )))
+        XCTAssertFalse(SecureRemoteRedirectScope.bdStaticHTTPS.allows(URL(
+            string: "https://tb2.bdstatic.com/tb/editor/images/client/not-an-emoticon.png"
+        )))
+        XCTAssertFalse(SecureRemoteRedirectScope.bdStaticHTTPS.allows(URL(
+            string: "https://tb2.bdstatic.com/tb/editor/images/client/image_emoticon1000.png"
+        )))
+        XCTAssertFalse(SecureRemoteRedirectScope.bdStaticHTTPS.allows(URL(
+            string: "https://tb2.bdstatic.com/tb/editor/images/client/nested/image_emoticon1.png"
+        )))
+        XCTAssertFalse(SecureRemoteRedirectScope.bdStaticHTTPS.allows(URL(
+            string: "http://tb2.bdstatic.com/tb/editor/images/client/image_emoticon1.png"
+        )))
+    }
+
     func testExternalRouteParsesCustomSchemeAndWebLinks() throws {
         XCTAssertEqual(
             ExternalRoute.parse(try XCTUnwrap(URL(string: "tiebapure://thread/8888888888"))),

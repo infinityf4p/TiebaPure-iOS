@@ -644,9 +644,9 @@ struct ThreadDetailView: View {
     }
 
     /// Restores the saved reading position automatically on the first load of
-    /// any entry point, mirroring TiebaLite's history restore: the first page
-    /// request itself targets the saved post ID, so the server locates its
-    /// page and the list opens there — no second load, no manual button.
+    /// any entry point. The first page request targets the saved post ID, so
+    /// the server locates its page and the list opens there without a second
+    /// load or a manual action.
     private func resolveAutoRestoreIfNeeded() {
         guard didResolveSavedReadingPosition == false else { return }
         didResolveSavedReadingPosition = true
@@ -659,7 +659,7 @@ struct ThreadDetailView: View {
         isResumingReadingPosition = true
         // Server-side post-ID paging is only well-defined in floor order; hot
         // order also reshuffles between visits, so resuming into it would be
-        // meaningless anyway. TiebaLite restores in floor order too.
+        // meaningless anyway. Resume in floor order for deterministic paging.
         sortType = .ascending
     }
 
@@ -1072,11 +1072,10 @@ struct ThreadPostViewportEntry: Equatable, Sendable {
 enum ThreadReadingViewportPolicy {
     static let minimumRecordingDistance: CGFloat = 44
 
-    /// The bottom-most reply visible in the viewport, mirroring TiebaLite's
-    /// `lastVisibilityPostId`. Floors are not part of the condition: hot-sorted
-    /// pb/page responses omit floor numbers, and the position is restored by
-    /// post ID, not floor. The main post is excluded so a long first floor
-    /// never records a position of its own.
+    /// Returns the bottom-most reply visible in the viewport. Floors are not
+    /// part of the condition: hot-sorted responses omit floor numbers, and the
+    /// position is restored by post ID. The main post is excluded so a long
+    /// first floor never records a position of its own.
     static func position(
         entries: [ThreadPostViewportEntry],
         scrollDistanceFromTop: CGFloat,

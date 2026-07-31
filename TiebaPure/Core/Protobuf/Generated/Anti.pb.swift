@@ -27,28 +27,6 @@ nonisolated struct Tieba_Anti: Sendable {
 
   var tbs: String = String()
 
-  var ifpost: Int32 = 0
-
-  var ifposta: Int32 = 0
-
-  var forbidFlag: Int32 = 0
-
-  var forbidInfo: String = String()
-
-  var blockStat: Int32 = 0
-
-  var hideStat: Int32 = 0
-
-  var vcodeStat: Int32 = 0
-
-  var daysTofree: Int32 = 0
-
-  var hasChance_p: Int32 = 0
-
-  var ifvoice: Int32 = 0
-
-  var delThreadText: [Tieba_DelThreadText] = []
-
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
@@ -60,7 +38,7 @@ fileprivate nonisolated let _protobuf_package = "tieba"
 
 nonisolated extension Tieba_Anti: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".Anti"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}tbs\0\u{1}ifpost\0\u{1}ifposta\0\u{3}forbid_flag\0\u{3}forbid_info\0\u{3}block_stat\0\u{3}hide_stat\0\u{3}vcode_stat\0\u{3}days_tofree\0\u{3}has_chance\0\u{1}ifvoice\0\u{4}\u{d}del_thread_text\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}tbs\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -69,17 +47,6 @@ nonisolated extension Tieba_Anti: SwiftProtobuf.Message, SwiftProtobuf._MessageI
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.tbs) }()
-      case 2: try { try decoder.decodeSingularInt32Field(value: &self.ifpost) }()
-      case 3: try { try decoder.decodeSingularInt32Field(value: &self.ifposta) }()
-      case 4: try { try decoder.decodeSingularInt32Field(value: &self.forbidFlag) }()
-      case 5: try { try decoder.decodeSingularStringField(value: &self.forbidInfo) }()
-      case 6: try { try decoder.decodeSingularInt32Field(value: &self.blockStat) }()
-      case 7: try { try decoder.decodeSingularInt32Field(value: &self.hideStat) }()
-      case 8: try { try decoder.decodeSingularInt32Field(value: &self.vcodeStat) }()
-      case 9: try { try decoder.decodeSingularInt32Field(value: &self.daysTofree) }()
-      case 10: try { try decoder.decodeSingularInt32Field(value: &self.hasChance_p) }()
-      case 11: try { try decoder.decodeSingularInt32Field(value: &self.ifvoice) }()
-      case 24: try { try decoder.decodeRepeatedMessageField(value: &self.delThreadText) }()
       default: break
       }
     }
@@ -89,55 +56,11 @@ nonisolated extension Tieba_Anti: SwiftProtobuf.Message, SwiftProtobuf._MessageI
     if !self.tbs.isEmpty {
       try visitor.visitSingularStringField(value: self.tbs, fieldNumber: 1)
     }
-    if self.ifpost != 0 {
-      try visitor.visitSingularInt32Field(value: self.ifpost, fieldNumber: 2)
-    }
-    if self.ifposta != 0 {
-      try visitor.visitSingularInt32Field(value: self.ifposta, fieldNumber: 3)
-    }
-    if self.forbidFlag != 0 {
-      try visitor.visitSingularInt32Field(value: self.forbidFlag, fieldNumber: 4)
-    }
-    if !self.forbidInfo.isEmpty {
-      try visitor.visitSingularStringField(value: self.forbidInfo, fieldNumber: 5)
-    }
-    if self.blockStat != 0 {
-      try visitor.visitSingularInt32Field(value: self.blockStat, fieldNumber: 6)
-    }
-    if self.hideStat != 0 {
-      try visitor.visitSingularInt32Field(value: self.hideStat, fieldNumber: 7)
-    }
-    if self.vcodeStat != 0 {
-      try visitor.visitSingularInt32Field(value: self.vcodeStat, fieldNumber: 8)
-    }
-    if self.daysTofree != 0 {
-      try visitor.visitSingularInt32Field(value: self.daysTofree, fieldNumber: 9)
-    }
-    if self.hasChance_p != 0 {
-      try visitor.visitSingularInt32Field(value: self.hasChance_p, fieldNumber: 10)
-    }
-    if self.ifvoice != 0 {
-      try visitor.visitSingularInt32Field(value: self.ifvoice, fieldNumber: 11)
-    }
-    if !self.delThreadText.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.delThreadText, fieldNumber: 24)
-    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Tieba_Anti, rhs: Tieba_Anti) -> Bool {
     if lhs.tbs != rhs.tbs {return false}
-    if lhs.ifpost != rhs.ifpost {return false}
-    if lhs.ifposta != rhs.ifposta {return false}
-    if lhs.forbidFlag != rhs.forbidFlag {return false}
-    if lhs.forbidInfo != rhs.forbidInfo {return false}
-    if lhs.blockStat != rhs.blockStat {return false}
-    if lhs.hideStat != rhs.hideStat {return false}
-    if lhs.vcodeStat != rhs.vcodeStat {return false}
-    if lhs.daysTofree != rhs.daysTofree {return false}
-    if lhs.hasChance_p != rhs.hasChance_p {return false}
-    if lhs.ifvoice != rhs.ifvoice {return false}
-    if lhs.delThreadText != rhs.delThreadText {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

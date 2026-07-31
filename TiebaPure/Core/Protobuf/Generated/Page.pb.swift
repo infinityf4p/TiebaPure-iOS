@@ -27,8 +27,6 @@ nonisolated struct Tieba_Page: Sendable {
 
   var pageSize: Int32 = 0
 
-  var offset: Int32 = 0
-
   var currentPage: Int32 = 0
 
   var totalCount: Int32 = 0
@@ -38,20 +36,6 @@ nonisolated struct Tieba_Page: Sendable {
   var hasMore_p: Int32 = 0
 
   var hasPrev_p: Int32 = 0
-
-  var curGoodID: Int32 = 0
-
-  var reqNum: Int32 = 0
-
-  var pnum: Int32 = 0
-
-  var tnum: Int32 = 0
-
-  var totalNum: Int32 = 0
-
-  var lzTotalFloor: Int32 = 0
-
-  var newTotalPage: Int32 = 0
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -64,7 +48,7 @@ fileprivate nonisolated let _protobuf_package = "tieba"
 
 nonisolated extension Tieba_Page: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".Page"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}page_size\0\u{1}offset\0\u{3}current_page\0\u{3}total_count\0\u{3}total_page\0\u{3}has_more\0\u{3}has_prev\0\u{3}cur_good_id\0\u{3}req_num\0\u{1}pnum\0\u{1}tnum\0\u{3}total_num\0\u{3}lz_total_floor\0\u{3}new_total_page\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}page_size\0\u{4}\u{2}current_page\0\u{3}total_count\0\u{3}total_page\0\u{3}has_more\0\u{3}has_prev\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -73,19 +57,11 @@ nonisolated extension Tieba_Page: SwiftProtobuf.Message, SwiftProtobuf._MessageI
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularInt32Field(value: &self.pageSize) }()
-      case 2: try { try decoder.decodeSingularInt32Field(value: &self.offset) }()
       case 3: try { try decoder.decodeSingularInt32Field(value: &self.currentPage) }()
       case 4: try { try decoder.decodeSingularInt32Field(value: &self.totalCount) }()
       case 5: try { try decoder.decodeSingularInt32Field(value: &self.totalPage) }()
       case 6: try { try decoder.decodeSingularInt32Field(value: &self.hasMore_p) }()
       case 7: try { try decoder.decodeSingularInt32Field(value: &self.hasPrev_p) }()
-      case 8: try { try decoder.decodeSingularInt32Field(value: &self.curGoodID) }()
-      case 9: try { try decoder.decodeSingularInt32Field(value: &self.reqNum) }()
-      case 10: try { try decoder.decodeSingularInt32Field(value: &self.pnum) }()
-      case 11: try { try decoder.decodeSingularInt32Field(value: &self.tnum) }()
-      case 12: try { try decoder.decodeSingularInt32Field(value: &self.totalNum) }()
-      case 13: try { try decoder.decodeSingularInt32Field(value: &self.lzTotalFloor) }()
-      case 14: try { try decoder.decodeSingularInt32Field(value: &self.newTotalPage) }()
       default: break
       }
     }
@@ -94,9 +70,6 @@ nonisolated extension Tieba_Page: SwiftProtobuf.Message, SwiftProtobuf._MessageI
   func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     if self.pageSize != 0 {
       try visitor.visitSingularInt32Field(value: self.pageSize, fieldNumber: 1)
-    }
-    if self.offset != 0 {
-      try visitor.visitSingularInt32Field(value: self.offset, fieldNumber: 2)
     }
     if self.currentPage != 0 {
       try visitor.visitSingularInt32Field(value: self.currentPage, fieldNumber: 3)
@@ -113,45 +86,16 @@ nonisolated extension Tieba_Page: SwiftProtobuf.Message, SwiftProtobuf._MessageI
     if self.hasPrev_p != 0 {
       try visitor.visitSingularInt32Field(value: self.hasPrev_p, fieldNumber: 7)
     }
-    if self.curGoodID != 0 {
-      try visitor.visitSingularInt32Field(value: self.curGoodID, fieldNumber: 8)
-    }
-    if self.reqNum != 0 {
-      try visitor.visitSingularInt32Field(value: self.reqNum, fieldNumber: 9)
-    }
-    if self.pnum != 0 {
-      try visitor.visitSingularInt32Field(value: self.pnum, fieldNumber: 10)
-    }
-    if self.tnum != 0 {
-      try visitor.visitSingularInt32Field(value: self.tnum, fieldNumber: 11)
-    }
-    if self.totalNum != 0 {
-      try visitor.visitSingularInt32Field(value: self.totalNum, fieldNumber: 12)
-    }
-    if self.lzTotalFloor != 0 {
-      try visitor.visitSingularInt32Field(value: self.lzTotalFloor, fieldNumber: 13)
-    }
-    if self.newTotalPage != 0 {
-      try visitor.visitSingularInt32Field(value: self.newTotalPage, fieldNumber: 14)
-    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Tieba_Page, rhs: Tieba_Page) -> Bool {
     if lhs.pageSize != rhs.pageSize {return false}
-    if lhs.offset != rhs.offset {return false}
     if lhs.currentPage != rhs.currentPage {return false}
     if lhs.totalCount != rhs.totalCount {return false}
     if lhs.totalPage != rhs.totalPage {return false}
     if lhs.hasMore_p != rhs.hasMore_p {return false}
     if lhs.hasPrev_p != rhs.hasPrev_p {return false}
-    if lhs.curGoodID != rhs.curGoodID {return false}
-    if lhs.reqNum != rhs.reqNum {return false}
-    if lhs.pnum != rhs.pnum {return false}
-    if lhs.tnum != rhs.tnum {return false}
-    if lhs.totalNum != rhs.totalNum {return false}
-    if lhs.lzTotalFloor != rhs.lzTotalFloor {return false}
-    if lhs.newTotalPage != rhs.newTotalPage {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

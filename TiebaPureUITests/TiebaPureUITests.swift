@@ -1738,16 +1738,32 @@ final class TiebaPureUITests: XCTestCase {
         attachScreenshot(named: "fixture-single-line-user-level-badge-axxxl")
     }
 
-    func testAboutShowsTiebaLiteAttributionAndGPL() {
+    func testAboutShowsProjectAndBundledDependencyLicenses() {
         let app = launchApp()
 
         rootTab("我的", in: app).tap()
         XCTAssertTrue(waitForElement(named: "关于 TiebaPure", in: app, maxSwipes: 4))
         app.buttons["关于 TiebaPure"].tap()
         XCTAssertTrue(waitForLabelContaining("infinityf4p", in: app, maxSwipes: 2))
-        XCTAssertTrue(waitForLabelContaining("开源与来源", in: app, maxSwipes: 4))
+        XCTAssertTrue(waitForLabelContaining("开源与许可", in: app, maxSwipes: 4))
         XCTAssertTrue(waitForLabelContaining("GPL-3.0-only", in: app, maxSwipes: 5))
-        XCTAssertTrue(waitForLabelContaining("查看 TiebaLite 来源项目", in: app, maxSwipes: 5))
+        XCTAssertTrue(waitForLabelContaining("SwiftProtobuf", in: app, maxSwipes: 5))
+        XCTAssertTrue(waitForLabelContaining("Apache-2.0", in: app, maxSwipes: 5))
+
+        let gplRow = app.buttons.matching(
+            NSPredicate(format: "label CONTAINS %@", "GPL-3.0-only")
+        ).firstMatch
+        XCTAssertTrue(gplRow.waitForExistence(timeout: 3))
+        gplRow.tap()
+        XCTAssertTrue(waitForLabelContaining("GNU GENERAL PUBLIC LICENSE", in: app, maxSwipes: 2))
+
+        app.navigationBars["TiebaPure-iOS"].buttons.firstMatch.tap()
+        let dependencyRow = app.buttons.matching(
+            NSPredicate(format: "label CONTAINS %@", "Apache-2.0")
+        ).firstMatch
+        XCTAssertTrue(dependencyRow.waitForExistence(timeout: 3))
+        dependencyRow.tap()
+        XCTAssertTrue(waitForLabelContaining("Apache License", in: app, maxSwipes: 2))
     }
 
     func testFixtureEmptyStateIsDeterministic() {
@@ -2593,8 +2609,13 @@ final class TiebaPureUITests: XCTestCase {
         XCTAssertTrue(threadRows(in: app).firstMatch.waitForExistence(timeout: 8))
         attachScreenshot(named: "fixture-search-controls")
 
-        app.descendants(matching: .any).matching(identifier: "thread-open-area").firstMatch.tap()
-        XCTAssertTrue(waitForElement(named: "全部回复", in: app, maxSwipes: 10))
+        let openArea = app.descendants(matching: .any)
+            .matching(identifier: "thread-open-area")
+            .firstMatch
+        XCTAssertTrue(openArea.waitForExistence(timeout: 8))
+        openArea.tap()
+        XCTAssertTrue(app.buttons["更多"].waitForExistence(timeout: 8))
+        XCTAssertTrue(waitForElement(named: "全部回复", in: app, maxSwipes: 30))
         app.swipeUp()
         attachScreenshot(named: "fixture-thread-controls")
     }

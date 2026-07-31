@@ -207,6 +207,7 @@ struct BoundedURLSession: Sendable {
 enum SecureRemoteRedirectScope: Sendable {
     case publicHTTPS
     case baiduHTTPS
+    case bdStaticHTTPS
 
     func allows(_ url: URL?) -> Bool {
         guard let url, url.scheme?.lowercased() == "https" else { return false }
@@ -219,6 +220,17 @@ enum SecureRemoteRedirectScope: Sendable {
                 return false
             }
             return host == "baidu.com" || host.hasSuffix(".baidu.com")
+        case .bdStaticHTTPS:
+            guard url.host?.lowercased() == TiebaEmoticonURLPolicy.host,
+                  url.user == nil,
+                  url.password == nil else {
+                return false
+            }
+            let prefix = "/tb/editor/images/client/"
+            guard url.path.hasPrefix(prefix), url.path.hasSuffix(".png") else { return false }
+            let imageName = String(url.path.dropFirst(prefix.count).dropLast(".png".count))
+            return imageName.contains("/") == false
+                && TiebaEmoticonURLPolicy.isValidImageName(imageName)
         }
     }
 }

@@ -1,11 +1,9 @@
 # Tieba Protobuf Inputs
 
-贴吧旧版客户端 API 用 protobuf 而非 JSON，这些 `.proto` 就是那套二进制数据的结构定义。
+部分贴吧接口使用 Protobuf 传输数据。本目录保存 TiebaPure 自行维护的最小协议定义，只包含应用实际发送或读取的字段；响应中的其他字段由 Protobuf 作为未知字段跳过。
 
-302 个 schema 从
-[`HuanCheng65/TiebaLite`](https://github.com/HuanCheng65/TiebaLite/tree/4.0-dev/app/src/main/protos)
-的 `4.0-dev@2885b2aabbbf47aba7bf12b1cd7cbc03b1f5ec15` 逐字节复制而来 —— 字段编号必须与百度服务器一致，否则什么都解不出来。`TiebaPureProfile/` 是本项目原创，不计入这 302 个，CI 统计时会排除它。
+字段编号、wire 类型以及 `optional` / `repeated` 语义都是协议的一部分。修改它们时必须同步增加手写 wire fixture，并验证请求编码、响应解码和领域模型映射，不能仅依赖同一份 schema 的编码再解码测试。
 
-`scripts/generate-ios-protos.sh` 只读取本目录，不依赖任何外部 checkout。要生成哪些根 schema 由该脚本里的 `roots` 决定（只选阅读功能需要的，不含发帖等写入端点），脚本会递归包含它们的 import 闭包。生成需要 `python3`、`protoc` 31.1 和 `protoc-gen-swift` 1.38.1；Swift 生成器版本必须与 `Package.resolved` 里钉住的 SwiftProtobuf 版本一致，脚本会在覆盖已提交的生成产物前校验。
+`scripts/generate-ios-protos.sh` 只读取本目录，不依赖外部 checkout。脚本从阅读接口的根 schema 递归解析 import，拒绝未进入生成闭包的孤立文件，并先在临时目录完成生成，成功后才替换已提交的 Swift 产物。
 
-如果因为缺少被 import 的 schema 导致生成失败，请单独提一个改动来补充本目录中已审计的 schema 集合，不要从别处的 checkout 静默读取文件，也不要顺手加入无关的端点。
+生成需要 `python3`、`protoc` 和 `protoc-gen-swift 1.38.1`。Swift 生成器版本必须与工程使用的 SwiftProtobuf 版本一致，脚本会在覆盖产物前校验。

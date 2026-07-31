@@ -63,11 +63,11 @@ struct ImageViewer: View {
     }
 
     private var inlineAspectRatio: CGFloat {
-        TiebaLiteInlineImageLayoutPolicy.displayAspectRatio(for: image)
+        InlineImageLayoutPolicy.displayAspectRatio(for: image)
     }
 
     private var isTallImage: Bool {
-        TiebaLiteInlineImageLayoutPolicy.isTall(image)
+        InlineImageLayoutPolicy.isTall(image)
     }
 
     private func activateInlineImage() {
@@ -149,7 +149,7 @@ struct ImageViewer: View {
                 }
             }
         }
-        .frame(maxHeight: TiebaLiteInlineImageLayoutPolicy.maximumInlineHeight)
+        .frame(maxHeight: InlineImageLayoutPolicy.maximumInlineHeight)
         .clipShape(RoundedRectangle(cornerRadius: TiebaPureTheme.Radius.media, style: .continuous))
         .contentShape(RoundedRectangle(cornerRadius: TiebaPureTheme.Radius.media, style: .continuous))
         .clipped()
@@ -158,7 +158,7 @@ struct ImageViewer: View {
     private var imagePlaceholder: some View {
         Color.clear
         .aspectRatio(inlineAspectRatio, contentMode: .fit)
-        .frame(maxHeight: TiebaLiteInlineImageLayoutPolicy.maximumInlineHeight)
+        .frame(maxHeight: InlineImageLayoutPolicy.maximumInlineHeight)
         .frame(maxWidth: .infinity, alignment: .leading)
         .overlay {
             ZStack {
@@ -185,7 +185,7 @@ struct ImageViewer: View {
     }
 }
 
-enum TiebaLiteInlineImageLayoutPolicy {
+enum InlineImageLayoutPolicy {
     static let maximumInlineHeight: CGFloat = 600
     static let minimumDisplayAspectRatio: CGFloat = 2.0 / 3.0
 
@@ -4125,6 +4125,7 @@ struct FullScreenImageView: View {
                 .font((dynamicTypeSize.isAccessibilitySize
                     ? Font.body
                     : Font.footnote).weight(.semibold))
+                .foregroundStyle(.white)
                 .padding(.horizontal, 8)
                 .frame(
                     maxWidth: dynamicTypeSize.isAccessibilitySize ? .infinity : nil,
@@ -4138,7 +4139,6 @@ struct FullScreenImageView: View {
         .frame(minWidth: 44, minHeight: 44)
         .contentShape(Rectangle())
         .disabled(currentOriginalLoadState.canRequest == false)
-        .opacity(currentOriginalLoadState.canRequest ? 1 : 0.72)
         .accessibilityIdentifier("view-original-image")
         .accessibilityLabel(originalImageAccessibilityLabel)
         .accessibilityHint(currentOriginalLoadState.canRequest
@@ -4226,7 +4226,7 @@ struct FullScreenImageView: View {
     private var originalButtonBackground: some View {
         GeometryReader { proxy in
             ZStack(alignment: .leading) {
-                Color.black.opacity(0.45)
+                Color.black.opacity(currentOriginalLoadState.canRequest ? 0.55 : 0.78)
                 if currentOriginalLoadState == .loading {
                     Color.white.opacity(0.24)
                         .frame(width: proxy.size.width * currentOriginalProgressFraction)

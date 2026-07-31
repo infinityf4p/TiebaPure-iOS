@@ -33,12 +33,6 @@ nonisolated struct Tieba_Abstract: Sendable {
 
   var src: String = String()
 
-  var un: String = String()
-
-  var duringTime: String = String()
-
-  var voiceMd5: String = String()
-
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
@@ -50,7 +44,7 @@ fileprivate nonisolated let _protobuf_package = "tieba"
 
 nonisolated extension Tieba_Abstract: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".Abstract"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}type\0\u{1}text\0\u{1}link\0\u{1}src\0\u{1}un\0\u{1}duringTime\0\u{1}voiceMD5\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}type\0\u{1}text\0\u{1}link\0\u{1}src\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -62,9 +56,6 @@ nonisolated extension Tieba_Abstract: SwiftProtobuf.Message, SwiftProtobuf._Mess
       case 2: try { try decoder.decodeSingularStringField(value: &self.text) }()
       case 3: try { try decoder.decodeSingularStringField(value: &self.link) }()
       case 4: try { try decoder.decodeSingularStringField(value: &self.src) }()
-      case 5: try { try decoder.decodeSingularStringField(value: &self.un) }()
-      case 6: try { try decoder.decodeSingularStringField(value: &self.duringTime) }()
-      case 7: try { try decoder.decodeSingularStringField(value: &self.voiceMd5) }()
       default: break
       }
     }
@@ -83,15 +74,6 @@ nonisolated extension Tieba_Abstract: SwiftProtobuf.Message, SwiftProtobuf._Mess
     if !self.src.isEmpty {
       try visitor.visitSingularStringField(value: self.src, fieldNumber: 4)
     }
-    if !self.un.isEmpty {
-      try visitor.visitSingularStringField(value: self.un, fieldNumber: 5)
-    }
-    if !self.duringTime.isEmpty {
-      try visitor.visitSingularStringField(value: self.duringTime, fieldNumber: 6)
-    }
-    if !self.voiceMd5.isEmpty {
-      try visitor.visitSingularStringField(value: self.voiceMd5, fieldNumber: 7)
-    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -100,9 +82,6 @@ nonisolated extension Tieba_Abstract: SwiftProtobuf.Message, SwiftProtobuf._Mess
     if lhs.text != rhs.text {return false}
     if lhs.link != rhs.link {return false}
     if lhs.src != rhs.src {return false}
-    if lhs.un != rhs.un {return false}
-    if lhs.duringTime != rhs.duringTime {return false}
-    if lhs.voiceMd5 != rhs.voiceMd5 {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

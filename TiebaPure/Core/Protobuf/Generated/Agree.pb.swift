@@ -29,11 +29,7 @@ nonisolated struct Tieba_Agree: Sendable {
 
   var hasAgree_p: Int32 = 0
 
-  var agreeType: Int32 = 0
-
   var disagreeNum: Int64 = 0
-
-  var diffAgreeNum: Int64 = 0
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -46,7 +42,7 @@ fileprivate nonisolated let _protobuf_package = "tieba"
 
 nonisolated extension Tieba_Agree: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".Agree"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}agreeNum\0\u{1}hasAgree\0\u{1}agreeType\0\u{1}disagreeNum\0\u{1}diffAgreeNum\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}agreeNum\0\u{1}hasAgree\0\u{2}\u{2}disagreeNum\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -56,9 +52,7 @@ nonisolated extension Tieba_Agree: SwiftProtobuf.Message, SwiftProtobuf._Message
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularInt64Field(value: &self.agreeNum) }()
       case 2: try { try decoder.decodeSingularInt32Field(value: &self.hasAgree_p) }()
-      case 3: try { try decoder.decodeSingularInt32Field(value: &self.agreeType) }()
       case 4: try { try decoder.decodeSingularInt64Field(value: &self.disagreeNum) }()
-      case 5: try { try decoder.decodeSingularInt64Field(value: &self.diffAgreeNum) }()
       default: break
       }
     }
@@ -71,14 +65,8 @@ nonisolated extension Tieba_Agree: SwiftProtobuf.Message, SwiftProtobuf._Message
     if self.hasAgree_p != 0 {
       try visitor.visitSingularInt32Field(value: self.hasAgree_p, fieldNumber: 2)
     }
-    if self.agreeType != 0 {
-      try visitor.visitSingularInt32Field(value: self.agreeType, fieldNumber: 3)
-    }
     if self.disagreeNum != 0 {
       try visitor.visitSingularInt64Field(value: self.disagreeNum, fieldNumber: 4)
-    }
-    if self.diffAgreeNum != 0 {
-      try visitor.visitSingularInt64Field(value: self.diffAgreeNum, fieldNumber: 5)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -86,9 +74,7 @@ nonisolated extension Tieba_Agree: SwiftProtobuf.Message, SwiftProtobuf._Message
   static func ==(lhs: Tieba_Agree, rhs: Tieba_Agree) -> Bool {
     if lhs.agreeNum != rhs.agreeNum {return false}
     if lhs.hasAgree_p != rhs.hasAgree_p {return false}
-    if lhs.agreeType != rhs.agreeType {return false}
     if lhs.disagreeNum != rhs.disagreeNum {return false}
-    if lhs.diffAgreeNum != rhs.diffAgreeNum {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

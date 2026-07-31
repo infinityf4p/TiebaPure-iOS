@@ -20,9 +20,6 @@ fileprivate nonisolated struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobu
   typealias Version = _2
 }
 
-/// Wire-compatible, deliberately small projections of Tieba's public profile
-/// messages. Keeping only the fields used by this client avoids generating the
-/// much larger collection of unrelated profile modules.
 nonisolated struct Tiebapure_Profile_UserProfileRequestData: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for

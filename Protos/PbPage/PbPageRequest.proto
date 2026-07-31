@@ -2,9 +2,27 @@ syntax = "proto3";
 
 package tieba.pbPage;
 
-option java_package = "com.huanchengfly.tieba.post.api.models.protos.pbPage";
+import "CommonRequest.proto";
 
-import "PbPage/PbPageRequestData.proto";
+message PbPageRequestData {
+  int32 mark = 2;
+  int64 kz = 4;
+  int32 lz = 5;
+  int32 r = 6;
+  optional int64 pid = 7;
+  int32 with_floor = 8;
+  int32 floor_rn = 9;
+  int32 rn = 13;
+  int32 scr_w = 14;
+  int32 scr_h = 15;
+  double scr_dip = 16;
+  int32 q_type = 17;
+  int32 pn = 18;
+  tieba.CommonRequest common = 25;
+  optional int64 forum_id = 56;
+  int32 floor_sort_type = 74;
+  int32 source_type = 75;
+}
 
 message PbPageRequest {
   PbPageRequestData data = 1;

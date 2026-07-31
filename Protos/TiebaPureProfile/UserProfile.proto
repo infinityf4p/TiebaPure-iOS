@@ -9,9 +9,6 @@ import "Media.proto";
 import "PbContent.proto";
 import "User.proto";
 
-// Wire-compatible, deliberately small projections of Tieba's public profile
-// messages. Keeping only the fields used by this client avoids generating the
-// much larger collection of unrelated profile modules.
 message UserProfileRequestData {
   optional int64 uid = 1;
   uint32 need_post_count = 2;

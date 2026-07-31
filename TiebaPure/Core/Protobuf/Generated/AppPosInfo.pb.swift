@@ -25,14 +25,14 @@ nonisolated struct Tieba_AppPosInfo: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var addrTimestamp: Int64 {
-    get {_addrTimestamp ?? 0}
-    set {_addrTimestamp = newValue}
+  var apMac: String {
+    get {_apMac ?? String()}
+    set {_apMac = newValue}
   }
-  /// Returns true if `addrTimestamp` has been explicitly set.
-  var hasAddrTimestamp: Bool {self._addrTimestamp != nil}
-  /// Clears the value of `addrTimestamp`. Subsequent reads from it will return its default value.
-  mutating func clearAddrTimestamp() {self._addrTimestamp = nil}
+  /// Returns true if `apMac` has been explicitly set.
+  var hasApMac: Bool {self._apMac != nil}
+  /// Clears the value of `apMac`. Subsequent reads from it will return its default value.
+  mutating func clearApMac() {self._apMac = nil}
 
   var apConnected: Bool {
     get {_apConnected ?? false}
@@ -43,14 +43,23 @@ nonisolated struct Tieba_AppPosInfo: Sendable {
   /// Clears the value of `apConnected`. Subsequent reads from it will return its default value.
   mutating func clearApConnected() {self._apConnected = nil}
 
-  var apMac: String {
-    get {_apMac ?? String()}
-    set {_apMac = newValue}
+  var coordinateType: String {
+    get {_coordinateType ?? String()}
+    set {_coordinateType = newValue}
   }
-  /// Returns true if `apMac` has been explicitly set.
-  var hasApMac: Bool {self._apMac != nil}
-  /// Clears the value of `apMac`. Subsequent reads from it will return its default value.
-  mutating func clearApMac() {self._apMac = nil}
+  /// Returns true if `coordinateType` has been explicitly set.
+  var hasCoordinateType: Bool {self._coordinateType != nil}
+  /// Clears the value of `coordinateType`. Subsequent reads from it will return its default value.
+  mutating func clearCoordinateType() {self._coordinateType = nil}
+
+  var addrTimestamp: Int64 {
+    get {_addrTimestamp ?? 0}
+    set {_addrTimestamp = newValue}
+  }
+  /// Returns true if `addrTimestamp` has been explicitly set.
+  var hasAddrTimestamp: Bool {self._addrTimestamp != nil}
+  /// Clears the value of `addrTimestamp`. Subsequent reads from it will return its default value.
+  mutating func clearAddrTimestamp() {self._addrTimestamp = nil}
 
   var aspShownInfo: String {
     get {_aspShownInfo ?? String()}
@@ -61,24 +70,15 @@ nonisolated struct Tieba_AppPosInfo: Sendable {
   /// Clears the value of `aspShownInfo`. Subsequent reads from it will return its default value.
   mutating func clearAspShownInfo() {self._aspShownInfo = nil}
 
-  var coordinateType: String {
-    get {_coordinateType ?? String()}
-    set {_coordinateType = newValue}
-  }
-  /// Returns true if `coordinateType` has been explicitly set.
-  var hasCoordinateType: Bool {self._coordinateType != nil}
-  /// Clears the value of `coordinateType`. Subsequent reads from it will return its default value.
-  mutating func clearCoordinateType() {self._coordinateType = nil}
-
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
 
-  fileprivate var _addrTimestamp: Int64? = nil
-  fileprivate var _apConnected: Bool? = nil
   fileprivate var _apMac: String? = nil
-  fileprivate var _aspShownInfo: String? = nil
+  fileprivate var _apConnected: Bool? = nil
   fileprivate var _coordinateType: String? = nil
+  fileprivate var _addrTimestamp: Int64? = nil
+  fileprivate var _aspShownInfo: String? = nil
 }
 
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
@@ -129,11 +129,11 @@ nonisolated extension Tieba_AppPosInfo: SwiftProtobuf.Message, SwiftProtobuf._Me
   }
 
   static func ==(lhs: Tieba_AppPosInfo, rhs: Tieba_AppPosInfo) -> Bool {
-    if lhs._addrTimestamp != rhs._addrTimestamp {return false}
-    if lhs._apConnected != rhs._apConnected {return false}
     if lhs._apMac != rhs._apMac {return false}
-    if lhs._aspShownInfo != rhs._aspShownInfo {return false}
+    if lhs._apConnected != rhs._apConnected {return false}
     if lhs._coordinateType != rhs._coordinateType {return false}
+    if lhs._addrTimestamp != rhs._addrTimestamp {return false}
+    if lhs._aspShownInfo != rhs._aspShownInfo {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

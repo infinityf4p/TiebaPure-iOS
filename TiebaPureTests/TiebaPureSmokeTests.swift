@@ -888,29 +888,29 @@ final class TiebaPureSmokeTests: XCTestCase {
         )
     }
 
-    func testTiebaLiteFeedMediaLayoutUsesStablePreviewRatios() {
-        XCTAssertEqual(TiebaLiteMediaLayoutPolicy.visibleItemCount(totalCount: 1), 1)
-        XCTAssertEqual(TiebaLiteMediaLayoutPolicy.visibleItemCount(totalCount: 5), 3)
-        XCTAssertEqual(TiebaLiteMediaLayoutPolicy.containerAspectRatio(totalCount: 1), 2)
-        XCTAssertEqual(TiebaLiteMediaLayoutPolicy.containerAspectRatio(totalCount: 2), 3)
-        XCTAssertEqual(TiebaLiteMediaLayoutPolicy.thumbnailAspectRatio(totalCount: 1, visibleCount: 1), 2)
-        XCTAssertEqual(TiebaLiteMediaLayoutPolicy.thumbnailAspectRatio(totalCount: 2, visibleCount: 2), 1.5)
-        XCTAssertEqual(TiebaLiteMediaLayoutPolicy.thumbnailAspectRatio(totalCount: 3, visibleCount: 3), 1)
-        XCTAssertTrue(TiebaLiteMediaLayoutPolicy.showsMoreBadge(totalCount: 4, visibleCount: 3))
+    func testForumFeedMediaLayoutUsesStablePreviewRatios() {
+        XCTAssertEqual(ForumFeedMediaLayoutPolicy.visibleItemCount(totalCount: 1), 1)
+        XCTAssertEqual(ForumFeedMediaLayoutPolicy.visibleItemCount(totalCount: 5), 3)
+        XCTAssertEqual(ForumFeedMediaLayoutPolicy.containerAspectRatio(totalCount: 1), 2)
+        XCTAssertEqual(ForumFeedMediaLayoutPolicy.containerAspectRatio(totalCount: 2), 3)
+        XCTAssertEqual(ForumFeedMediaLayoutPolicy.thumbnailAspectRatio(totalCount: 1, visibleCount: 1), 2)
+        XCTAssertEqual(ForumFeedMediaLayoutPolicy.thumbnailAspectRatio(totalCount: 2, visibleCount: 2), 1.5)
+        XCTAssertEqual(ForumFeedMediaLayoutPolicy.thumbnailAspectRatio(totalCount: 3, visibleCount: 3), 1)
+        XCTAssertTrue(ForumFeedMediaLayoutPolicy.showsMoreBadge(totalCount: 4, visibleCount: 3))
     }
 
-    func testTiebaLiteFeedMediaLayoutProducesBoundedContainerHeight() {
+    func testForumFeedMediaLayoutProducesBoundedContainerHeight() {
         XCTAssertEqual(
-            TiebaLiteMediaLayoutPolicy.containerHeight(containerWidth: 320, totalCount: 1),
+            ForumFeedMediaLayoutPolicy.containerHeight(containerWidth: 320, totalCount: 1),
             160
         )
         XCTAssertEqual(
-            TiebaLiteMediaLayoutPolicy.containerHeight(containerWidth: 320, totalCount: 2),
+            ForumFeedMediaLayoutPolicy.containerHeight(containerWidth: 320, totalCount: 2),
             320.0 / 3.0,
             accuracy: 0.001
         )
         XCTAssertEqual(
-            TiebaLiteMediaLayoutPolicy.containerHeight(containerWidth: 320, totalCount: 9),
+            ForumFeedMediaLayoutPolicy.containerHeight(containerWidth: 320, totalCount: 9),
             320.0 / 3.0,
             accuracy: 0.001
         )
@@ -1049,7 +1049,7 @@ final class TiebaPureSmokeTests: XCTestCase {
         XCTAssertFalse(TiebaImageSourcePolicy.isSyntheticSuccessURL(wrongScheme))
     }
 
-    func testTiebaLiteInlineImageLayoutKeepsWideImagesShallowInThreadDetail() {
+    func testInlineImageLayoutKeepsWideImagesShallowInThreadDetail() {
         let wideImage = ImageContent(
             thumbnailURL: URL(string: "https://image.example/wide-thumb.jpg"),
             originalURL: URL(string: "https://image.example/wide-original.jpg"),
@@ -1058,12 +1058,12 @@ final class TiebaPureSmokeTests: XCTestCase {
             showOriginalButton: false
         )
 
-        XCTAssertEqual(TiebaLiteInlineImageLayoutPolicy.aspectRatio(for: wideImage), 8)
+        XCTAssertEqual(InlineImageLayoutPolicy.aspectRatio(for: wideImage), 8)
         XCTAssertEqual(
-            TiebaLiteInlineImageLayoutPolicy.height(containerWidth: 320, image: wideImage),
+            InlineImageLayoutPolicy.height(containerWidth: 320, image: wideImage),
             40
         )
-        XCTAssertEqual(TiebaLiteMediaLayoutPolicy.thumbnailAspectRatio(totalCount: 1, visibleCount: 1), 2)
+        XCTAssertEqual(ForumFeedMediaLayoutPolicy.thumbnailAspectRatio(totalCount: 1, visibleCount: 1), 2)
     }
 
     func testFullScreenImageSwipePolicySwitchesImagesWithoutDismiss() {
@@ -2617,7 +2617,21 @@ final class TiebaPureSmokeTests: XCTestCase {
                                 .emoticon(code: "滑稽"),
                                 .text("首行表情附件之后的回复文字不应被裁切。")
                             ],
-                            style: .reply
+                            style: .reply,
+                            emoticonImageProvider: { _ in nil }
+                        )
+                    ),
+                    (
+                        "inline-emoticon-loaded",
+                        InlineContentText(
+                            blocks: [
+                                .emoticon(code: "滑稽"),
+                                .text("首行表情附件之后的回复文字不应被裁切。")
+                            ],
+                            style: .reply,
+                            emoticonImageProvider: { _ in
+                                UIImage(systemName: "face.smiling")
+                            }
                         )
                     ),
                     (

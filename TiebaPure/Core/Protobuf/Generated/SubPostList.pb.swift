@@ -20,88 +20,57 @@ fileprivate nonisolated struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobu
   typealias Version = _2
 }
 
-nonisolated struct Tieba_SubPostList: @unchecked Sendable {
+nonisolated struct Tieba_SubPostList: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var id: UInt64 {
-    get {_storage._id}
-    set {_uniqueStorage()._id = newValue}
-  }
+  var id: UInt64 = 0
 
-  var content: [Tieba_PbContent] {
-    get {_storage._content}
-    set {_uniqueStorage()._content = newValue}
-  }
+  var content: [Tieba_PbContent] = []
 
-  var time: UInt32 {
-    get {_storage._time}
-    set {_uniqueStorage()._time = newValue}
-  }
+  var time: UInt32 = 0
 
-  var authorID: Int64 {
-    get {_storage._authorID}
-    set {_uniqueStorage()._authorID = newValue}
-  }
+  var authorID: Int64 = 0
 
-  var title: String {
-    get {_storage._title}
-    set {_uniqueStorage()._title = newValue}
-  }
+  var title: String = String()
 
-  var floor: UInt32 {
-    get {_storage._floor}
-    set {_uniqueStorage()._floor = newValue}
-  }
+  var floor: UInt32 = 0
 
   var author: Tieba_User {
-    get {_storage._author ?? Tieba_User()}
-    set {_uniqueStorage()._author = newValue}
+    get {_author ?? Tieba_User()}
+    set {_author = newValue}
   }
   /// Returns true if `author` has been explicitly set.
-  var hasAuthor: Bool {_storage._author != nil}
+  var hasAuthor: Bool {self._author != nil}
   /// Clears the value of `author`. Subsequent reads from it will return its default value.
-  mutating func clearAuthor() {_uniqueStorage()._author = nil}
-
-  var isGiftpost: Int32 {
-    get {_storage._isGiftpost}
-    set {_uniqueStorage()._isGiftpost = newValue}
-  }
+  mutating func clearAuthor() {self._author = nil}
 
   var agree: Tieba_Agree {
-    get {_storage._agree ?? Tieba_Agree()}
-    set {_uniqueStorage()._agree = newValue}
+    get {_agree ?? Tieba_Agree()}
+    set {_agree = newValue}
   }
   /// Returns true if `agree` has been explicitly set.
-  var hasAgree: Bool {_storage._agree != nil}
+  var hasAgree: Bool {self._agree != nil}
   /// Clears the value of `agree`. Subsequent reads from it will return its default value.
-  mutating func clearAgree() {_uniqueStorage()._agree = nil}
+  mutating func clearAgree() {self._agree = nil}
 
   var location: Tieba_Lbs {
-    get {_storage._location ?? Tieba_Lbs()}
-    set {_uniqueStorage()._location = newValue}
+    get {_location ?? Tieba_Lbs()}
+    set {_location = newValue}
   }
   /// Returns true if `location` has been explicitly set.
-  var hasLocation: Bool {_storage._location != nil}
+  var hasLocation: Bool {self._location != nil}
   /// Clears the value of `location`. Subsequent reads from it will return its default value.
-  mutating func clearLocation() {_uniqueStorage()._location = nil}
-
-  var isFakeTop: Int32 {
-    get {_storage._isFakeTop}
-    set {_uniqueStorage()._isFakeTop = newValue}
-  }
-
-  var isAuthorView: Int32 {
-    get {_storage._isAuthorView}
-    set {_uniqueStorage()._isAuthorView = newValue}
-  }
+  mutating func clearLocation() {self._location = nil}
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
 
-  fileprivate var _storage = _StorageClass.defaultInstance
+  fileprivate var _author: Tieba_User? = nil
+  fileprivate var _agree: Tieba_Agree? = nil
+  fileprivate var _location: Tieba_Lbs? = nil
 }
 
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
@@ -110,146 +79,73 @@ fileprivate nonisolated let _protobuf_package = "tieba"
 
 nonisolated extension Tieba_SubPostList: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".SubPostList"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}content\0\u{1}time\0\u{3}author_id\0\u{1}title\0\u{1}floor\0\u{1}author\0\u{3}is_giftpost\0\u{1}agree\0\u{1}location\0\u{3}is_fake_top\0\u{3}is_author_view\0")
-
-  fileprivate class _StorageClass {
-    var _id: UInt64 = 0
-    var _content: [Tieba_PbContent] = []
-    var _time: UInt32 = 0
-    var _authorID: Int64 = 0
-    var _title: String = String()
-    var _floor: UInt32 = 0
-    var _author: Tieba_User? = nil
-    var _isGiftpost: Int32 = 0
-    var _agree: Tieba_Agree? = nil
-    var _location: Tieba_Lbs? = nil
-    var _isFakeTop: Int32 = 0
-    var _isAuthorView: Int32 = 0
-
-      // This property is used as the initial default value for new instances of the type.
-      // The type itself is protecting the reference to its storage via CoW semantics.
-      // This will force a copy to be made of this reference when the first mutation occurs;
-      // hence, it is safe to mark this as `nonisolated(unsafe)`.
-      static nonisolated(unsafe) let defaultInstance = _StorageClass()
-
-    private init() {}
-
-    init(copying source: _StorageClass) {
-      _id = source._id
-      _content = source._content
-      _time = source._time
-      _authorID = source._authorID
-      _title = source._title
-      _floor = source._floor
-      _author = source._author
-      _isGiftpost = source._isGiftpost
-      _agree = source._agree
-      _location = source._location
-      _isFakeTop = source._isFakeTop
-      _isAuthorView = source._isAuthorView
-    }
-  }
-
-  fileprivate mutating func _uniqueStorage() -> _StorageClass {
-    if !isKnownUniquelyReferenced(&_storage) {
-      _storage = _StorageClass(copying: _storage)
-    }
-    return _storage
-  }
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}content\0\u{1}time\0\u{3}author_id\0\u{1}title\0\u{1}floor\0\u{1}author\0\u{2}\u{2}agree\0\u{1}location\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    _ = _uniqueStorage()
-    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      while let fieldNumber = try decoder.nextFieldNumber() {
-        // The use of inline closures is to circumvent an issue where the compiler
-        // allocates stack space for every case branch when no optimizations are
-        // enabled. https://github.com/apple/swift-protobuf/issues/1034
-        switch fieldNumber {
-        case 1: try { try decoder.decodeSingularUInt64Field(value: &_storage._id) }()
-        case 2: try { try decoder.decodeRepeatedMessageField(value: &_storage._content) }()
-        case 3: try { try decoder.decodeSingularUInt32Field(value: &_storage._time) }()
-        case 4: try { try decoder.decodeSingularInt64Field(value: &_storage._authorID) }()
-        case 5: try { try decoder.decodeSingularStringField(value: &_storage._title) }()
-        case 6: try { try decoder.decodeSingularUInt32Field(value: &_storage._floor) }()
-        case 7: try { try decoder.decodeSingularMessageField(value: &_storage._author) }()
-        case 8: try { try decoder.decodeSingularInt32Field(value: &_storage._isGiftpost) }()
-        case 9: try { try decoder.decodeSingularMessageField(value: &_storage._agree) }()
-        case 10: try { try decoder.decodeSingularMessageField(value: &_storage._location) }()
-        case 11: try { try decoder.decodeSingularInt32Field(value: &_storage._isFakeTop) }()
-        case 12: try { try decoder.decodeSingularInt32Field(value: &_storage._isAuthorView) }()
-        default: break
-        }
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularUInt64Field(value: &self.id) }()
+      case 2: try { try decoder.decodeRepeatedMessageField(value: &self.content) }()
+      case 3: try { try decoder.decodeSingularUInt32Field(value: &self.time) }()
+      case 4: try { try decoder.decodeSingularInt64Field(value: &self.authorID) }()
+      case 5: try { try decoder.decodeSingularStringField(value: &self.title) }()
+      case 6: try { try decoder.decodeSingularUInt32Field(value: &self.floor) }()
+      case 7: try { try decoder.decodeSingularMessageField(value: &self._author) }()
+      case 9: try { try decoder.decodeSingularMessageField(value: &self._agree) }()
+      case 10: try { try decoder.decodeSingularMessageField(value: &self._location) }()
+      default: break
       }
     }
   }
 
   func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every if/case branch local when no optimizations
-      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-      // https://github.com/apple/swift-protobuf/issues/1182
-      if _storage._id != 0 {
-        try visitor.visitSingularUInt64Field(value: _storage._id, fieldNumber: 1)
-      }
-      if !_storage._content.isEmpty {
-        try visitor.visitRepeatedMessageField(value: _storage._content, fieldNumber: 2)
-      }
-      if _storage._time != 0 {
-        try visitor.visitSingularUInt32Field(value: _storage._time, fieldNumber: 3)
-      }
-      if _storage._authorID != 0 {
-        try visitor.visitSingularInt64Field(value: _storage._authorID, fieldNumber: 4)
-      }
-      if !_storage._title.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._title, fieldNumber: 5)
-      }
-      if _storage._floor != 0 {
-        try visitor.visitSingularUInt32Field(value: _storage._floor, fieldNumber: 6)
-      }
-      try { if let v = _storage._author {
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 7)
-      } }()
-      if _storage._isGiftpost != 0 {
-        try visitor.visitSingularInt32Field(value: _storage._isGiftpost, fieldNumber: 8)
-      }
-      try { if let v = _storage._agree {
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 9)
-      } }()
-      try { if let v = _storage._location {
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 10)
-      } }()
-      if _storage._isFakeTop != 0 {
-        try visitor.visitSingularInt32Field(value: _storage._isFakeTop, fieldNumber: 11)
-      }
-      if _storage._isAuthorView != 0 {
-        try visitor.visitSingularInt32Field(value: _storage._isAuthorView, fieldNumber: 12)
-      }
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if self.id != 0 {
+      try visitor.visitSingularUInt64Field(value: self.id, fieldNumber: 1)
     }
+    if !self.content.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.content, fieldNumber: 2)
+    }
+    if self.time != 0 {
+      try visitor.visitSingularUInt32Field(value: self.time, fieldNumber: 3)
+    }
+    if self.authorID != 0 {
+      try visitor.visitSingularInt64Field(value: self.authorID, fieldNumber: 4)
+    }
+    if !self.title.isEmpty {
+      try visitor.visitSingularStringField(value: self.title, fieldNumber: 5)
+    }
+    if self.floor != 0 {
+      try visitor.visitSingularUInt32Field(value: self.floor, fieldNumber: 6)
+    }
+    try { if let v = self._author {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 7)
+    } }()
+    try { if let v = self._agree {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 9)
+    } }()
+    try { if let v = self._location {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 10)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Tieba_SubPostList, rhs: Tieba_SubPostList) -> Bool {
-    if lhs._storage !== rhs._storage {
-      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
-        let _storage = _args.0
-        let rhs_storage = _args.1
-        if _storage._id != rhs_storage._id {return false}
-        if _storage._content != rhs_storage._content {return false}
-        if _storage._time != rhs_storage._time {return false}
-        if _storage._authorID != rhs_storage._authorID {return false}
-        if _storage._title != rhs_storage._title {return false}
-        if _storage._floor != rhs_storage._floor {return false}
-        if _storage._author != rhs_storage._author {return false}
-        if _storage._isGiftpost != rhs_storage._isGiftpost {return false}
-        if _storage._agree != rhs_storage._agree {return false}
-        if _storage._location != rhs_storage._location {return false}
-        if _storage._isFakeTop != rhs_storage._isFakeTop {return false}
-        if _storage._isAuthorView != rhs_storage._isAuthorView {return false}
-        return true
-      }
-      if !storagesAreEqual {return false}
-    }
+    if lhs.id != rhs.id {return false}
+    if lhs.content != rhs.content {return false}
+    if lhs.time != rhs.time {return false}
+    if lhs.authorID != rhs.authorID {return false}
+    if lhs.title != rhs.title {return false}
+    if lhs.floor != rhs.floor {return false}
+    if lhs._author != rhs._author {return false}
+    if lhs._agree != rhs._agree {return false}
+    if lhs._location != rhs._location {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

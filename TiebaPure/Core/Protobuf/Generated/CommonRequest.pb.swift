@@ -20,6 +20,8 @@ fileprivate nonisolated struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobu
   typealias Version = _2
 }
 
+/// Project-maintained projection of fields emitted by TiebaPure. Field numbers
+/// are wire identifiers and must only change with a matching fixture update.
 nonisolated struct Tieba_CommonRequest: @unchecked Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -38,11 +40,6 @@ nonisolated struct Tieba_CommonRequest: @unchecked Sendable {
   var clientID: String {
     get {_storage._clientID}
     set {_uniqueStorage()._clientID = newValue}
-  }
-
-  var phoneImei: String {
-    get {_storage._phoneImei}
-    set {_uniqueStorage()._phoneImei = newValue}
   }
 
   var from: String {
@@ -88,20 +85,6 @@ nonisolated struct Tieba_CommonRequest: @unchecked Sendable {
     set {_uniqueStorage()._netType = newValue}
   }
 
-  var phoneNewimei: String {
-    get {_storage._phoneNewimei}
-    set {_uniqueStorage()._phoneNewimei = newValue}
-  }
-
-  var sign: String {
-    get {_storage._sign ?? String()}
-    set {_uniqueStorage()._sign = newValue}
-  }
-  /// Returns true if `sign` has been explicitly set.
-  var hasSign: Bool {_storage._sign != nil}
-  /// Clears the value of `sign`. Subsequent reads from it will return its default value.
-  mutating func clearSign() {_uniqueStorage()._sign = nil}
-
   var pversion: String {
     get {_storage._pversion}
     set {_uniqueStorage()._pversion = newValue}
@@ -117,20 +100,6 @@ nonisolated struct Tieba_CommonRequest: @unchecked Sendable {
     set {_uniqueStorage()._brand = newValue}
   }
 
-  var legoLibVersion: String {
-    get {_storage._legoLibVersion}
-    set {_uniqueStorage()._legoLibVersion = newValue}
-  }
-
-  var applist: String {
-    get {_storage._applist ?? String()}
-    set {_uniqueStorage()._applist = newValue}
-  }
-  /// Returns true if `applist` has been explicitly set.
-  var hasApplist: Bool {_storage._applist != nil}
-  /// Clears the value of `applist`. Subsequent reads from it will return its default value.
-  mutating func clearApplist() {_uniqueStorage()._applist = nil}
-
   var stoken: String {
     get {_storage._stoken ?? String()}
     set {_uniqueStorage()._stoken = newValue}
@@ -139,15 +108,6 @@ nonisolated struct Tieba_CommonRequest: @unchecked Sendable {
   var hasStoken: Bool {_storage._stoken != nil}
   /// Clears the value of `stoken`. Subsequent reads from it will return its default value.
   mutating func clearStoken() {_uniqueStorage()._stoken = nil}
-
-  var zID: String {
-    get {_storage._zID ?? String()}
-    set {_uniqueStorage()._zID = newValue}
-  }
-  /// Returns true if `zID` has been explicitly set.
-  var hasZID: Bool {_storage._zID != nil}
-  /// Clears the value of `zID`. Subsequent reads from it will return its default value.
-  mutating func clearZID() {_uniqueStorage()._zID = nil}
 
   var cuidGalaxy2: String {
     get {_storage._cuidGalaxy2}
@@ -162,29 +122,6 @@ nonisolated struct Tieba_CommonRequest: @unchecked Sendable {
   var hasCuidGid: Bool {_storage._cuidGid != nil}
   /// Clears the value of `cuidGid`. Subsequent reads from it will return its default value.
   mutating func clearCuidGid() {_uniqueStorage()._cuidGid = nil}
-
-  var oaid: String {
-    get {_storage._oaid ?? String()}
-    set {_uniqueStorage()._oaid = newValue}
-  }
-  /// Returns true if `oaid` has been explicitly set.
-  var hasOaid: Bool {_storage._oaid != nil}
-  /// Clears the value of `oaid`. Subsequent reads from it will return its default value.
-  mutating func clearOaid() {_uniqueStorage()._oaid = nil}
-
-  var c3Aid: String {
-    get {_storage._c3Aid}
-    set {_uniqueStorage()._c3Aid = newValue}
-  }
-
-  var sampleID: String {
-    get {_storage._sampleID ?? String()}
-    set {_uniqueStorage()._sampleID = newValue}
-  }
-  /// Returns true if `sampleID` has been explicitly set.
-  var hasSampleID: Bool {_storage._sampleID != nil}
-  /// Clears the value of `sampleID`. Subsequent reads from it will return its default value.
-  mutating func clearSampleID() {_uniqueStorage()._sampleID = nil}
 
   var scrW: Int32 {
     get {_storage._scrW}
@@ -219,74 +156,6 @@ nonisolated struct Tieba_CommonRequest: @unchecked Sendable {
   /// Clears the value of `isTeenager`. Subsequent reads from it will return its default value.
   mutating func clearIsTeenager() {_uniqueStorage()._isTeenager = nil}
 
-  var sdkVer: String {
-    get {_storage._sdkVer}
-    set {_uniqueStorage()._sdkVer = newValue}
-  }
-
-  var frameworkVer: String {
-    get {_storage._frameworkVer}
-    set {_uniqueStorage()._frameworkVer = newValue}
-  }
-
-  var swanGameVer: String {
-    get {_storage._swanGameVer}
-    set {_uniqueStorage()._swanGameVer = newValue}
-  }
-
-  var activeTimestamp: Int64 {
-    get {_storage._activeTimestamp}
-    set {_uniqueStorage()._activeTimestamp = newValue}
-  }
-
-  var firstInstallTime: Int64 {
-    get {_storage._firstInstallTime}
-    set {_uniqueStorage()._firstInstallTime = newValue}
-  }
-
-  var lastUpdateTime: Int64 {
-    get {_storage._lastUpdateTime}
-    set {_uniqueStorage()._lastUpdateTime = newValue}
-  }
-
-  var eventDay: String {
-    get {_storage._eventDay}
-    set {_uniqueStorage()._eventDay = newValue}
-  }
-
-  var androidID: String {
-    get {_storage._androidID}
-    set {_uniqueStorage()._androidID = newValue}
-  }
-
-  var cmode: Int32 {
-    get {_storage._cmode}
-    set {_uniqueStorage()._cmode = newValue}
-  }
-
-  var startScheme: String {
-    get {_storage._startScheme ?? String()}
-    set {_uniqueStorage()._startScheme = newValue}
-  }
-  /// Returns true if `startScheme` has been explicitly set.
-  var hasStartScheme: Bool {_storage._startScheme != nil}
-  /// Clears the value of `startScheme`. Subsequent reads from it will return its default value.
-  mutating func clearStartScheme() {_uniqueStorage()._startScheme = nil}
-
-  var startType: Int32 {
-    get {_storage._startType}
-    set {_uniqueStorage()._startType = newValue}
-  }
-
-  var extra: String {
-    get {_storage._extra ?? String()}
-    set {_uniqueStorage()._extra = newValue}
-  }
-  /// Returns true if `extra` has been explicitly set.
-  var hasExtra: Bool {_storage._extra != nil}
-  /// Clears the value of `extra`. Subsequent reads from it will return its default value.
-  mutating func clearExtra() {_uniqueStorage()._extra = nil}
-
   var userAgent: String {
     get {_storage._userAgent}
     set {_uniqueStorage()._userAgent = newValue}
@@ -295,11 +164,6 @@ nonisolated struct Tieba_CommonRequest: @unchecked Sendable {
   var personalizedRecSwitch: Int32 {
     get {_storage._personalizedRecSwitch}
     set {_uniqueStorage()._personalizedRecSwitch = newValue}
-  }
-
-  var deviceScore: String {
-    get {_storage._deviceScore}
-    set {_uniqueStorage()._deviceScore = newValue}
   }
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -315,13 +179,12 @@ fileprivate nonisolated let _protobuf_package = "tieba"
 
 nonisolated extension Tieba_CommonRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".CommonRequest"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}_client_type\0\u{3}_client_version\0\u{3}_client_id\0\u{4}\u{2}_phone_imei\0\u{1}from\0\u{1}cuid\0\u{3}_timestamp\0\u{1}model\0\u{1}BDUSS\0\u{1}tbs\0\u{3}net_type\0\u{4}\u{2}_phone_newimei\0\u{2}\u{9}sign\0\u{1}pversion\0\u{3}_os_version\0\u{1}brand\0\u{4}\u{2}lego_lib_version\0\u{1}applist\0\u{1}stoken\0\u{3}z_id\0\u{3}cuid_galaxy2\0\u{3}cuid_gid\0\u{1}oaid\0\u{3}c3_aid\0\u{3}sample_id\0\u{3}scr_w\0\u{3}scr_h\0\u{3}scr_dip\0\u{3}q_type\0\u{3}is_teenager\0\u{3}sdk_ver\0\u{3}framework_ver\0\u{3}swan_game_ver\0\u{4}\u{5}active_timestamp\0\u{3}first_install_time\0\u{3}last_update_time\0\u{4}\u{2}event_day\0\u{3}android_id\0\u{1}cmode\0\u{3}start_scheme\0\u{3}start_type\0\u{2}\u{4}extra\0\u{3}user_agent\0\u{3}personalized_rec_switch\0\u{4}\u{7}device_score\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}_client_type\0\u{3}_client_version\0\u{3}_client_id\0\u{2}\u{3}from\0\u{1}cuid\0\u{3}_timestamp\0\u{1}model\0\u{1}BDUSS\0\u{1}tbs\0\u{3}net_type\0\u{2}\u{c}pversion\0\u{3}_os_version\0\u{1}brand\0\u{2}\u{4}stoken\0\u{4}\u{2}cuid_galaxy2\0\u{3}cuid_gid\0\u{4}\u{4}scr_w\0\u{3}scr_h\0\u{3}scr_dip\0\u{3}q_type\0\u{3}is_teenager\0\u{4}\u{15}user_agent\0\u{3}personalized_rec_switch\0")
 
   fileprivate class _StorageClass {
     var _clientType: Int32 = 0
     var _clientVersion: String = String()
     var _clientID: String = String()
-    var _phoneImei: String = String()
     var _from: String = String()
     var _cuid: String = String()
     var _timestamp: Int64 = 0
@@ -329,40 +192,19 @@ nonisolated extension Tieba_CommonRequest: SwiftProtobuf.Message, SwiftProtobuf.
     var _bduss: String? = nil
     var _tbs: String? = nil
     var _netType: Int32 = 0
-    var _phoneNewimei: String = String()
-    var _sign: String? = nil
     var _pversion: String = String()
     var _osVersion: String = String()
     var _brand: String = String()
-    var _legoLibVersion: String = String()
-    var _applist: String? = nil
     var _stoken: String? = nil
-    var _zID: String? = nil
     var _cuidGalaxy2: String = String()
     var _cuidGid: String? = nil
-    var _oaid: String? = nil
-    var _c3Aid: String = String()
-    var _sampleID: String? = nil
     var _scrW: Int32 = 0
     var _scrH: Int32 = 0
     var _scrDip: Double = 0
     var _qType: Int32? = nil
     var _isTeenager: Int32? = nil
-    var _sdkVer: String = String()
-    var _frameworkVer: String = String()
-    var _swanGameVer: String = String()
-    var _activeTimestamp: Int64 = 0
-    var _firstInstallTime: Int64 = 0
-    var _lastUpdateTime: Int64 = 0
-    var _eventDay: String = String()
-    var _androidID: String = String()
-    var _cmode: Int32 = 0
-    var _startScheme: String? = nil
-    var _startType: Int32 = 0
-    var _extra: String? = nil
     var _userAgent: String = String()
     var _personalizedRecSwitch: Int32 = 0
-    var _deviceScore: String = String()
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -376,7 +218,6 @@ nonisolated extension Tieba_CommonRequest: SwiftProtobuf.Message, SwiftProtobuf.
       _clientType = source._clientType
       _clientVersion = source._clientVersion
       _clientID = source._clientID
-      _phoneImei = source._phoneImei
       _from = source._from
       _cuid = source._cuid
       _timestamp = source._timestamp
@@ -384,40 +225,19 @@ nonisolated extension Tieba_CommonRequest: SwiftProtobuf.Message, SwiftProtobuf.
       _bduss = source._bduss
       _tbs = source._tbs
       _netType = source._netType
-      _phoneNewimei = source._phoneNewimei
-      _sign = source._sign
       _pversion = source._pversion
       _osVersion = source._osVersion
       _brand = source._brand
-      _legoLibVersion = source._legoLibVersion
-      _applist = source._applist
       _stoken = source._stoken
-      _zID = source._zID
       _cuidGalaxy2 = source._cuidGalaxy2
       _cuidGid = source._cuidGid
-      _oaid = source._oaid
-      _c3Aid = source._c3Aid
-      _sampleID = source._sampleID
       _scrW = source._scrW
       _scrH = source._scrH
       _scrDip = source._scrDip
       _qType = source._qType
       _isTeenager = source._isTeenager
-      _sdkVer = source._sdkVer
-      _frameworkVer = source._frameworkVer
-      _swanGameVer = source._swanGameVer
-      _activeTimestamp = source._activeTimestamp
-      _firstInstallTime = source._firstInstallTime
-      _lastUpdateTime = source._lastUpdateTime
-      _eventDay = source._eventDay
-      _androidID = source._androidID
-      _cmode = source._cmode
-      _startScheme = source._startScheme
-      _startType = source._startType
-      _extra = source._extra
       _userAgent = source._userAgent
       _personalizedRecSwitch = source._personalizedRecSwitch
-      _deviceScore = source._deviceScore
     }
   }
 
@@ -439,7 +259,6 @@ nonisolated extension Tieba_CommonRequest: SwiftProtobuf.Message, SwiftProtobuf.
         case 1: try { try decoder.decodeSingularInt32Field(value: &_storage._clientType) }()
         case 2: try { try decoder.decodeSingularStringField(value: &_storage._clientVersion) }()
         case 3: try { try decoder.decodeSingularStringField(value: &_storage._clientID) }()
-        case 5: try { try decoder.decodeSingularStringField(value: &_storage._phoneImei) }()
         case 6: try { try decoder.decodeSingularStringField(value: &_storage._from) }()
         case 7: try { try decoder.decodeSingularStringField(value: &_storage._cuid) }()
         case 8: try { try decoder.decodeSingularInt64Field(value: &_storage._timestamp) }()
@@ -447,40 +266,19 @@ nonisolated extension Tieba_CommonRequest: SwiftProtobuf.Message, SwiftProtobuf.
         case 10: try { try decoder.decodeSingularStringField(value: &_storage._bduss) }()
         case 11: try { try decoder.decodeSingularStringField(value: &_storage._tbs) }()
         case 12: try { try decoder.decodeSingularInt32Field(value: &_storage._netType) }()
-        case 14: try { try decoder.decodeSingularStringField(value: &_storage._phoneNewimei) }()
-        case 23: try { try decoder.decodeSingularStringField(value: &_storage._sign) }()
         case 24: try { try decoder.decodeSingularStringField(value: &_storage._pversion) }()
         case 25: try { try decoder.decodeSingularStringField(value: &_storage._osVersion) }()
         case 26: try { try decoder.decodeSingularStringField(value: &_storage._brand) }()
-        case 28: try { try decoder.decodeSingularStringField(value: &_storage._legoLibVersion) }()
-        case 29: try { try decoder.decodeSingularStringField(value: &_storage._applist) }()
         case 30: try { try decoder.decodeSingularStringField(value: &_storage._stoken) }()
-        case 31: try { try decoder.decodeSingularStringField(value: &_storage._zID) }()
         case 32: try { try decoder.decodeSingularStringField(value: &_storage._cuidGalaxy2) }()
         case 33: try { try decoder.decodeSingularStringField(value: &_storage._cuidGid) }()
-        case 34: try { try decoder.decodeSingularStringField(value: &_storage._oaid) }()
-        case 35: try { try decoder.decodeSingularStringField(value: &_storage._c3Aid) }()
-        case 36: try { try decoder.decodeSingularStringField(value: &_storage._sampleID) }()
         case 37: try { try decoder.decodeSingularInt32Field(value: &_storage._scrW) }()
         case 38: try { try decoder.decodeSingularInt32Field(value: &_storage._scrH) }()
         case 39: try { try decoder.decodeSingularDoubleField(value: &_storage._scrDip) }()
         case 40: try { try decoder.decodeSingularInt32Field(value: &_storage._qType) }()
         case 41: try { try decoder.decodeSingularInt32Field(value: &_storage._isTeenager) }()
-        case 42: try { try decoder.decodeSingularStringField(value: &_storage._sdkVer) }()
-        case 43: try { try decoder.decodeSingularStringField(value: &_storage._frameworkVer) }()
-        case 44: try { try decoder.decodeSingularStringField(value: &_storage._swanGameVer) }()
-        case 49: try { try decoder.decodeSingularInt64Field(value: &_storage._activeTimestamp) }()
-        case 50: try { try decoder.decodeSingularInt64Field(value: &_storage._firstInstallTime) }()
-        case 51: try { try decoder.decodeSingularInt64Field(value: &_storage._lastUpdateTime) }()
-        case 53: try { try decoder.decodeSingularStringField(value: &_storage._eventDay) }()
-        case 54: try { try decoder.decodeSingularStringField(value: &_storage._androidID) }()
-        case 55: try { try decoder.decodeSingularInt32Field(value: &_storage._cmode) }()
-        case 56: try { try decoder.decodeSingularStringField(value: &_storage._startScheme) }()
-        case 57: try { try decoder.decodeSingularInt32Field(value: &_storage._startType) }()
-        case 61: try { try decoder.decodeSingularStringField(value: &_storage._extra) }()
         case 62: try { try decoder.decodeSingularStringField(value: &_storage._userAgent) }()
         case 63: try { try decoder.decodeSingularInt32Field(value: &_storage._personalizedRecSwitch) }()
-        case 70: try { try decoder.decodeSingularStringField(value: &_storage._deviceScore) }()
         default: break
         }
       }
@@ -501,9 +299,6 @@ nonisolated extension Tieba_CommonRequest: SwiftProtobuf.Message, SwiftProtobuf.
       }
       if !_storage._clientID.isEmpty {
         try visitor.visitSingularStringField(value: _storage._clientID, fieldNumber: 3)
-      }
-      if !_storage._phoneImei.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._phoneImei, fieldNumber: 5)
       }
       if !_storage._from.isEmpty {
         try visitor.visitSingularStringField(value: _storage._from, fieldNumber: 6)
@@ -526,12 +321,6 @@ nonisolated extension Tieba_CommonRequest: SwiftProtobuf.Message, SwiftProtobuf.
       if _storage._netType != 0 {
         try visitor.visitSingularInt32Field(value: _storage._netType, fieldNumber: 12)
       }
-      if !_storage._phoneNewimei.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._phoneNewimei, fieldNumber: 14)
-      }
-      try { if let v = _storage._sign {
-        try visitor.visitSingularStringField(value: v, fieldNumber: 23)
-      } }()
       if !_storage._pversion.isEmpty {
         try visitor.visitSingularStringField(value: _storage._pversion, fieldNumber: 24)
       }
@@ -541,32 +330,14 @@ nonisolated extension Tieba_CommonRequest: SwiftProtobuf.Message, SwiftProtobuf.
       if !_storage._brand.isEmpty {
         try visitor.visitSingularStringField(value: _storage._brand, fieldNumber: 26)
       }
-      if !_storage._legoLibVersion.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._legoLibVersion, fieldNumber: 28)
-      }
-      try { if let v = _storage._applist {
-        try visitor.visitSingularStringField(value: v, fieldNumber: 29)
-      } }()
       try { if let v = _storage._stoken {
         try visitor.visitSingularStringField(value: v, fieldNumber: 30)
-      } }()
-      try { if let v = _storage._zID {
-        try visitor.visitSingularStringField(value: v, fieldNumber: 31)
       } }()
       if !_storage._cuidGalaxy2.isEmpty {
         try visitor.visitSingularStringField(value: _storage._cuidGalaxy2, fieldNumber: 32)
       }
       try { if let v = _storage._cuidGid {
         try visitor.visitSingularStringField(value: v, fieldNumber: 33)
-      } }()
-      try { if let v = _storage._oaid {
-        try visitor.visitSingularStringField(value: v, fieldNumber: 34)
-      } }()
-      if !_storage._c3Aid.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._c3Aid, fieldNumber: 35)
-      }
-      try { if let v = _storage._sampleID {
-        try visitor.visitSingularStringField(value: v, fieldNumber: 36)
       } }()
       if _storage._scrW != 0 {
         try visitor.visitSingularInt32Field(value: _storage._scrW, fieldNumber: 37)
@@ -583,50 +354,11 @@ nonisolated extension Tieba_CommonRequest: SwiftProtobuf.Message, SwiftProtobuf.
       try { if let v = _storage._isTeenager {
         try visitor.visitSingularInt32Field(value: v, fieldNumber: 41)
       } }()
-      if !_storage._sdkVer.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._sdkVer, fieldNumber: 42)
-      }
-      if !_storage._frameworkVer.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._frameworkVer, fieldNumber: 43)
-      }
-      if !_storage._swanGameVer.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._swanGameVer, fieldNumber: 44)
-      }
-      if _storage._activeTimestamp != 0 {
-        try visitor.visitSingularInt64Field(value: _storage._activeTimestamp, fieldNumber: 49)
-      }
-      if _storage._firstInstallTime != 0 {
-        try visitor.visitSingularInt64Field(value: _storage._firstInstallTime, fieldNumber: 50)
-      }
-      if _storage._lastUpdateTime != 0 {
-        try visitor.visitSingularInt64Field(value: _storage._lastUpdateTime, fieldNumber: 51)
-      }
-      if !_storage._eventDay.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._eventDay, fieldNumber: 53)
-      }
-      if !_storage._androidID.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._androidID, fieldNumber: 54)
-      }
-      if _storage._cmode != 0 {
-        try visitor.visitSingularInt32Field(value: _storage._cmode, fieldNumber: 55)
-      }
-      try { if let v = _storage._startScheme {
-        try visitor.visitSingularStringField(value: v, fieldNumber: 56)
-      } }()
-      if _storage._startType != 0 {
-        try visitor.visitSingularInt32Field(value: _storage._startType, fieldNumber: 57)
-      }
-      try { if let v = _storage._extra {
-        try visitor.visitSingularStringField(value: v, fieldNumber: 61)
-      } }()
       if !_storage._userAgent.isEmpty {
         try visitor.visitSingularStringField(value: _storage._userAgent, fieldNumber: 62)
       }
       if _storage._personalizedRecSwitch != 0 {
         try visitor.visitSingularInt32Field(value: _storage._personalizedRecSwitch, fieldNumber: 63)
-      }
-      if !_storage._deviceScore.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._deviceScore, fieldNumber: 70)
       }
     }
     try unknownFields.traverse(visitor: &visitor)
@@ -640,7 +372,6 @@ nonisolated extension Tieba_CommonRequest: SwiftProtobuf.Message, SwiftProtobuf.
         if _storage._clientType != rhs_storage._clientType {return false}
         if _storage._clientVersion != rhs_storage._clientVersion {return false}
         if _storage._clientID != rhs_storage._clientID {return false}
-        if _storage._phoneImei != rhs_storage._phoneImei {return false}
         if _storage._from != rhs_storage._from {return false}
         if _storage._cuid != rhs_storage._cuid {return false}
         if _storage._timestamp != rhs_storage._timestamp {return false}
@@ -648,40 +379,19 @@ nonisolated extension Tieba_CommonRequest: SwiftProtobuf.Message, SwiftProtobuf.
         if _storage._bduss != rhs_storage._bduss {return false}
         if _storage._tbs != rhs_storage._tbs {return false}
         if _storage._netType != rhs_storage._netType {return false}
-        if _storage._phoneNewimei != rhs_storage._phoneNewimei {return false}
-        if _storage._sign != rhs_storage._sign {return false}
         if _storage._pversion != rhs_storage._pversion {return false}
         if _storage._osVersion != rhs_storage._osVersion {return false}
         if _storage._brand != rhs_storage._brand {return false}
-        if _storage._legoLibVersion != rhs_storage._legoLibVersion {return false}
-        if _storage._applist != rhs_storage._applist {return false}
         if _storage._stoken != rhs_storage._stoken {return false}
-        if _storage._zID != rhs_storage._zID {return false}
         if _storage._cuidGalaxy2 != rhs_storage._cuidGalaxy2 {return false}
         if _storage._cuidGid != rhs_storage._cuidGid {return false}
-        if _storage._oaid != rhs_storage._oaid {return false}
-        if _storage._c3Aid != rhs_storage._c3Aid {return false}
-        if _storage._sampleID != rhs_storage._sampleID {return false}
         if _storage._scrW != rhs_storage._scrW {return false}
         if _storage._scrH != rhs_storage._scrH {return false}
         if _storage._scrDip != rhs_storage._scrDip {return false}
         if _storage._qType != rhs_storage._qType {return false}
         if _storage._isTeenager != rhs_storage._isTeenager {return false}
-        if _storage._sdkVer != rhs_storage._sdkVer {return false}
-        if _storage._frameworkVer != rhs_storage._frameworkVer {return false}
-        if _storage._swanGameVer != rhs_storage._swanGameVer {return false}
-        if _storage._activeTimestamp != rhs_storage._activeTimestamp {return false}
-        if _storage._firstInstallTime != rhs_storage._firstInstallTime {return false}
-        if _storage._lastUpdateTime != rhs_storage._lastUpdateTime {return false}
-        if _storage._eventDay != rhs_storage._eventDay {return false}
-        if _storage._androidID != rhs_storage._androidID {return false}
-        if _storage._cmode != rhs_storage._cmode {return false}
-        if _storage._startScheme != rhs_storage._startScheme {return false}
-        if _storage._startType != rhs_storage._startType {return false}
-        if _storage._extra != rhs_storage._extra {return false}
         if _storage._userAgent != rhs_storage._userAgent {return false}
         if _storage._personalizedRecSwitch != rhs_storage._personalizedRecSwitch {return false}
-        if _storage._deviceScore != rhs_storage._deviceScore {return false}
         return true
       }
       if !storagesAreEqual {return false}

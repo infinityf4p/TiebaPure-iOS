@@ -654,11 +654,11 @@ struct ForumThreadRow: View {
         func mediaLimit(totalCount: Int) -> Int? {
             switch self {
             case .list, .homeFeed, .userProfile:
-                return TiebaLiteMediaLayoutPolicy.visibleItemCount(totalCount: totalCount)
+                return ForumFeedMediaLayoutPolicy.visibleItemCount(totalCount: totalCount)
             }
         }
 
-        var usesTiebaLiteMediaLayout: Bool {
+        var usesCompactFeedLayout: Bool {
             switch self {
             case .list, .homeFeed, .userProfile:
                 return true
@@ -742,7 +742,7 @@ struct ForumThreadRow: View {
                             items: previewMedia,
                             maxItemHeight: presentation.mediaMaxHeight(itemCount: previewMedia.count),
                             totalItemCount: allMedia.count,
-                            usesTiebaLiteLayout: presentation.usesTiebaLiteMediaLayout,
+                            usesCompactFeedLayout: presentation.usesCompactFeedLayout,
                             isInteractive: onOpenMedia != nil,
                             onTap: { item, sourceFrame, sourceImage, sourceAnchor in
                                 guard ForumThreadTapPolicy.destination(for: .media) == .media else { return }

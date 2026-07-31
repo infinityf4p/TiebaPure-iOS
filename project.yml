@@ -18,9 +18,12 @@ targets:
     platform: iOS
     sources:
       - TiebaPure
+      - path: LICENSE
+        buildPhase: resources
+      - path: LICENSES/SwiftProtobuf-Apache-2.0.txt
+        buildPhase: resources
     resources:
       - TiebaPure/Resources/Assets.xcassets
-      - TiebaPure/Resources/Emoticons
       - TiebaPure/Resources/PrivacyInfo.xcprivacy
     dependencies:
       - package: SwiftProtobuf
@@ -29,8 +32,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: dev.infinityf4p.tiebapure
         INFOPLIST_FILE: TiebaPure/Resources/Info.plist
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        MARKETING_VERSION: 1.2.6
-        CURRENT_PROJECT_VERSION: 16
+        MARKETING_VERSION: 1.3.0
+        CURRENT_PROJECT_VERSION: 18
   TiebaPureTests:
     type: bundle.unit-test
     platform: iOS

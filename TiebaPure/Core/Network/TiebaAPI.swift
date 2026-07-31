@@ -65,7 +65,7 @@ struct TiebaAPI {
             clientVersion: "11.10.8.6",
             timestamp: timestamp
         )
-        // TiebaLite removes these two official headers for the login route.
+        // The login route rejects these headers from the standard client set.
         headers.removeValue(forKey: "Charset")
         headers.removeValue(forKey: "client_type")
 
@@ -527,8 +527,7 @@ extension TiebaAPI {
             requestData.pid = try TiebaRequestValuePolicy.signedIdentifier(postID)
             if page <= 1 {
                 // An explicit page number overrides post-ID targeting on the
-                // server. pn=0 asks it to locate the page containing pid,
-                // which is how TiebaLite jumps to a saved post.
+                // server. pn=0 asks it to locate the page containing pid.
                 requestData.pn = 0
             }
         }

@@ -39,11 +39,7 @@ nonisolated struct Tieba_Media: Sendable {
 
   var originSize: UInt32 = 0
 
-  var postID: Int64 = 0
-
   var dynamicPic: String = String()
-
-  var isLongPic: UInt32 = 0
 
   var showOriginalBtn: UInt32 = 0
 
@@ -58,7 +54,7 @@ fileprivate nonisolated let _protobuf_package = "tieba"
 
 nonisolated extension Tieba_Media: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".Media"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}type\0\u{2}\u{2}bigPic\0\u{2}\u{5}srcPic\0\u{2}\u{2}width\0\u{1}height\0\u{2}\u{4}originPic\0\u{1}originSize\0\u{1}postId\0\u{1}dynamicPic\0\u{1}isLongPic\0\u{1}showOriginalBtn\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}type\0\u{2}\u{2}bigPic\0\u{2}\u{5}srcPic\0\u{2}\u{2}width\0\u{1}height\0\u{2}\u{4}originPic\0\u{1}originSize\0\u{2}\u{2}dynamicPic\0\u{2}\u{2}showOriginalBtn\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -73,9 +69,7 @@ nonisolated extension Tieba_Media: SwiftProtobuf.Message, SwiftProtobuf._Message
       case 11: try { try decoder.decodeSingularUInt32Field(value: &self.height) }()
       case 15: try { try decoder.decodeSingularStringField(value: &self.originPic) }()
       case 16: try { try decoder.decodeSingularUInt32Field(value: &self.originSize) }()
-      case 17: try { try decoder.decodeSingularInt64Field(value: &self.postID) }()
       case 18: try { try decoder.decodeSingularStringField(value: &self.dynamicPic) }()
-      case 19: try { try decoder.decodeSingularUInt32Field(value: &self.isLongPic) }()
       case 20: try { try decoder.decodeSingularUInt32Field(value: &self.showOriginalBtn) }()
       default: break
       }
@@ -104,14 +98,8 @@ nonisolated extension Tieba_Media: SwiftProtobuf.Message, SwiftProtobuf._Message
     if self.originSize != 0 {
       try visitor.visitSingularUInt32Field(value: self.originSize, fieldNumber: 16)
     }
-    if self.postID != 0 {
-      try visitor.visitSingularInt64Field(value: self.postID, fieldNumber: 17)
-    }
     if !self.dynamicPic.isEmpty {
       try visitor.visitSingularStringField(value: self.dynamicPic, fieldNumber: 18)
-    }
-    if self.isLongPic != 0 {
-      try visitor.visitSingularUInt32Field(value: self.isLongPic, fieldNumber: 19)
     }
     if self.showOriginalBtn != 0 {
       try visitor.visitSingularUInt32Field(value: self.showOriginalBtn, fieldNumber: 20)
@@ -127,9 +115,7 @@ nonisolated extension Tieba_Media: SwiftProtobuf.Message, SwiftProtobuf._Message
     if lhs.height != rhs.height {return false}
     if lhs.originPic != rhs.originPic {return false}
     if lhs.originSize != rhs.originSize {return false}
-    if lhs.postID != rhs.postID {return false}
     if lhs.dynamicPic != rhs.dynamicPic {return false}
-    if lhs.isLongPic != rhs.isLongPic {return false}
     if lhs.showOriginalBtn != rhs.showOriginalBtn {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true

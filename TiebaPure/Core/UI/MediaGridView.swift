@@ -46,7 +46,7 @@ struct MediaGridView: View {
     let items: [ReaderMediaItem]
     let maxItemHeight: CGFloat?
     let totalItemCount: Int
-    let usesTiebaLiteLayout: Bool
+    let usesCompactFeedLayout: Bool
     let isInteractive: Bool
     let onTap: (ReaderMediaItem, CGRect?, UIImage?, ImagePreviewSourceAnchor?) -> Void
 
@@ -54,25 +54,25 @@ struct MediaGridView: View {
         items: [ReaderMediaItem],
         maxItemHeight: CGFloat? = nil,
         totalItemCount: Int? = nil,
-        usesTiebaLiteLayout: Bool = false,
+        usesCompactFeedLayout: Bool = false,
         isInteractive: Bool = true,
         onTap: @escaping (ReaderMediaItem, CGRect?, UIImage?, ImagePreviewSourceAnchor?) -> Void = { _, _, _, _ in }
     ) {
         self.items = items
         self.maxItemHeight = maxItemHeight
         self.totalItemCount = max(totalItemCount ?? items.count, items.count)
-        self.usesTiebaLiteLayout = usesTiebaLiteLayout
+        self.usesCompactFeedLayout = usesCompactFeedLayout
         self.isInteractive = isInteractive
         self.onTap = onTap
     }
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
-            if usesTiebaLiteLayout {
+            if usesCompactFeedLayout {
                 Color.clear
                     .frame(maxWidth: .infinity)
                     .aspectRatio(
-                        TiebaLiteMediaLayoutPolicy.containerAspectRatio(totalCount: totalItemCount),
+                        ForumFeedMediaLayoutPolicy.containerAspectRatio(totalCount: totalItemCount),
                         contentMode: .fit
                     )
                     .overlay {
@@ -87,7 +87,7 @@ struct MediaGridView: View {
                 standardGrid
             }
 
-            if TiebaLiteMediaLayoutPolicy.showsMoreBadge(
+            if ForumFeedMediaLayoutPolicy.showsMoreBadge(
                 totalCount: totalItemCount,
                 visibleCount: items.count
             ) {
@@ -122,18 +122,18 @@ struct MediaGridView: View {
             if isInteractive {
                 MediaItemButton(
                     item: item,
-                    maxHeight: usesTiebaLiteLayout ? nil : maxItemHeight,
-                    aspectRatioOverride: usesTiebaLiteLayout ? nil : thumbnailAspectRatio,
-                    fillsAvailableSpace: usesTiebaLiteLayout,
+                    maxHeight: usesCompactFeedLayout ? nil : maxItemHeight,
+                    aspectRatioOverride: usesCompactFeedLayout ? nil : thumbnailAspectRatio,
+                    fillsAvailableSpace: usesCompactFeedLayout,
                     totalItemCount: totalItemCount,
                     onTap: onTap
                 )
             } else {
                 MediaThumbnailView(
                     item: item,
-                    maxHeight: usesTiebaLiteLayout ? nil : maxItemHeight,
-                    aspectRatioOverride: usesTiebaLiteLayout ? nil : thumbnailAspectRatio,
-                    fillsAvailableSpace: usesTiebaLiteLayout,
+                    maxHeight: usesCompactFeedLayout ? nil : maxItemHeight,
+                    aspectRatioOverride: usesCompactFeedLayout ? nil : thumbnailAspectRatio,
+                    fillsAvailableSpace: usesCompactFeedLayout,
                     retryTrigger: 0,
                     onLoadStateChange: { _ in }
                 )
@@ -143,7 +143,7 @@ struct MediaGridView: View {
     }
 
     private var columnCount: Int {
-        if usesTiebaLiteLayout {
+        if usesCompactFeedLayout {
             return max(1, items.count)
         }
         switch items.count {
@@ -157,8 +157,8 @@ struct MediaGridView: View {
     }
 
     private var thumbnailAspectRatio: CGFloat? {
-        guard usesTiebaLiteLayout else { return nil }
-        return TiebaLiteMediaLayoutPolicy.thumbnailAspectRatio(
+        guard usesCompactFeedLayout else { return nil }
+        return ForumFeedMediaLayoutPolicy.thumbnailAspectRatio(
             totalCount: totalItemCount,
             visibleCount: items.count
         )
@@ -334,7 +334,7 @@ private struct MediaThumbnailView: View {
     }
 }
 
-enum TiebaLiteMediaLayoutPolicy {
+enum ForumFeedMediaLayoutPolicy {
     static func visibleItemCount(totalCount: Int) -> Int {
         min(max(totalCount, 0), 3)
     }

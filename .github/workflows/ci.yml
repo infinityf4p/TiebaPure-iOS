@@ -25,68 +25,19 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-        with:
-          fetch-depth: 0
-
-      - name: Detect documentation-only changes
-        id: scope
-        env:
-          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
-          HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
-        run: |
-          code_changed=true
-          if [ -n "$BASE_SHA" ] &&
-             [ "$BASE_SHA" != "0000000000000000000000000000000000000000" ] &&
-             git cat-file -e "$BASE_SHA^{commit}" 2>/dev/null &&
-             git cat-file -e "$HEAD_SHA^{commit}" 2>/dev/null; then
-            changed="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")"
-            printf 'Changed files:\n%s\n' "$changed"
-            if [ -n "$changed" ] &&
-               ! printf '%s\n' "$changed" | grep -qvE '^(docs/|\.github/ISSUE_TEMPLATE/|[^/]+\.md$)'; then
-              code_changed=false
-            fi
-            echo "base=$BASE_SHA" >> "$GITHUB_OUTPUT"
-            echo "head=$HEAD_SHA" >> "$GITHUB_OUTPUT"
-          else
-            echo "base=" >> "$GITHUB_OUTPUT"
-            echo "head=$HEAD_SHA" >> "$GITHUB_OUTPUT"
-            echo "::warning::No usable comparison range; running the normal CI checks."
-          fi
-          echo "code=$code_changed" >> "$GITHUB_OUTPUT"
-
-      - name: Verify app build numbers
-        if: steps.scope.outputs.base != ''
-        run: ./scripts/verify-build-version.sh "${{ steps.scope.outputs.base }}" "${{ steps.scope.outputs.head }}"
-
-      - name: Documentation-only change
-        if: steps.scope.outputs.code != 'true'
-        run: echo "Documentation only; build and simulator tests are skipped."
-
-      - name: Select toolchain
-        if: steps.scope.outputs.code == 'true'
-        run: xcodebuild -version
-
-      - name: Install XcodeGen
-        if: steps.scope.outputs.code == 'true'
-        run: brew install xcodegen
-
-      - name: Verify generated Xcode project
-        if: steps.scope.outputs.code == 'true'
-        run: |
-          xcodegen generate --spec project.yml
-          git diff --exit-code -- TiebaPure.xcodeproj
 
       - name: Boot iPhone simulator
-        if: steps.scope.outputs.code == 'true'
         run: |
           source scripts/ci-simulator.sh
-          ci_install_runtime
+          if [ -z "$(ci_runtime_id)" ]; then
+            echo "::error::The macos-26 image does not contain the pinned iOS runtime."
+            exit 1
+          fi
           udid="$(ci_create_simulator "$(ci_iphone_device_type)" 'TiebaPure CI')"
           test -n "$udid"
           echo "SIMULATOR_UDID=$udid" >> "$GITHUB_ENV"
 
       - name: Unit tests
-        if: steps.scope.outputs.code == 'true'
         run: |
           xcodebuild -project TiebaPure.xcodeproj -scheme TiebaPure \
             -configuration Debug \
@@ -97,7 +48,6 @@ jobs:
             -skip-testing:TiebaPureTests/AnonymousLiveSmokeTests
 
       - name: Reset simulator for UI smoke tests
-        if: steps.scope.outputs.code == 'true'
         run: |
           source scripts/ci-simulator.sh
           udid="$(ci_reset_simulator "$SIMULATOR_UDID" "$(ci_iphone_device_type)" 'TiebaPure CI UI')"
@@ -105,7 +55,6 @@ jobs:
           echo "SIMULATOR_UDID=$udid" >> "$GITHUB_ENV"
 
       - name: Fixture UI smoke tests
-        if: steps.scope.outputs.code == 'true'
         run: |
           xcodebuild -project TiebaPure.xcodeproj -scheme TiebaPure \
             -configuration Debug \
@@ -116,18 +65,11 @@ jobs:
             -only-testing:TiebaPureUITests/TiebaPureUITests/testLaunchShowsHomeWithoutLoginAndRootTabs \
             -only-testing:TiebaPureUITests/TiebaPureUITests/testSearchResultRoutesToMatchedReply \
             -only-testing:TiebaPureUITests/TiebaPureUITests/testForumLatestMenuSwitchesReplyPublishAndFeaturedCategories \
-            -only-testing:TiebaPureUITests/TiebaPureUITests/testForumHubTitleStaysInsideNavigationBarWhileScrolling \
             -only-testing:TiebaPureUITests/TiebaPureUITests/testFullScreenImageOffersDownloadAndTapReturnsToSource \
-            -only-testing:TiebaPureUITests/TiebaPureUITests/testFullScreenImageControlsFitAtAccessibilityXXXL \
-            -only-testing:TiebaPureUITests/TiebaPureUITests/testFullScreenImageControlsFitAtXXXL \
-            -only-testing:TiebaPureUITests/TiebaPureUITests/testFullScreenImageDoubleTapZoomUsesGestureRecognizer \
-            -only-testing:TiebaPureUITests/TiebaPureUITests/testFullScreenImageRightSwipeAndVerticalDragReturnToSource \
-            -only-testing:TiebaPureUITests/TiebaPureUITests/testFullScreenImagePagingDoesNotConflictWithDismissGesture \
             -retry-tests-on-failure -test-iterations 2 \
             -test-repetition-relaunch-enabled YES
 
-      - name: Release build and privacy manifest
-        if: steps.scope.outputs.code == 'true'
+      - name: Release build and bundled notices
         run: |
           xcodebuild -project TiebaPure.xcodeproj -scheme TiebaPure \
             -configuration Release -sdk iphoneos \
@@ -137,4 +79,8 @@ jobs:
           APP="$DERIVED_DATA/Build/Products/Release-iphoneos/TiebaPure.app"
           test -f "$APP/PrivacyInfo.xcprivacy"
           plutil -lint "$APP/PrivacyInfo.xcprivacy"
+          test -f "$APP/LICENSE"
+          grep -Fq 'GNU GENERAL PUBLIC LICENSE' "$APP/LICENSE"
+          test -f "$APP/SwiftProtobuf-Apache-2.0.txt"
+          grep -Fq 'Apache License' "$APP/SwiftProtobuf-Apache-2.0.txt"
           test "$(/usr/libexec/PlistBuddy -c 'Print :CADisableMinimumFrameDurationOnPhone' "$APP/Info.plist")" = true

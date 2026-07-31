@@ -468,6 +468,9 @@ struct InlineContentText: UIViewRepresentable {
     var allowsTextSelection = false
     var accessibilityIdentifier: String?
     var onOpenUser: ((UserSummary) -> Void)?
+    var emoticonImageProvider: (String) -> UIImage? = { code in
+        TiebaEmoticon.cachedImage(for: code)
+    }
 
     func makeCoordinator() -> Coordinator {
         Coordinator(onOpenUser: onOpenUser)
@@ -701,14 +704,19 @@ struct InlineContentText: UIViewRepresentable {
         font: UIFont,
         attributes: [NSAttributedString.Key: Any]
     ) -> NSAttributedString {
-        guard let image = TiebaEmoticon.cachedImage(for: code) else {
+        guard let image = emoticonImageProvider(code) else {
             return NSAttributedString(string: TiebaEmoticon.displayText(for: code), attributes: attributes)
         }
 
         let attachment = NSTextAttachment()
         attachment.image = image
-        let size = style.emoticonSize
-        attachment.bounds = CGRect(x: 0, y: (font.capHeight - size) / 2, width: size, height: size)
+        // Keep artwork inside the font's own ascent/descent. An attachment
+        // taller than that line box makes the row jump when CDN artwork
+        // replaces the readable fallback, and can invalidate a reused cell's
+        // already measured height.
+        let size = min(style.emoticonSize, font.lineHeight)
+        let baselineY = font.descender + max((font.lineHeight - size) / 2, 0)
+        attachment.bounds = CGRect(x: 0, y: baselineY, width: size, height: size)
         return NSAttributedString(attachment: attachment)
     }
 

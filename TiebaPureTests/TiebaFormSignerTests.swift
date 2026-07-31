@@ -2,7 +2,7 @@ import XCTest
 @testable import TiebaPure
 
 final class TiebaFormSignerTests: XCTestCase {
-    func testFormSignerMatchesTiebaLiteSortAndSignRule() {
+    func testFormSignerMatchesCanonicalSortAndSignRule() {
         let signature = TiebaFormSigner.sign(
             fields: [
                 "b": "2",

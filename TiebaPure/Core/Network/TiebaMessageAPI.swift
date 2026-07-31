@@ -58,7 +58,7 @@ enum TiebaMessageEndpoint {
 }
 
 enum TiebaMessageRequestFactory {
-    /// TiebaLite's message feed talks to the legacy 8.2.2 client profile.
+    /// The legacy message feed requires the 8.2.2 client profile.
     static let clientVersion = "8.2.2"
 
     static func feedFields(
@@ -68,8 +68,8 @@ enum TiebaMessageRequestFactory {
         timestamp: Int64 = Int64(Date().timeIntervalSince1970 * 1_000)
     ) throws -> [String: String] {
         let requestedPage = try TiebaRequestValuePolicy.signedPage(page)
-        // Mirrors TiebaLite's NewTiebaApi common params; the mini profile
-        // carries two extra keys that client version never sends.
+        // The legacy feed starts from the mini common fields but does not
+        // accept the two keys below for this client version.
         var fields = requestBuilder.miniCommonFields(timestamp: timestamp)
         fields.removeValue(forKey: "subapp_type")
         fields.removeValue(forKey: "cuid_galaxy2")
@@ -244,8 +244,8 @@ struct MessageListResponseDTO: Decodable {
         errorCode = container.flexibleInt(forKey: .errorCode)
         errorMessage = container.flexibleString(forKey: .errorMessage) ?? ""
         if errorCode == 0 {
-            // TiebaLite's adapter maps a missing/null/primitive list to an
-            // empty list. Objects and malformed array elements still throw.
+            // A missing, null, or primitive list maps to an empty list.
+            // Objects and malformed array elements still throw.
             replyList = try container.decodeIfPresent(
                 CompatibleMessageList.self,
                 forKey: .replyList

@@ -31,6 +31,8 @@ else
   ln -s "$ROOT/TiebaPure" "$XCODEGEN_CHECK_DIR/TiebaPure"
   ln -s "$ROOT/TiebaPureTests" "$XCODEGEN_CHECK_DIR/TiebaPureTests"
   ln -s "$ROOT/TiebaPureUITests" "$XCODEGEN_CHECK_DIR/TiebaPureUITests"
+  ln -s "$ROOT/LICENSE" "$XCODEGEN_CHECK_DIR/LICENSE"
+  ln -s "$ROOT/LICENSES" "$XCODEGEN_CHECK_DIR/LICENSES"
   xcodegen generate \
     --spec "$XCODEGEN_CHECK_DIR/project.yml" \
     --project "$XCODEGEN_CHECK_DIR" \
