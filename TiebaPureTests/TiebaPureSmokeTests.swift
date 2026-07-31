@@ -2480,24 +2480,11 @@ final class TiebaPureSmokeTests: XCTestCase {
         XCTAssertEqual(SubpostSheetTitle.text(floor: 2, count: 10), "2楼的回复(10条)")
     }
 
-    func testSubpostDetailUsesDistinctCompactSections() {
+    func testSubpostDetailUsesCompactLabelFreeSeparator() {
         XCTAssertEqual(SubpostDetailSectionLayout.separatorHeight, 12)
-        XCTAssertEqual(SubpostDetailSectionLayout.headerVerticalPadding, 8)
         XCTAssertGreaterThan(
             SubpostDetailSectionLayout.separatorHeight,
             ThreadReplyLayout.sectionSeparatorHeight
-        )
-        XCTAssertEqual(
-            SubpostDetailSectionLayout.accessibilityLabel(title: "层主内容", count: nil),
-            "层主内容"
-        )
-        XCTAssertEqual(
-            SubpostDetailSectionLayout.accessibilityLabel(title: "楼中楼回复", count: 4),
-            "楼中楼回复，共4条"
-        )
-        XCTAssertEqual(
-            SubpostDetailSectionLayout.accessibilityLabel(title: "楼中楼回复", count: -1),
-            "楼中楼回复，共0条"
         )
     }
 

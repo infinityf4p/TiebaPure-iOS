@@ -37,6 +37,7 @@ enum TiebaPureTheme {
         static let primaryAccent = Color(uiColor: .systemBlue)
         static let videoAccent = Color(red: 0.96, green: 0.62, blue: 0.04)
         static let readerGroupedBackground = Color(uiColor: .systemGroupedBackground)
+        static let readerSectionBand = Color(uiColor: .secondarySystemBackground)
         static let readerSecondarySurface = Color(uiColor: .secondarySystemGroupedBackground)
         static let readerTertiarySurface = Color(uiColor: .tertiarySystemGroupedBackground)
         static let readerSeparator = Color(uiColor: .separator)

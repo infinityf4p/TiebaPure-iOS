@@ -1381,11 +1381,6 @@ private struct SubpostListSheet: View {
                 } else {
                     ScrollView {
                         LazyVStack(spacing: 0) {
-                            SubpostSectionHeader(
-                                title: "层主内容",
-                                accessibilityIdentifier: "subpost-parent-section-header"
-                            )
-
                             ReaderCard(showsDivider: false) {
                                 VStack(alignment: .leading, spacing: ThreadReplyLayout.headerContentSpacing) {
                                     UserHeaderView(
@@ -1420,16 +1415,7 @@ private struct SubpostListSheet: View {
                                 }
                             }
 
-                            Rectangle()
-                                .fill(TiebaPureTheme.ColorToken.readerGroupedBackground)
-                                .frame(height: SubpostDetailSectionLayout.separatorHeight)
-                                .accessibilityHidden(true)
-
-                            SubpostSectionHeader(
-                                title: "楼中楼回复",
-                                count: max(post.subpostCount, subposts.count),
-                                accessibilityIdentifier: "subpost-replies-section-header"
-                            )
+                            SubpostSectionSeparator()
 
                             ForEach(Array(subposts.enumerated()), id: \.element.id) { index, subpost in
                                 SubpostRowView(
@@ -1755,57 +1741,21 @@ private struct SubpostListSheet: View {
 
 enum SubpostDetailSectionLayout {
     static let separatorHeight: CGFloat = TiebaPureTheme.Spacing.sm
-    static let headerVerticalPadding: CGFloat = TiebaPureTheme.Spacing.xs
-
-    static func accessibilityLabel(title: String, count: Int?) -> String {
-        guard let count else { return title }
-        return "\(title)，共\(max(count, 0))条"
-    }
 }
 
-private struct SubpostSectionHeader: View {
-    let title: String
-    var count: Int?
-    let accessibilityIdentifier: String
-
-    init(
-        title: String,
-        count: Int? = nil,
-        accessibilityIdentifier: String
-    ) {
-        self.title = title
-        self.count = count
-        self.accessibilityIdentifier = accessibilityIdentifier
-    }
-
+private struct SubpostSectionSeparator: View {
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: TiebaPureTheme.Spacing.xxs) {
-            Text(title)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.primary)
+        ZStack {
+            TiebaPureTheme.ColorToken.readerSectionBand
 
-            if let count {
-                Text("\(max(count, 0))条")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
+            VStack(spacing: 0) {
+                Divider()
+                Spacer(minLength: 0)
+                Divider()
             }
-
-            Spacer(minLength: TiebaPureTheme.Spacing.xs)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, TiebaPureTheme.Spacing.md)
-        .padding(.vertical, SubpostDetailSectionLayout.headerVerticalPadding)
-        .background(Color(uiColor: .systemBackground))
-        .overlay(alignment: .bottom) {
-            Divider()
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(
-            SubpostDetailSectionLayout.accessibilityLabel(title: title, count: count)
-        )
-        .accessibilityAddTraits(.isHeader)
-        .accessibilityIdentifier(accessibilityIdentifier)
+        .frame(height: SubpostDetailSectionLayout.separatorHeight)
+        .accessibilityHidden(true)
     }
 }
 
