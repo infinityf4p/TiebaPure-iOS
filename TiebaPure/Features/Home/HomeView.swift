@@ -410,6 +410,7 @@ struct HomeView: View {
                 )
                 .contentShape(Rectangle())
             }
+            .hidesBottomTabBarScrollEdgeEffect()
             .accessibilityIdentifier("home-feed-scroll-view")
             .shortPullRefresh(
                 isEnabled: didLoad && isLoading == false,
