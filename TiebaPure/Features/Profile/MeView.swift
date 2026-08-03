@@ -178,7 +178,6 @@ struct MeView: View {
                     .accessibilityHint("查看来源、许可证和源码链接")
                 }
             }
-            .hidesBottomTabBarScrollEdgeEffect()
             .navigationTitle("我的")
             .interactiveNavigationPopRevealSource()
             .navigationDestination(isPresented: $showsBrowsingHistory) {

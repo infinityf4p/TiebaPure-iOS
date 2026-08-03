@@ -398,35 +398,29 @@ struct HomeView: View {
     private func refreshableScrollView<Content: View>(
         @ViewBuilder content: @escaping () -> Content
     ) -> some View {
-        GeometryReader { proxy in
-            ScrollView {
-                VStack(spacing: 0) {
-                    content()
-                }
-                .frame(maxWidth: .infinity)
-                .frame(
-                    minHeight: max(proxy.size.height + 1, 1),
-                    alignment: .top
-                )
-                .contentShape(Rectangle())
+        ScrollView {
+            VStack(spacing: 0) {
+                content()
             }
-            .hidesBottomTabBarScrollEdgeEffect()
-            .accessibilityIdentifier("home-feed-scroll-view")
-            .shortPullRefresh(
-                isEnabled: didLoad && isLoading == false,
-                surface: .grouped,
-                accessibilityIdentifier: "home-refresh-animation",
-                programmaticRefreshToken: programmaticRefreshToken
-            ) { source in
-                if source == .pullGesture {
-                    guard isLoading == false else { return }
-                }
-                await reload(
-                    trigger: source == .programmatic ? .tabTap : .pullToRefresh
-                )
-            }
-            .background(TiebaPureTheme.ColorToken.readerGroupedBackground)
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
         }
+        .scrollBounceBehavior(.always, axes: .vertical)
+        .accessibilityIdentifier("home-feed-scroll-view")
+        .shortPullRefresh(
+            isEnabled: didLoad && isLoading == false,
+            surface: .grouped,
+            accessibilityIdentifier: "home-refresh-animation",
+            programmaticRefreshToken: programmaticRefreshToken
+        ) { source in
+            if source == .pullGesture {
+                guard isLoading == false else { return }
+            }
+            await reload(
+                trigger: source == .programmatic ? .tabTap : .pullToRefresh
+            )
+        }
+        .background(TiebaPureTheme.ColorToken.readerGroupedBackground)
     }
 
     private func reload(trigger: HomeRefreshTrigger) async {

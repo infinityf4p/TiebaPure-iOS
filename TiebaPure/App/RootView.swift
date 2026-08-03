@@ -185,23 +185,17 @@ private struct MainTabView: View {
 
     var body: some View {
         TabView(selection: tabSelection) {
-            HomeView(account: account, refreshToken: homeRefreshToken)
-                .tabItem {
-                    Label("首页", systemImage: "house")
-                }
-                .tag(RootTab.home)
+            Tab("首页", systemImage: "house", value: RootTab.home) {
+                HomeView(account: account, refreshToken: homeRefreshToken)
+            }
 
-            ForumHubView(account: account)
-                .tabItem {
-                    Label("进吧", systemImage: "square.grid.2x2")
-                }
-                .tag(RootTab.forums)
+            Tab("进吧", systemImage: "square.grid.2x2", value: RootTab.forums) {
+                ForumHubView(account: account)
+            }
 
-            MeView(account: account)
-                .tabItem {
-                    Label("我的", systemImage: "person.circle")
-                }
-                .tag(RootTab.me)
+            Tab("我的", systemImage: "person.circle", value: RootTab.me) {
+                MeView(account: account)
+            }
         }
         .background(
             TabSelectionObserver {

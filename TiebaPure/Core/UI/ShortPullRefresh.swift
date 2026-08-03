@@ -294,41 +294,39 @@ private struct ShortPullRefreshModifier: ViewModifier {
     @State private var panTranslation: CGSize = .zero
 
     func body(content: Content) -> some View {
-        ZStack(alignment: .top) {
-            surface.color
-                .accessibilityHidden(true)
-
-            content
-                .background {
-                    ShortPullScrollViewPanObserver(
-                        surfaceColor: surface.uiColor,
-                        onStateChange: handlePanChange
-                    )
-                        .accessibilityHidden(true)
-                }
-                .onScrollGeometryChange(for: ShortPullRefreshGeometry.self) { geometry in
-                    ShortPullRefreshGeometry(geometry)
-                } action: { _, newGeometry in
-                    updateGeometry(newGeometry)
-                }
-                .onScrollPhaseChange { oldPhase, newPhase, context in
-                    handlePhaseChange(
-                        from: oldPhase,
-                        to: newPhase,
-                        geometry: ShortPullRefreshGeometry(context.geometry)
-                    )
-                }
-                .offset(y: heldContentOffset)
-                .animation(
-                    reduceMotion ? nil : .easeInOut(duration: 0.22),
-                    value: isRefreshing
+        content
+            .background {
+                ShortPullScrollViewPanObserver(
+                    surfaceColor: surface.uiColor,
+                    onStateChange: handlePanChange
                 )
-
-            refreshOverlay
-                .allowsHitTesting(false)
-        }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .clipped()
+                    .accessibilityHidden(true)
+            }
+            .onScrollGeometryChange(for: ShortPullRefreshGeometry.self) { geometry in
+                ShortPullRefreshGeometry(geometry)
+            } action: { _, newGeometry in
+                updateGeometry(newGeometry)
+            }
+            .onScrollPhaseChange { oldPhase, newPhase, context in
+                handlePhaseChange(
+                    from: oldPhase,
+                    to: newPhase,
+                    geometry: ShortPullRefreshGeometry(context.geometry)
+                )
+            }
+            .offset(y: heldContentOffset)
+            .animation(
+                reduceMotion ? nil : .easeInOut(duration: 0.22),
+                value: isRefreshing
+            )
+            .background {
+                surface.color
+                    .accessibilityHidden(true)
+            }
+            .overlay(alignment: .top) {
+                refreshOverlay
+                    .allowsHitTesting(false)
+            }
             .onDisappear {
                 cancelRefresh()
             }

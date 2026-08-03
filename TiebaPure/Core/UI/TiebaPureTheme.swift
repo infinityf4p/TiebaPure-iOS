@@ -53,15 +53,6 @@ extension View {
         frame(minWidth: 44, minHeight: 44)
     }
 
-    @ViewBuilder
-    func hidesBottomTabBarScrollEdgeEffect() -> some View {
-        if #available(iOS 26.0, *) {
-            scrollEdgeEffectHidden(true, for: .bottom)
-        } else {
-            self
-        }
-    }
-
 }
 
 enum PaginationPrefetchPolicy {

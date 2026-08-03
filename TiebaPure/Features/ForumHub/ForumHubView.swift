@@ -117,7 +117,6 @@ struct ForumHubView: View {
                 }
             }
         }
-        .hidesBottomTabBarScrollEdgeEffect()
         .scrollContentBackground(.hidden)
         .accessibilityIdentifier("forum-hub-list")
         .shortPullRefresh(

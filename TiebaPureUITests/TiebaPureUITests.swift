@@ -1644,6 +1644,7 @@ final class TiebaPureUITests: XCTestCase {
             account: "loggedIn",
             additionalArguments: [
                 "UITEST_EXTENDED_REFRESH_ANIMATION",
+                "UITEST_SEED_SCROLLABLE_RECENT_FORUMS",
                 "-UIPreferredContentSizeCategoryName",
                 "UICTContentSizeCategoryAccessibilityXXXL"
             ]

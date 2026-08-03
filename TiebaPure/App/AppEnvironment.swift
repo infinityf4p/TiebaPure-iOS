@@ -67,6 +67,21 @@ final class AppEnvironment: ObservableObject {
                 operation: "清空最近浏览贴吧"
             )
         }
+        if arguments.contains("UITEST_SEED_SCROLLABLE_RECENT_FORUMS") {
+            for index in 1...6 {
+                requireUIFixturePersistence(
+                    RecentForumStore.shared.save(Forum(
+                        id: Int64(10_000 + index),
+                        name: "合成最近贴吧\(index)",
+                        displayName: "合成最近贴吧\(index)吧",
+                        avatarURL: nil,
+                        memberCount: index * 100,
+                        threadCount: index * 10
+                    )),
+                    operation: "写入可滚动最近贴吧夹具"
+                )
+            }
+        }
         if arguments.contains("UITEST_RESET_LOCAL_THREAD_LIBRARY") {
             requireUIFixturePersistence(
                 LocalThreadLibraryStore.shared.clearAll(),
