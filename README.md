@@ -10,11 +10,11 @@
 
 <p align="center">
   <img src="docs/images/home-light.png" width="31%" alt="未登录访客首页" />
-  <img src="docs/images/thread-light.png" width="31%" alt="未登录访客帖子详情" />
+  <img src="docs/images/thread-guest-light.png" width="31%" alt="未登录访客帖子详情" />
   <img src="docs/images/search-light.png" width="31%" alt="未登录访客搜索结果" />
 </p>
 
-<p align="center"><sub>未登录访客模式下的公开内容；截图时可见图片均已加载</sub></p>
+<p align="center"><sub>未登录访客模式下的公开内容</sub></p>
 
 ## 功能
 
