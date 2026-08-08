@@ -54,9 +54,9 @@ targets:
         INFOPLIST_FILE: TiebaPureOpenIn/Info.plist
         APPLICATION_EXTENSION_API_ONLY: YES
         SKIP_INSTALL: YES
-         MARKETING_VERSION: 1.4.5
-         CURRENT_PROJECT_VERSION: 49
-   TiebaPureTests:
+        MARKETING_VERSION: 1.4.5
+        CURRENT_PROJECT_VERSION: 49
+  TiebaPureTests:
     type: bundle.unit-test
     platform: iOS
     sources:
