@@ -536,14 +536,18 @@ struct ThreadDetailView: View {
                     isEnabled: preciseScrollSession?.postID == post.id
                 )
                 .id(post.id)
-                .onScrollVisibilityChange(threshold: 0.01) { isVisible in
-                    readingPostVisibilityChanged(post.id, isVisible: isVisible)
-                    if isVisible {
-                        prefetchRepliesIfNeeded(
-                            index: index,
-                            totalCount: visibleReplyCount
-                        )
-                    }
+                .background {
+                    ThreadPostVisibilityObserver(
+                        onChange: { isVisible in
+                            readingPostVisibilityChanged(post.id, isVisible: isVisible)
+                            if isVisible {
+                                prefetchRepliesIfNeeded(
+                                    index: index,
+                                    totalCount: visibleReplyCount
+                                )
+                            }
+                        }
+                    )
                 }
             }
         }
@@ -1840,6 +1844,44 @@ enum ThreadReadingScrollRegion: Equatable, Sendable {
             return .away
         }
         return .nearTop
+    }
+}
+
+/// Approximate iOS 18 `onScrollVisibilityChange` with a geometry preference.
+private struct ThreadPostVisibilityObserver: View {
+    let onChange: (Bool) -> Void
+    @State private var lastVisible: Bool?
+
+    var body: some View {
+        GeometryReader { proxy in
+            Color.clear
+                .preference(
+                    key: ThreadPostVisibilityPreferenceKey.self,
+                    value: Self.isVisible(frame: proxy.frame(in: .global))
+                )
+        }
+        .onPreferenceChange(ThreadPostVisibilityPreferenceKey.self) { isVisible in
+            guard lastVisible != isVisible else { return }
+            lastVisible = isVisible
+            onChange(isVisible)
+        }
+    }
+
+    private static func isVisible(frame: CGRect) -> Bool {
+        guard frame.isNull == false, frame.isInfinite == false else { return false }
+        let screen = UIScreen.main.bounds.insetBy(dx: 0, dy: -20)
+        let intersection = frame.intersection(screen)
+        guard intersection.isNull == false else { return false }
+        let area = max(frame.width * frame.height, 1)
+        return (intersection.width * intersection.height) / area >= 0.01
+    }
+}
+
+private struct ThreadPostVisibilityPreferenceKey: PreferenceKey {
+    static var defaultValue = false
+
+    static func reduce(value: inout Bool, nextValue: () -> Bool) {
+        value = value || nextValue()
     }
 }
 

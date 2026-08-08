@@ -4027,7 +4027,7 @@ struct FullScreenImageView: View {
     private var originalButtonLabel: some View {
         if currentOriginalLoadState == .loading {
             Text(originalImageButtonTitle)
-                .fontDesign(.monospaced)
+                .font(.system(.body, design: .monospaced))
                 .lineLimit(1)
         } else if dynamicTypeSize.isAccessibilitySize {
             VStack(spacing: TiebaPureTheme.Spacing.xs) {

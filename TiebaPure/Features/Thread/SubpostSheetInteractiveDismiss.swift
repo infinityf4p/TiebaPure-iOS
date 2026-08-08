@@ -234,12 +234,10 @@ struct SubpostSheetInteractiveDismissSurface<Content: View>: View {
         phase = .dismissing
 
         let duration = reduceMotion ? 0.12 : 0.24
-        withAnimation(
-            .easeIn(duration: duration),
-            completionCriteria: .logicallyComplete
-        ) {
+        withAnimation(.easeIn(duration: duration)) {
             verticalOffset = max(containerHeight + 32, 1)
-        } completion: {
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration) {
             guard phase == .dismissing else { return }
             onDismiss()
         }
@@ -251,12 +249,10 @@ struct SubpostSheetInteractiveDismissSurface<Content: View>: View {
         rejectedCurrentGesture = false
 
         let duration = reduceMotion ? 0.10 : 0.22
-        withAnimation(
-            .spring(duration: duration, bounce: reduceMotion ? 0 : 0.08),
-            completionCriteria: .logicallyComplete
-        ) {
+        withAnimation(.spring(response: duration, dampingFraction: reduceMotion ? 1 : 0.86)) {
             verticalOffset = 0
-        } completion: {
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration + 0.05) {
             guard phase == .restoring else { return }
             phase = .idle
         }
