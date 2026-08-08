@@ -37,7 +37,7 @@ struct ThreadFavoritesView: View {
                 guard let account, loader.didLoad else { return }
                 Task { await reloadAfterPendingFavoriteWrites(account: account) }
             }
-            .onChange(of: account?.sessionIdentity) { _, _ in
+            .onChangeCompat(of: account?.sessionIdentity) { _, _ in
                 cancelRemovalPresentation()
                 loader.reset()
                 guard let account else { return }
@@ -47,15 +47,15 @@ struct ThreadFavoritesView: View {
                 loader.cancel()
                 cancelRemovalPresentation()
             }
-            .onChange(of: visibleThreadIDs) { _, _ in
+            .onChangeCompat(of: visibleThreadIDs) { _, _ in
                 synchronizeSelection()
             }
-            .onChange(of: isEditing) { _, editing in
+            .onChangeCompat(of: isEditing) { _, editing in
                 if editing == false {
                     selectedThreadIDs.removeAll()
                 }
             }
-            .onChange(of: blocklistStore.entries) { _, _ in
+            .onChangeCompat(of: blocklistStore.entries) { _, _ in
                 guard let activeFavorite,
                       ThreadFavoritesListPolicy.shouldKeep(
                         activeFavorite,
@@ -87,7 +87,7 @@ struct ThreadFavoritesView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             selectionBar
         }
-        .navigationDestination(isPresented: favoriteIsActive) {
+        .navigationDestinationCompat(isPresented: favoriteIsActive) {
             if let activeFavorite {
                 ThreadDetailView(
                     account: account,
@@ -105,7 +105,7 @@ struct ThreadFavoritesView: View {
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         if isEditing {
-            ToolbarItem(placement: .topBarLeading) {
+            ToolbarItem(placement: .navigationBarLeading) {
                 Button(allVisibleFavoritesAreSelected ? "取消全选" : "全选") {
                     selectedThreadIDs = LocalThreadListSelectionPolicy
                         .selectionByTogglingAll(
@@ -119,7 +119,7 @@ struct ThreadFavoritesView: View {
         }
 
         if isEditing == false, libraryStore.readingPositions.isEmpty == false {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
                     Button(role: .destructive) {
                         showsClearReadingPositionsConfirmation = true
@@ -137,7 +137,7 @@ struct ThreadFavoritesView: View {
         }
 
         if visibleFavorites.isEmpty == false || isEditing {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItem(placement: .navigationBarTrailing) {
                 EditButton()
                     .minTouchTarget()
                     .accessibilityIdentifier("thread-favorites-edit")

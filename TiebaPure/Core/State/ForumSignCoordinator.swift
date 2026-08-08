@@ -65,7 +65,7 @@ final class ForumSignCoordinator: ObservableObject {
                 try Task.checkCancellation()
                 for (index, forum) in forums.enumerated() {
                     if index > 0 {
-                        try await Task.sleep(for: requestSpacing)
+                        try await CompatibleTaskSleep.duration(requestSpacing)
                     }
                     do {
                         try Task.checkCancellation()

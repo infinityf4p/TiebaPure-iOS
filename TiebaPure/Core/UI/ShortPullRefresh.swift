@@ -214,6 +214,15 @@ struct ShortPullRefreshGeometry: Equatable {
         }
     }
 
+    init(scrollView: UIScrollView) {
+        self.init(
+            contentOffsetY: scrollView.contentOffset.y,
+            topInset: scrollView.adjustedContentInset.top,
+            viewportLength: scrollView.bounds.height
+        )
+    }
+
+    @available(iOS 18.0, *)
     init(_ geometry: ScrollGeometry) {
         self.init(
             contentOffsetY: geometry.contentOffset.y,
@@ -363,7 +372,7 @@ private final class ScrollFrameProbe: NSObject {
         activeFrameCount = intervals.count
         delayedFinishTask = Task { @MainActor in
             do {
-                try await Task.sleep(for: .milliseconds(650))
+                try await CompatibleTaskSleep.milliseconds(650)
             } catch {
                 return
             }
@@ -428,15 +437,19 @@ private final class ScrollFrameProbe: NSObject {
 
 private struct ScrollFrameProbeModifier: ViewModifier {
     func body(content: Content) -> some View {
-        content.onScrollPhaseChange { oldPhase, newPhase in
-            let wasDirect = oldPhase == .tracking || oldPhase == .interacting
-            let isDirect = newPhase == .tracking || newPhase == .interacting
-            if isDirect, wasDirect == false {
-                ScrollFrameProbe.shared.begin()
+        if #available(iOS 18.0, *) {
+            content.onScrollPhaseChange { oldPhase, newPhase in
+                let wasDirect = oldPhase == .tracking || oldPhase == .interacting
+                let isDirect = newPhase == .tracking || newPhase == .interacting
+                if isDirect, wasDirect == false {
+                    ScrollFrameProbe.shared.begin()
+                }
+                if newPhase == .idle, oldPhase != .idle {
+                    ScrollFrameProbe.shared.finishAfterIdle()
+                }
             }
-            if newPhase == .idle, oldPhase != .idle {
-                ScrollFrameProbe.shared.finishAfterIdle()
-            }
+        } else {
+            content
         }
     }
 }
@@ -466,21 +479,11 @@ private struct ShortPullRefreshModifier: ViewModifier {
             .background {
                 ShortPullScrollViewPanObserver(
                     surfaceColor: surface.uiColor,
-                    onStateChange: handlePanChange
+                    onStateChange: handlePanChange,
+                    onGeometryChange: { updateGeometry($0) },
+                    onDirectInteractionChange: handleDirectInteractionChange
                 )
                     .accessibilityHidden(true)
-            }
-            .onScrollGeometryChange(for: ShortPullRefreshGeometry.self) { geometry in
-                ShortPullRefreshGeometry(geometry)
-            } action: { _, newGeometry in
-                updateGeometry(newGeometry)
-            }
-            .onScrollPhaseChange { oldPhase, newPhase, context in
-                handlePhaseChange(
-                    from: oldPhase,
-                    to: newPhase,
-                    geometry: ShortPullRefreshGeometry(context.geometry)
-                )
             }
             .offset(y: heldContentOffset)
             .animation(
@@ -503,7 +506,7 @@ private struct ShortPullRefreshModifier: ViewModifier {
                     resetGesture()
                 }
             }
-            .onChange(of: programmaticRefreshToken) { oldValue, newValue in
+            .onChangeCompat(of: programmaticRefreshToken) { oldValue, newValue in
                 guard oldValue != newValue else { return }
                 startRefresh(source: .programmatic)
             }
@@ -579,14 +582,12 @@ private struct ShortPullRefreshModifier: ViewModifier {
         )
     }
 
-    private func handlePhaseChange(
-        from oldPhase: ScrollPhase,
-        to newPhase: ScrollPhase,
+    private func handleDirectInteractionChange(
+        isDirect: Bool,
         geometry newGeometry: ShortPullRefreshGeometry
     ) {
         geometry = newGeometry
-        let wasDirect = isDirectInteraction(oldPhase)
-        let isDirect = isDirectInteraction(newPhase)
+        let wasDirect = isDirectlyInteracting
 
         if isDirect, wasDirect == false {
             beginGesture(with: newGeometry)
@@ -597,10 +598,6 @@ private struct ShortPullRefreshModifier: ViewModifier {
         }
 
         isDirectlyInteracting = isDirect
-    }
-
-    private func isDirectInteraction(_ phase: ScrollPhase) -> Bool {
-        phase == .tracking || phase == .interacting
     }
 
     private func beginGesture(with geometry: ShortPullRefreshGeometry) {
@@ -729,9 +726,16 @@ private struct ShortPullRefreshModifier: ViewModifier {
 private struct ShortPullScrollViewPanObserver: UIViewRepresentable {
     let surfaceColor: UIColor
     let onStateChange: (UIGestureRecognizer.State, CGSize) -> Void
+    let onGeometryChange: (ShortPullRefreshGeometry) -> Void
+    let onDirectInteractionChange: (Bool, ShortPullRefreshGeometry) -> Void
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(surfaceColor: surfaceColor, onStateChange: onStateChange)
+        Coordinator(
+            surfaceColor: surfaceColor,
+            onStateChange: onStateChange,
+            onGeometryChange: onGeometryChange,
+            onDirectInteractionChange: onDirectInteractionChange
+        )
     }
 
     func makeUIView(context: Context) -> AttachmentView {
@@ -749,6 +753,8 @@ private struct ShortPullScrollViewPanObserver: UIViewRepresentable {
         context.coordinator.update(
             surfaceColor: surfaceColor,
             onStateChange: onStateChange,
+            onGeometryChange: onGeometryChange,
+            onDirectInteractionChange: onDirectInteractionChange,
             from: uiView
         )
     }
@@ -794,6 +800,8 @@ private struct ShortPullScrollViewPanObserver: UIViewRepresentable {
             }
         }
         var onStateChange: (UIGestureRecognizer.State, CGSize) -> Void
+        var onGeometryChange: (ShortPullRefreshGeometry) -> Void
+        var onDirectInteractionChange: (Bool, ShortPullRefreshGeometry) -> Void
         private weak var attachedScrollView: UIScrollView?
         private var originalBackgroundColor: UIColor?
         private weak var panGestureRecognizer: UIPanGestureRecognizer?
@@ -801,22 +809,35 @@ private struct ShortPullScrollViewPanObserver: UIViewRepresentable {
         private var attachmentRequestID: UInt = 0
         private var attachedHierarchyGeneration: UInt?
         private var lifecycleSentinel: ScrollLifecycleSentinel?
+        private var offsetObservation: NSKeyValueObservation?
+        private var insetObservation: NSKeyValueObservation?
+        private var boundsObservation: NSKeyValueObservation?
+        private var isDirectlyInteracting = false
+        private weak var currentAttachmentView: AttachmentView?
 
         init(
             surfaceColor: UIColor,
-            onStateChange: @escaping (UIGestureRecognizer.State, CGSize) -> Void
+            onStateChange: @escaping (UIGestureRecognizer.State, CGSize) -> Void,
+            onGeometryChange: @escaping (ShortPullRefreshGeometry) -> Void,
+            onDirectInteractionChange: @escaping (Bool, ShortPullRefreshGeometry) -> Void
         ) {
             self.surfaceColor = surfaceColor
             self.onStateChange = onStateChange
+            self.onGeometryChange = onGeometryChange
+            self.onDirectInteractionChange = onDirectInteractionChange
         }
 
         func update(
             surfaceColor: UIColor,
             onStateChange: @escaping (UIGestureRecognizer.State, CGSize) -> Void,
+            onGeometryChange: @escaping (ShortPullRefreshGeometry) -> Void,
+            onDirectInteractionChange: @escaping (Bool, ShortPullRefreshGeometry) -> Void,
             from view: AttachmentView
         ) {
             self.surfaceColor = surfaceColor
             self.onStateChange = onStateChange
+            self.onGeometryChange = onGeometryChange
+            self.onDirectInteractionChange = onDirectInteractionChange
             guard hasUsableAttachment(for: view) == false else { return }
             scheduleAttachment(from: view)
         }
@@ -847,8 +868,41 @@ private struct ShortPullScrollViewPanObserver: UIViewRepresentable {
             pendingAttachment = nil
             panGestureRecognizer?.removeTarget(self, action: #selector(handlePan(_:)))
             panGestureRecognizer = nil
+            clearGeometryObservation()
             restoreScrollBackground()
             currentAttachmentView = nil
+            isDirectlyInteracting = false
+        }
+
+        private func clearGeometryObservation() {
+            offsetObservation?.invalidate()
+            insetObservation?.invalidate()
+            boundsObservation?.invalidate()
+            offsetObservation = nil
+            insetObservation = nil
+            boundsObservation = nil
+        }
+
+        private func installGeometryObservation(on scrollView: UIScrollView) {
+            clearGeometryObservation()
+            let publish: (UIScrollView) -> Void = { [weak self] scrollView in
+                self?.onGeometryChange(ShortPullRefreshGeometry(scrollView: scrollView))
+            }
+            offsetObservation = scrollView.observe(\.contentOffset, options: [.initial, .new]) { scrollView, _ in
+                publish(scrollView)
+            }
+            insetObservation = scrollView.observe(\.contentInset, options: [.new]) { scrollView, _ in
+                publish(scrollView)
+            }
+            boundsObservation = scrollView.observe(\.bounds, options: [.new]) { scrollView, _ in
+                publish(scrollView)
+            }
+        }
+
+        private func publishDirectInteraction(_ isDirect: Bool, scrollView: UIScrollView) {
+            guard isDirectlyInteracting != isDirect else { return }
+            isDirectlyInteracting = isDirect
+            onDirectInteractionChange(isDirect, ShortPullRefreshGeometry(scrollView: scrollView))
         }
 
         private func hasUsableAttachment(for view: AttachmentView) -> Bool {
@@ -883,6 +937,7 @@ private struct ShortPullScrollViewPanObserver: UIViewRepresentable {
                 return
             }
             panGestureRecognizer?.removeTarget(self, action: #selector(handlePan(_:)))
+            clearGeometryObservation()
             restoreScrollBackground()
             attachedScrollView = scrollView
             attachedHierarchyGeneration = hierarchyGeneration
@@ -894,6 +949,7 @@ private struct ShortPullScrollViewPanObserver: UIViewRepresentable {
             scrollView.backgroundColor = surfaceColor
             panGestureRecognizer = recognizer
             recognizer.addTarget(self, action: #selector(handlePan(_:)))
+            installGeometryObservation(on: scrollView)
             installLifecycleSentinelIfNeeded(on: scrollView)
         }
 
@@ -927,9 +983,17 @@ private struct ShortPullScrollViewPanObserver: UIViewRepresentable {
             scrollView.addSubview(sentinel)
         }
 
-        private weak var currentAttachmentView: AttachmentView?
-
         @objc private func handlePan(_ recognizer: UIPanGestureRecognizer) {
+            if let scrollView = attachedScrollView {
+                switch recognizer.state {
+                case .began, .changed:
+                    publishDirectInteraction(true, scrollView: scrollView)
+                case .ended, .cancelled, .failed:
+                    publishDirectInteraction(false, scrollView: scrollView)
+                default:
+                    break
+                }
+            }
             let point = recognizer.translation(in: recognizer.view)
             onStateChange(
                 recognizer.state,

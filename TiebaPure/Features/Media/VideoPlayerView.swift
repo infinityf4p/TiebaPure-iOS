@@ -84,7 +84,7 @@ struct VideoPlayerView: View {
                     .accessibilityLabel("视频不可用")
             }
         }
-        .onChange(of: previewSourceIdentity, initial: true) { _, identity in
+        .onChangeCompat(of: previewSourceIdentity, initial: true) { (_: String, identity: String) in
             coverLoadState = .empty
             coverLoadStateIdentity = identity
             manualCoverAuthorization = nil

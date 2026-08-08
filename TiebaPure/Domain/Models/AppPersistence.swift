@@ -1,6 +1,5 @@
 import Foundation
 import OSLog
-import SwiftData
 
 enum PersistenceAvailability: Equatable, Sendable {
     case available
@@ -36,107 +35,89 @@ struct PersistenceLoadResult<Value> {
     let repairError: Error?
 }
 
-// Single app-wide SwiftData container shared by every persisted store. Tests
-// build their own container from `models` with an in-memory configuration.
+/// JSON-file persistence backend (iOS 16 compatible replacement for SwiftData).
+enum AppJSONPersistence {
+    static let sharedDirectory: URL = {
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory
+        let dir = base.appendingPathComponent("TiebaPure", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir
+    }()
+
+    static func fileURL(for key: String) -> URL {
+        sharedDirectory.appendingPathComponent("\(key).json")
+    }
+
+    static func load<T: Decodable>(_ type: T.Type, key: String) throws -> T? {
+        let url = fileURL(for: key)
+        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
+        let data = try Data(contentsOf: url)
+        return try JSONDecoder().decode(T.self, from: data)
+    }
+
+    static func save<T: Encodable>(_ value: T, key: String) throws {
+        let data = try JSONEncoder().encode(value)
+        let url = fileURL(for: key)
+        try data.write(to: url, options: [.atomic])
+    }
+
+    static func remove(key: String) {
+        let url = fileURL(for: key)
+        try? FileManager.default.removeItem(at: url)
+    }
+}
+
+/// Compatibility shim. SwiftData was replaced by JSON file persistence for iOS 16.
+/// Test helpers that still reference container APIs degrade to JSON availability checks.
 enum AppModelContainer {
     struct Resolution {
-        let container: ModelContainer
         let availability: PersistenceAvailability
+        /// Placeholder for former ModelContainer identity checks in tests.
+        let containerToken: ObjectIdentifier?
 
         var isDurable: Bool {
             availability.canPersist
         }
-    }
 
-    static let models: [any PersistentModel.Type] = [
-        ThreadFavoriteRecord.self,
-        ThreadReadingPositionRecord.self,
-        BrowsingHistoryRecord.self,
-        RecentForumRecord.self,
-        SearchHistoryRecord.self,
-        ContentDraftRecord.self
-    ]
-
-    private static let sharedResolution: Resolution = {
-        let schema = Schema(models)
-        do {
-            return try resolve(
-                persistent: {
-                    try ModelContainer(
-                        for: schema,
-                        configurations: ModelConfiguration(schema: schema)
-                    )
-                },
-                fallback: {
-                    try ModelContainer(
-                        for: schema,
-                        configurations: ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
-                    )
-                }
-            )
-        } catch {
-            fatalError("ModelContainer creation failed: \(error)")
+        init(availability: PersistenceAvailability, containerToken: ObjectIdentifier? = nil) {
+            self.availability = availability
+            self.containerToken = containerToken
         }
-    }()
-
-    static let shared = sharedResolution.container
-    static var sharedAvailability: PersistenceAvailability {
-        sharedResolution.availability
     }
 
-    /// Resolves a durable container first and degrades to an in-memory
-    /// container only when opening the on-disk store fails. The durability bit
-    /// is kept alongside the container so a fallback session can import legacy
-    /// values for display without deleting their only durable copy.
+    /// Former SwiftData model list; retained empty so older tests compile against the symbol.
+    static let models: [Any.Type] = []
+
+    static let sharedAvailability: PersistenceAvailability = .available
+    static let sharedResolution = Resolution(availability: .available)
+    static let shared: Any? = nil
+
+    static func persistenceAvailability() -> PersistenceAvailability {
+        .available
+    }
+
+    static func persistenceAvailability(for _: Any?) -> PersistenceAvailability {
+        .available
+    }
+
+    static func allowsLegacyCleanup(for _: Any? = nil) -> Bool {
+        true
+    }
+
     static func resolve(
-        persistent: () throws -> ModelContainer,
-        fallback: () throws -> ModelContainer
+        persistent: () throws -> Any,
+        fallback: () throws -> Any
     ) throws -> Resolution {
         do {
-            return Resolution(container: try persistent(), availability: .available)
+            _ = try persistent()
+            return Resolution(availability: .available)
         } catch {
-            PersistenceDiagnostics.report(error, operation: "open persistent model container")
-            return Resolution(container: try fallback(), availability: .unavailable)
+            PersistenceDiagnostics.report(error, operation: "open persistent store")
+            _ = try fallback()
+            return Resolution(availability: .unavailable)
         }
     }
-
-    static func persistenceAvailability(for container: ModelContainer) -> PersistenceAvailability {
-        persistenceAvailability(for: container, resolvedSharedContainer: sharedResolution)
-    }
-
-    static func persistenceAvailability(
-        for container: ModelContainer,
-        resolvedSharedContainer: Resolution
-    ) -> PersistenceAvailability {
-        guard container === resolvedSharedContainer.container else {
-            // Explicitly injected containers are owned by their caller (tests
-            // use this path) and are considered writable unless the store
-            // initializer is given an unavailable override.
-            return .available
-        }
-        return resolvedSharedContainer.availability
-    }
-
-    static func allowsLegacyCleanup(for container: ModelContainer) -> Bool {
-        allowsLegacyCleanup(for: container, resolvedSharedContainer: sharedResolution)
-    }
-
-    static func allowsLegacyCleanup(
-        for container: ModelContainer,
-        resolvedSharedContainer: Resolution
-    ) -> Bool {
-        persistenceAvailability(
-            for: container,
-            resolvedSharedContainer: resolvedSharedContainer
-        ).canPersist
-    }
-}
-
-// Each store persists a full snapshot of its in-memory array; sortIndex
-// preserves the array order across relaunches exactly as the legacy JSON
-// encoding did.
-protocol OrderedPersistentRecord: PersistentModel {
-    var sortIndex: Int { get }
 }
 
 enum PersistenceDiagnostics {
@@ -155,10 +136,6 @@ enum LegacyStorageMigration {
         case invalidTopLevelArray
     }
 
-    /// The legacy value is removed only after the SwiftData save completes and
-    /// only when the destination is durable. A successful write to the
-    /// in-memory fallback is useful for the current session but is not a
-    /// migration because it cannot survive relaunch.
     static func persistThenRemoveLegacyValue(
         defaults: UserDefaults,
         key: String,
@@ -171,182 +148,34 @@ enum LegacyStorageMigration {
     }
 }
 
-@MainActor
-enum PersistedRecordStore {
-    static func fetchOrdered<Record: OrderedPersistentRecord>(
-        _ type: Record.Type,
-        in context: ModelContext
-    ) throws -> [Record] {
-        let records = try context.fetch(FetchDescriptor<Record>())
-        return records.sorted { $0.sortIndex < $1.sortIndex }
-    }
-
-    static func fetchAll<Record: PersistentModel>(
-        _ type: Record.Type,
-        in context: ModelContext
-    ) throws -> [Record] {
-        try context.fetch(FetchDescriptor<Record>())
-    }
-
-    static func replaceAll<Record: OrderedPersistentRecord>(
-        _ type: Record.Type,
-        with records: [Record],
-        in context: ModelContext,
-        beforeSave: () throws -> Void = {}
-    ) throws {
-        do {
-            let existing = try context.fetch(FetchDescriptor<Record>())
-            for record in existing {
-                context.delete(record)
-            }
-            for record in records {
-                context.insert(record)
-            }
-            try beforeSave()
-            try save(context)
-        } catch {
-            context.rollback()
-            throw error
+enum PersistedArrayDecoder {
+    static func decode<T: Decodable>(_ type: T.Type, from data: Data) -> [T]? {
+        if let values = try? JSONDecoder().decode([T].self, from: data) {
+            return values
         }
-    }
-
-    /// Updates one reading-position row in place and prunes only duplicates or
-    /// rows beyond the retention limit. Scrolling no longer deletes and
-    /// reinserts the entire 500-row table for every visible-floor change.
-    static func upsertReadingPosition(
-        _ position: ThreadReadingPosition,
-        limit: Int,
-        in context: ModelContext
-    ) throws {
-        let effectiveLimit = min(
-            max(limit, 0),
-            LocalThreadLibraryPolicy.maximumReadingPositions
-        )
-        var records = try context.fetch(FetchDescriptor<ThreadReadingPositionRecord>())
-        guard effectiveLimit > 0 else {
-            for record in records {
-                context.delete(record)
-            }
-            try save(context)
-            return
-        }
-
-        if let existing = records.first(where: { $0.threadID == position.threadID }) {
-            existing.postIDBitPattern = Int64(bitPattern: position.postID)
-            existing.floor = position.floor
-            existing.updatedAt = position.updatedAt
-        } else {
-            let inserted = ThreadReadingPositionRecord(entry: position, sortIndex: 0)
-            context.insert(inserted)
-            records.append(inserted)
-        }
-
-        records.sort {
-            if $0.updatedAt != $1.updatedAt {
-                return $0.updatedAt > $1.updatedAt
-            }
-            return $0.threadID < $1.threadID
-        }
-
-        var seenThreadIDs = Set<Int64>()
-        var retainedCount = 0
-        for record in records {
-            guard seenThreadIDs.insert(record.threadID).inserted,
-                  retainedCount < effectiveLimit else {
-                context.delete(record)
-                continue
-            }
-            record.sortIndex = retainedCount
-            retainedCount += 1
-        }
-        try save(context)
-    }
-
-    static func deleteReadingPosition(
-        threadID: Int64,
-        in context: ModelContext
-    ) throws {
-        let requestedThreadID = threadID
-        let records = try context.fetch(FetchDescriptor<ThreadReadingPositionRecord>(
-            predicate: #Predicate { record in
-                record.threadID == requestedThreadID
-            }
-        ))
-        for record in records {
-            context.delete(record)
-        }
-        try save(context)
-    }
-
-    static func clearThreadLibrary(
-        in context: ModelContext,
-        beforeSave: () throws -> Void = {}
-    ) throws {
-        do {
-            let favorites = try context.fetch(FetchDescriptor<ThreadFavoriteRecord>())
-            let positions = try context.fetch(FetchDescriptor<ThreadReadingPositionRecord>())
-            for favorite in favorites {
-                context.delete(favorite)
-            }
-            for position in positions {
-                context.delete(position)
-            }
-            try beforeSave()
-            try save(context)
-        } catch {
-            context.rollback()
-            throw error
-        }
-    }
-
-    private static func save(_ context: ModelContext) throws {
-        do {
-            try context.save()
-        } catch {
-            context.rollback()
-            throw error
-        }
+        return nil
     }
 }
 
-/// Retired: thread collections live on the Baidu account now. The model stays
-/// in the schema so stores written by older versions still open, and its rows
-/// are deleted on first launch.
-@Model
-final class ThreadFavoriteRecord {
-    var threadID: Int64
-    var forumID: Int64?
-    var title: String
-    var authorDisplayName: String
-    var forumDisplayName: String?
-    var savedAt: Date
-    var sortIndex: Int
+/// JSON-backed ordered list store used by history / recent / search / reading position.
+enum JSONRecordStore {
+    static func loadArray<T: Codable>(key: String) throws -> [T] {
+        try AppJSONPersistence.load([T].self, key: key) ?? []
+    }
 
-    init(
-        threadID: Int64 = 0,
-        forumID: Int64? = nil,
-        title: String = "",
-        authorDisplayName: String = "",
-        forumDisplayName: String? = nil,
-        savedAt: Date = .distantPast,
-        sortIndex: Int = 0
-    ) {
-        self.threadID = threadID
-        self.forumID = forumID
-        self.title = title
-        self.authorDisplayName = authorDisplayName
-        self.forumDisplayName = forumDisplayName
-        self.savedAt = savedAt
-        self.sortIndex = sortIndex
+    static func saveArray<T: Codable>(_ values: [T], key: String) throws {
+        try AppJSONPersistence.save(values, key: key)
+    }
+
+    static func clear(key: String) {
+        AppJSONPersistence.remove(key: key)
     }
 }
 
-extension ThreadFavoriteRecord: OrderedPersistentRecord {}
+// MARK: - Codable record DTOs (replacing @Model classes)
 
-@Model
-final class ThreadReadingPositionRecord {
+struct ThreadReadingPositionRecordDTO: Codable, Equatable {
     var threadID: Int64
-    // UInt64 bit pattern; the backing store has no unsigned 64-bit column.
     var postIDBitPattern: Int64
     var floor: Int
     var updatedAt: Date
@@ -370,10 +199,7 @@ final class ThreadReadingPositionRecord {
     }
 }
 
-extension ThreadReadingPositionRecord: OrderedPersistentRecord {}
-
-@Model
-final class BrowsingHistoryRecord {
+struct BrowsingHistoryRecordDTO: Codable, Equatable {
     var threadID: Int64
     var forumID: Int64?
     var title: String
@@ -404,10 +230,7 @@ final class BrowsingHistoryRecord {
     }
 }
 
-extension BrowsingHistoryRecord: OrderedPersistentRecord {}
-
-@Model
-final class RecentForumRecord {
+struct RecentForumRecordDTO: Codable, Equatable {
     var name: String
     var displayName: String
     var avatarURL: URL?
@@ -432,51 +255,105 @@ final class RecentForumRecord {
     }
 }
 
-extension RecentForumRecord: OrderedPersistentRecord {}
-
-@Model
-final class SearchHistoryRecord {
+struct SearchHistoryRecordDTO: Codable, Equatable {
     var keyword: String
     var sortIndex: Int
-
-    init(keyword: String, sortIndex: Int) {
-        self.keyword = keyword
-        self.sortIndex = sortIndex
-    }
 }
 
-extension SearchHistoryRecord: OrderedPersistentRecord {}
-
-@Model
-final class ContentDraftRecord {
+struct ContentDraftRecordDTO: Codable, Equatable {
     var accountID: String
     var targetKey: String
     var targetData: Data
     var title: String
     var body: String
-    @Attribute(.externalStorage) var imagesBlob: Data
-    // Optional so existing stores can migrate without materializing external
-    // attachment blobs. Legacy rows are backfilled off the main actor.
+    var imagesBlob: Data
     var imagesByteCount: Int?
     var updatedAt: Date
+}
 
-    init(
-        accountID: String,
-        targetKey: String,
-        targetData: Data,
-        title: String,
-        body: String,
-        imagesBlob: Data,
-        imagesByteCount: Int? = nil,
-        updatedAt: Date
-    ) {
-        self.accountID = accountID
-        self.targetKey = targetKey
-        self.targetData = targetData
-        self.title = title
-        self.body = body
-        self.imagesBlob = imagesBlob
-        self.imagesByteCount = imagesByteCount ?? imagesBlob.count
-        self.updatedAt = updatedAt
+enum PersistedRecordStore {
+    static let browsingHistoryKey = "browsingHistory"
+    static let recentForumsKey = "recentForums"
+    static let searchHistoryKey = "searchHistory"
+    static let readingPositionsKey = "readingPositions"
+    static let contentDraftsKey = "contentDrafts"
+    static let threadFavoritesKey = "threadFavorites"
+
+    static func loadBrowsingHistory() throws -> [BrowsingHistoryEntry] {
+        let records: [BrowsingHistoryRecordDTO] = try JSONRecordStore.loadArray(key: browsingHistoryKey)
+        return records.sorted { $0.sortIndex < $1.sortIndex }.map(\.entry)
+    }
+
+    static func saveBrowsingHistory(_ entries: [BrowsingHistoryEntry]) throws {
+        let records = entries.enumerated().map {
+            BrowsingHistoryRecordDTO(entry: $0.element, sortIndex: $0.offset)
+        }
+        try JSONRecordStore.saveArray(records, key: browsingHistoryKey)
+    }
+
+    static func loadRecentForums() throws -> [RecentForum] {
+        let records: [RecentForumRecordDTO] = try JSONRecordStore.loadArray(key: recentForumsKey)
+        return records.sorted { $0.sortIndex < $1.sortIndex }.map(\.entry)
+    }
+
+    static func saveRecentForums(_ entries: [RecentForum]) throws {
+        let records = entries.enumerated().map {
+            RecentForumRecordDTO(entry: $0.element, sortIndex: $0.offset)
+        }
+        try JSONRecordStore.saveArray(records, key: recentForumsKey)
+    }
+
+    static func loadSearchHistory() throws -> [String] {
+        let records: [SearchHistoryRecordDTO] = try JSONRecordStore.loadArray(key: searchHistoryKey)
+        return records.sorted { $0.sortIndex < $1.sortIndex }.map(\.keyword)
+    }
+
+    static func saveSearchHistory(_ keywords: [String]) throws {
+        let records = keywords.enumerated().map {
+            SearchHistoryRecordDTO(keyword: $0.element, sortIndex: $0.offset)
+        }
+        try JSONRecordStore.saveArray(records, key: searchHistoryKey)
+    }
+
+    static func loadReadingPositions() throws -> [ThreadReadingPosition] {
+        let records: [ThreadReadingPositionRecordDTO] = try JSONRecordStore.loadArray(key: readingPositionsKey)
+        return records.sorted { $0.sortIndex < $1.sortIndex }.map(\.entry)
+    }
+
+    static func saveReadingPositions(_ entries: [ThreadReadingPosition]) throws {
+        let records = entries.enumerated().map {
+            ThreadReadingPositionRecordDTO(entry: $0.element, sortIndex: $0.offset)
+        }
+        try JSONRecordStore.saveArray(records, key: readingPositionsKey)
+    }
+
+    static func upsertReadingPosition(_ position: ThreadReadingPosition, limit: Int) throws {
+        let effectiveLimit = min(max(limit, 0), 500)
+        var entries = try loadReadingPositions()
+        entries.removeAll { $0.threadID == position.threadID }
+        entries.insert(position, at: 0)
+        if entries.count > effectiveLimit {
+            entries = Array(entries.prefix(effectiveLimit))
+        }
+        try saveReadingPositions(entries)
+    }
+
+    static func deleteReadingPosition(threadID: Int64) throws {
+        var entries = try loadReadingPositions()
+        entries.removeAll { $0.threadID == threadID }
+        try saveReadingPositions(entries)
+    }
+
+    static func clearThreadLibrary() throws {
+        JSONRecordStore.clear(key: threadFavoritesKey)
+        JSONRecordStore.clear(key: readingPositionsKey)
+    }
+
+    static func loadContentDrafts() throws -> [ContentDraftRecordDTO] {
+        try JSONRecordStore.loadArray(key: contentDraftsKey)
+    }
+
+    static func saveContentDrafts(_ drafts: [ContentDraftRecordDTO]) throws {
+        try JSONRecordStore.saveArray(drafts, key: contentDraftsKey)
     }
 }

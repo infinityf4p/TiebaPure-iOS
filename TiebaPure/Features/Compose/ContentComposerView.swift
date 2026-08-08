@@ -102,7 +102,7 @@ struct ContentComposerView: View {
                 }
                 .background(.bar)
             }
-            .onChange(of: focusedField) { _, field in
+            .onChangeCompat(of: focusedField) { _, field in
                 guard field != nil, showsEmoticons else { return }
                 withAnimation(.easeInOut(duration: 0.2)) {
                     showsEmoticons = false
@@ -132,7 +132,7 @@ struct ContentComposerView: View {
                 onDismissed: onCancel
             )
         }
-        .onChange(of: photoSelection) { _, newValue in
+        .onChangeCompat(of: photoSelection) { _, newValue in
             preparePhotoSelection(newValue)
         }
         .onDisappear {

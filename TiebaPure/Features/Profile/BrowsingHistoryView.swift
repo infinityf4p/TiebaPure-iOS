@@ -37,7 +37,7 @@ struct BrowsingHistoryView: View {
         )
         .toolbar {
             if isEditing {
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItem(placement: .navigationBarLeading) {
                     Button(allVisibleEntriesAreSelected ? "取消全选" : "全选") {
                         selectedThreadIDs = LocalThreadListSelectionPolicy
                             .selectionByTogglingAll(
@@ -51,7 +51,7 @@ struct BrowsingHistoryView: View {
             }
 
             if isEditing == false, historyStore.items.isEmpty == false {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .navigationBarTrailing) {
                     Button("清空") {
                         showsClearConfirmation = true
                     }
@@ -62,7 +62,7 @@ struct BrowsingHistoryView: View {
             }
 
             if visibleEntries.isEmpty == false || isEditing {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .navigationBarTrailing) {
                     EditButton()
                         .minTouchTarget()
                         .accessibilityIdentifier("browsing-history-edit")
@@ -73,7 +73,7 @@ struct BrowsingHistoryView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             selectionBar
         }
-        .navigationDestination(isPresented: entryIsActive) {
+        .navigationDestinationCompat(isPresented: entryIsActive) {
             if let activeEntry {
                 ThreadDetailView(
                     account: account,
@@ -127,15 +127,15 @@ struct BrowsingHistoryView: View {
             historyStore.reload()
             dateFilterReferenceDate = Date()
         }
-        .onChange(of: visibleThreadIDs) { _, _ in
+        .onChangeCompat(of: visibleThreadIDs) { _, _ in
             synchronizeSelection()
         }
-        .onChange(of: isEditing) { _, editing in
+        .onChangeCompat(of: isEditing) { _, editing in
             if editing == false {
                 selectedThreadIDs.removeAll()
             }
         }
-        .onChange(of: blocklistStore.entries) { _, _ in
+        .onChangeCompat(of: blocklistStore.entries) { _, _ in
             guard let activeEntry,
                   BrowsingHistoryListPolicy.shouldKeep(
                     activeEntry,
@@ -143,7 +143,7 @@ struct BrowsingHistoryView: View {
                   ) == false else { return }
             self.activeEntry = nil
         }
-        .onChange(of: scenePhase) { _, phase in
+        .onChangeCompat(of: scenePhase) { _, phase in
             if phase == .active {
                 dateFilterReferenceDate = Date()
             }

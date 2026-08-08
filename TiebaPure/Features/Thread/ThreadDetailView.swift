@@ -158,13 +158,13 @@ struct ThreadDetailView: View {
 
     private var navigationContent: some View {
         decoratedContent
-            .navigationDestination(isPresented: $isSearchActive) {
+            .navigationDestinationCompat(isPresented: $isSearchActive) {
                 SearchResultsView(account: account, scope: searchScope, initialKeyword: "")
                     .interactiveNavigationPopStateSync {
                         isSearchActive = false
                     }
             }
-            .navigationDestination(isPresented: selectedUserIsActive) {
+            .navigationDestinationCompat(isPresented: selectedUserIsActive) {
                 if let selectedUser {
                     UserProfileView(
                         account: account,
@@ -604,7 +604,7 @@ struct ThreadDetailView: View {
         ToolbarItem(placement: .principal) {
             forumToolbarTitle
         }
-        ToolbarItemGroup(placement: .topBarTrailing) {
+        ToolbarItemGroup(placement: .navigationBarTrailing) {
             favoriteToolbarButton
             searchToolbarButton
             moreToolbarMenu
@@ -1036,28 +1036,24 @@ struct ThreadDetailView: View {
             .onPreferenceChange(ThreadPostViewportPreferenceKey.self) { entries in
                 correctPendingPreciseScroll(entries: entries, proxy: scrollProxy)
             }
-            .onScrollPhaseChange { _, newPhase in
-                let isDirectInteraction = newPhase == .tracking || newPhase == .interacting
-                if isDirectInteraction {
-                    cancelPreciseScroll()
-                }
-                readingTrackingState.isScrollIdle = newPhase == .idle
-                if newPhase == .idle {
-                    requestPendingAutomaticPageLoadIfPossible()
-                    scheduleReadingPositionCommit()
-                } else {
-                    readingTrackingState.cancelPendingCommit()
-                }
-            }
-            .onScrollGeometryChange(for: ThreadReadingScrollRegion.self) { geometry in
-                ThreadReadingScrollRegion.resolve(
-                    distanceFromTop: ShortPullRefreshPolicy.distanceFromTop(
-                        contentOffsetY: geometry.contentOffset.y,
-                        topInset: geometry.contentInsets.top
-                    )
+            .background {
+                ThreadDetailScrollObserver(
+                    onDirectInteractionChange: { isDirect in
+                        if isDirect {
+                            cancelPreciseScroll()
+                            readingTrackingState.isScrollIdle = false
+                            readingTrackingState.cancelPendingCommit()
+                        } else {
+                            readingTrackingState.isScrollIdle = true
+                            requestPendingAutomaticPageLoadIfPossible()
+                            scheduleReadingPositionCommit()
+                        }
+                    },
+                    onScrollRegionChange: { region in
+                        handleReadingScrollRegionChange(region)
+                    }
                 )
-            } action: { _, region in
-                handleReadingScrollRegionChange(region)
+                .accessibilityHidden(true)
             }
             .onChange(of: scrollRequest) { request in
                 guard let request else { return }
@@ -1348,7 +1344,7 @@ struct ThreadDetailView: View {
         }
         preciseScrollTimeoutTask = Task { @MainActor in
             do {
-                try await Task.sleep(for: .milliseconds(1_500))
+                try await CompatibleTaskSleep.milliseconds(1_500)
             } catch {
                 return
             }
@@ -1428,7 +1424,7 @@ struct ThreadDetailView: View {
                 }
             }
             do {
-                try await Task.sleep(for: ThreadReadingPersistencePolicy.idleDelay)
+                try await CompatibleTaskSleep.duration(ThreadReadingPersistencePolicy.idleDelay)
             } catch {
                 return
             }
@@ -1844,6 +1840,107 @@ enum ThreadReadingScrollRegion: Equatable, Sendable {
             return .away
         }
         return .nearTop
+    }
+}
+
+/// UIKit-backed scroll observation so reading position works on iOS 16+.
+private struct ThreadDetailScrollObserver: UIViewRepresentable {
+    let onDirectInteractionChange: (Bool) -> Void
+    let onScrollRegionChange: (ThreadReadingScrollRegion) -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(
+            onDirectInteractionChange: onDirectInteractionChange,
+            onScrollRegionChange: onScrollRegionChange
+        )
+    }
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView()
+        view.isUserInteractionEnabled = false
+        view.backgroundColor = .clear
+        DispatchQueue.main.async {
+            context.coordinator.attach(from: view)
+        }
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {
+        context.coordinator.onDirectInteractionChange = onDirectInteractionChange
+        context.coordinator.onScrollRegionChange = onScrollRegionChange
+        context.coordinator.attach(from: uiView)
+    }
+
+    static func dismantleUIView(_ uiView: UIView, coordinator: Coordinator) {
+        coordinator.detach()
+    }
+
+    final class Coordinator: NSObject {
+        var onDirectInteractionChange: (Bool) -> Void
+        var onScrollRegionChange: (ThreadReadingScrollRegion) -> Void
+        private weak var scrollView: UIScrollView?
+        private weak var panRecognizer: UIPanGestureRecognizer?
+        private var offsetObservation: NSKeyValueObservation?
+        private var isDirect = false
+
+        init(
+            onDirectInteractionChange: @escaping (Bool) -> Void,
+            onScrollRegionChange: @escaping (ThreadReadingScrollRegion) -> Void
+        ) {
+            self.onDirectInteractionChange = onDirectInteractionChange
+            self.onScrollRegionChange = onScrollRegionChange
+        }
+
+        func attach(from view: UIView) {
+            guard let found = Self.enclosingScrollView(startingAt: view) else { return }
+            if scrollView === found { return }
+            detach()
+            scrollView = found
+            let pan = found.panGestureRecognizer
+            panRecognizer = pan
+            pan.addTarget(self, action: #selector(handlePan(_:)))
+            offsetObservation = found.observe(\.contentOffset, options: [.initial, .new]) { [weak self] scrollView, _ in
+                guard let self else { return }
+                let distance = ShortPullRefreshPolicy.distanceFromTop(
+                    contentOffsetY: scrollView.contentOffset.y,
+                    topInset: scrollView.adjustedContentInset.top
+                )
+                self.onScrollRegionChange(ThreadReadingScrollRegion.resolve(distanceFromTop: distance))
+            }
+        }
+
+        func detach() {
+            panRecognizer?.removeTarget(self, action: #selector(handlePan(_:)))
+            panRecognizer = nil
+            offsetObservation?.invalidate()
+            offsetObservation = nil
+            scrollView = nil
+            isDirect = false
+        }
+
+        @objc private func handlePan(_ recognizer: UIPanGestureRecognizer) {
+            let direct: Bool
+            switch recognizer.state {
+            case .began, .changed:
+                direct = true
+            default:
+                direct = false
+            }
+            guard isDirect != direct else { return }
+            isDirect = direct
+            onDirectInteractionChange(direct)
+        }
+
+        private static func enclosingScrollView(startingAt view: UIView) -> UIScrollView? {
+            var current: UIView? = view.superview
+            while let candidate = current {
+                if let scrollView = candidate as? UIScrollView {
+                    return scrollView
+                }
+                current = candidate.superview
+            }
+            return nil
+        }
     }
 }
 
@@ -2372,11 +2469,11 @@ private struct SubpostListSheet: View {
                 // of the sheet root for the middle-screen interactive return.
                 .interactiveNavigationPopRevealSource()
                 .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
+                    ToolbarItem(placement: .navigationBarTrailing) {
                         SubpostSheetDismissButton()
                     }
                 }
-                .navigationDestination(isPresented: selectedUserIsActive) {
+                .navigationDestinationCompat(isPresented: selectedUserIsActive) {
                     if let selectedUser {
                         UserProfileView(
                             account: account,
@@ -2845,15 +2942,9 @@ enum SubpostSheetTitle {
 private extension View {
     @ViewBuilder
     func subpostInteractivePresentation() -> some View {
-        if #available(iOS 16.4, *) {
             presentationDetents([.large])
-                .presentationDragIndicator(.hidden)
-                .presentationBackground(.clear)
-                .interactiveDismissDisabled()
-        } else {
-            presentationDetents([.large])
-                .presentationDragIndicator(.hidden)
-                .interactiveDismissDisabled()
-        }
+            .presentationDragIndicator(.hidden)
+            .presentationBackgroundClearIfAvailable()
+            .interactiveDismissDisabled()
     }
 }

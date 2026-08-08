@@ -99,7 +99,7 @@ struct SubpostSheetInteractiveDismissSurface<Content: View>: View {
                 .accessibilityAction(named: "关闭楼中楼") {
                     finishDismissal(containerHeight: containerSize.height)
                 }
-                .onChange(of: containerSize) { previousSize, newSize in
+                .onChangeCompat(of: containerSize) { previousSize, newSize in
                     guard previousSize != newSize else { return }
                     if phase == .dismissing {
                         // Rotation during the short completion animation must
@@ -121,15 +121,15 @@ struct SubpostSheetInteractiveDismissSurface<Content: View>: View {
                 .frame(width: 0, height: 0)
                 .accessibilityHidden(true)
         }
-        .onChange(of: isEnabled) { _, enabled in
+        .onChangeCompat(of: isEnabled) { _, enabled in
             guard enabled == false, phase == .tracking else { return }
             restore()
         }
-        .onChange(of: scenePhase) { _, newPhase in
+        .onChangeCompat(of: scenePhase) { _, newPhase in
             guard newPhase != .active else { return }
             cancelInterruptedGesture()
         }
-        .onChange(of: dismissGestureIsActive) { wasActive, isActive in
+        .onChangeCompat(of: dismissGestureIsActive) { wasActive, isActive in
             guard wasActive, isActive == false else { return }
             // GestureState resets even when the system cancels the gesture and
             // omits `onEnded`. Defer one main-actor turn so a normal `onEnded`

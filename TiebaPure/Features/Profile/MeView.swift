@@ -170,31 +170,31 @@ struct MeView: View {
             }
             .navigationTitle("我的")
             .interactiveNavigationPopRevealSource()
-            .navigationDestination(isPresented: $showsBrowsingHistory) {
+            .navigationDestinationCompat(isPresented: $showsBrowsingHistory) {
                 BrowsingHistoryView(account: account)
                     .interactiveNavigationPopStateSync {
                         showsBrowsingHistory = false
                     }
             }
-            .navigationDestination(isPresented: $showsThreadFavorites) {
+            .navigationDestinationCompat(isPresented: $showsThreadFavorites) {
                 ThreadFavoritesView(account: account)
                     .interactiveNavigationPopStateSync {
                         showsThreadFavorites = false
                     }
             }
-            .navigationDestination(isPresented: $showsSettings) {
+            .navigationDestinationCompat(isPresented: $showsSettings) {
                 SettingsView(account: account)
                     .interactiveNavigationPopStateSync {
                         showsSettings = false
                     }
             }
-            .navigationDestination(isPresented: $showsAbout) {
+            .navigationDestinationCompat(isPresented: $showsAbout) {
                 AboutView()
                     .interactiveNavigationPopStateSync {
                         showsAbout = false
                     }
             }
-            .navigationDestination(isPresented: $showsMessages) {
+            .navigationDestinationCompat(isPresented: $showsMessages) {
                 if let account {
                     MessagesView(account: account)
                         .interactiveNavigationPopStateSync {
@@ -202,7 +202,7 @@ struct MeView: View {
                         }
                 }
             }
-            .navigationDestination(isPresented: $showsFollowedForums) {
+            .navigationDestinationCompat(isPresented: $showsFollowedForums) {
                 if let account {
                     ForumListView(account: account)
                         .interactiveNavigationPopStateSync {
@@ -210,7 +210,7 @@ struct MeView: View {
                         }
                 }
             }
-            .navigationDestination(isPresented: $showsFollowedUsers) {
+            .navigationDestinationCompat(isPresented: $showsFollowedUsers) {
                 if let account {
                     FollowedUsersView(account: account)
                         .interactiveNavigationPopStateSync {
@@ -218,7 +218,7 @@ struct MeView: View {
                         }
                 }
             }
-            .navigationDestination(isPresented: $showsOwnProfile) {
+            .navigationDestinationCompat(isPresented: $showsOwnProfile) {
                 if let account {
                     UserProfileView(account: account, user: userSummary(for: account))
                         .interactiveNavigationPopStateSync {
@@ -232,7 +232,7 @@ struct MeView: View {
                         .navigationTitle("手机号验证码登录")
                         .navigationBarTitleDisplayMode(.inline)
                         .toolbar {
-                            ToolbarItem(placement: .topBarLeading) {
+                            ToolbarItem(placement: .navigationBarLeading) {
                                 Button("关闭") {
                                     showsLogin = false
                                 }

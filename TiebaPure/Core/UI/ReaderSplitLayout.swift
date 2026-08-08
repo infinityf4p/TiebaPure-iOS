@@ -47,10 +47,10 @@ extension EnvironmentValues {
 /// Detail-column resting state before any thread is selected.
 struct ReaderSplitDetailPlaceholder: View {
     var body: some View {
-        ContentUnavailableView(
+        CompatibleContentUnavailableSimple(
             "选择一个帖子开始阅读",
             systemImage: "text.bubble",
-            description: Text("从左侧列表中打开的帖子会显示在这里。")
+            description: "从左侧列表中打开的帖子会显示在这里。"
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(TiebaPureTheme.ColorToken.readerGroupedBackground)
@@ -99,7 +99,7 @@ struct ReaderSplitLayout<Route: Hashable, ListColumn: View, DetailRoot: View>: V
                 }
                 // The columns are fixed. A sidebar toggle could hide the list
                 // and strand the detail thread without a way back.
-                .toolbar(removing: .sidebarToggle)
+                .removeSidebarToggleIfAvailable()
                 .navigationSplitViewColumnWidth(min: 320, ideal: 400, max: 480)
                 .environment(
                     \.readerSplitOpenThread,

@@ -88,7 +88,7 @@ struct UserProfileView: View {
             // Do not expose the destructive block action while identity is
             // still unknown; a fast tap used to allow blocking oneself.
             if let profile, profile.isCurrentUser == false {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
                         blockToggleButton
                     } label: {
@@ -119,7 +119,7 @@ struct UserProfileView: View {
                 .environmentObject(environment)
             }
         }
-        .navigationDestination(isPresented: threadIsActive) {
+        .navigationDestinationCompat(isPresented: threadIsActive) {
             if let selectedThread {
                 ThreadDetailView(
                     account: account,
@@ -134,7 +134,7 @@ struct UserProfileView: View {
                 }
             }
         }
-        .navigationDestination(isPresented: forumIsActive) {
+        .navigationDestinationCompat(isPresented: forumIsActive) {
             if let selectedForum {
                 ForumThreadsView(account: account, forum: selectedForum)
                     .interactiveNavigationPopStateSync {
@@ -142,7 +142,7 @@ struct UserProfileView: View {
                     }
             }
         }
-        .navigationDestination(isPresented: relationshipIsActive) {
+        .navigationDestinationCompat(isPresented: relationshipIsActive) {
             if let selectedRelationshipKind, let profile {
                 UserRelationshipsView(
                     account: account,
@@ -1035,7 +1035,7 @@ private struct UserProfileEditSheet: View {
     }
 
     private var successContent: some View {
-        ContentUnavailableView {
+        CompatibleContentUnavailableView {
             Label("资料已更新", systemImage: "checkmark.circle.fill")
         } description: {
             Text("昵称、简介和性别已保存。")

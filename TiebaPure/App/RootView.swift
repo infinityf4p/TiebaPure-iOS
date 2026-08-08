@@ -212,7 +212,7 @@ private struct ExternalRouteView: View {
                 }
             }
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItem(placement: .navigationBarLeading) {
                     Button("关闭", action: onClose)
                         .accessibilityIdentifier("external-route-close")
                 }
@@ -228,17 +228,23 @@ private struct MainTabView: View {
 
     var body: some View {
         TabView(selection: tabSelection) {
-            Tab("首页", systemImage: "house", value: RootTab.home) {
-                HomeView(account: account, refreshToken: homeRefreshToken)
-            }
+            HomeView(account: account, refreshToken: homeRefreshToken)
+                .tabItem {
+                    Label("首页", systemImage: "house")
+                }
+                .tag(RootTab.home)
 
-            Tab("进吧", systemImage: "square.grid.2x2", value: RootTab.forums) {
-                ForumHubView(account: account)
-            }
+            ForumHubView(account: account)
+                .tabItem {
+                    Label("进吧", systemImage: "square.grid.2x2")
+                }
+                .tag(RootTab.forums)
 
-            Tab("我的", systemImage: "person.circle", value: RootTab.me) {
-                MeView(account: account)
-            }
+            MeView(account: account)
+                .tabItem {
+                    Label("我的", systemImage: "person.circle")
+                }
+                .tag(RootTab.me)
         }
         .background(
             TabSelectionObserver {

@@ -3855,7 +3855,7 @@ struct FullScreenImageView: View {
             transitionState.setCurrentIndex(currentIndex)
             onCurrentIndexChange?(currentIndex)
         }
-        .onChange(of: currentIndex) { _, index in
+        .onChangeCompat(of: currentIndex) { _, index in
             transitionState.setCurrentIndex(index)
             onCurrentIndexChange?(index)
         }
