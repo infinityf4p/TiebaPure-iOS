@@ -5,7 +5,7 @@ import UIKit
 
 struct CompatibleContentUnavailableView<Label: View, Description: View>: View {
     private let label: Label
-    private let description: Description?
+    private let description: Description
 
     init(
         @ViewBuilder label: () -> Label,
@@ -27,23 +27,14 @@ struct CompatibleContentUnavailableView<Label: View, Description: View>: View {
                 label
                     .font(.title2)
                     .symbolRenderingMode(.hierarchical)
-                if let description {
-                    description
-                        .font(.body)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                }
+                description
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding()
         }
-    }
-}
-
-extension CompatibleContentUnavailableView where Description == EmptyView {
-    init(@ViewBuilder label: () -> Label) {
-        self.label = label()
-        self.description = nil
     }
 }
 
@@ -93,6 +84,7 @@ struct CompatibleContentUnavailableSimple: View {
 // MARK: - onChange helpers
 
 extension View {
+    /// Single-value onChange compatible with iOS 16 and 17+.
     @ViewBuilder
     func onChangeCompat<V: Equatable>(
         of value: V,
@@ -107,6 +99,7 @@ extension View {
         }
     }
 
+    /// Two-value onChange compatible with iOS 16 and 17+.
     @ViewBuilder
     func onChangeCompat<V: Equatable>(
         of value: V,
@@ -123,6 +116,7 @@ extension View {
         }
     }
 
+    /// onChange with optional initial fire.
     @ViewBuilder
     func onChangeCompat<V: Equatable>(
         of value: V,
@@ -172,7 +166,7 @@ extension View {
     @ViewBuilder
     func scrollBounceBehaviorAlwaysVertical() -> some View {
         if #available(iOS 16.4, *) {
-            self.scrollBounceBehaviorAlwaysVertical()
+            self.scrollBounceBehavior(.always, axes: .vertical)
         } else {
             self
         }

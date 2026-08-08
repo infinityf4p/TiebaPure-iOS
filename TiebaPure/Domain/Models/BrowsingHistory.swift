@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 
 struct BrowsingHistoryEntry: Codable, Equatable, Identifiable, Sendable {

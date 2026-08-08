@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 
 // Legacy UserDefaults blobs are decoded element by element during the one-time

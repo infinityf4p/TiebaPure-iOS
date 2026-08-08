@@ -132,7 +132,7 @@ struct ContentComposerView: View {
                 onDismissed: onCancel
             )
         }
-        .onChangeCompat(of: photoSelection) { _, newValue in
+        .onChange(of: photoSelection) { newValue in
             preparePhotoSelection(newValue)
         }
         .onDisappear {

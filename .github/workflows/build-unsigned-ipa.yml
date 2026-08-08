@@ -133,6 +133,7 @@ jobs:
         run: |
           set -euo pipefail
           CONFIG="${{ github.event.inputs.configuration || 'Release' }}"
+          set +e
           xcodebuild -project TiebaPure.xcodeproj -scheme TiebaPure \
             -configuration "$CONFIG" \
             -sdk iphoneos \
@@ -142,7 +143,15 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
-            AD_HOC_CODE_SIGNING_ALLOWED=YES
+            AD_HOC_CODE_SIGNING_ALLOWED=YES 2>&1 | tee /tmp/xcodebuild-device.log
+          BUILD_RC=${PIPESTATUS[0]}
+          set -e
+          if [ "$BUILD_RC" -ne 0 ]; then
+            echo "::group::Swift compiler errors"
+            grep -E 'error:|fatal error:' /tmp/xcodebuild-device.log | head -n 200 || true
+            echo "::endgroup::"
+            exit "$BUILD_RC"
+          fi
           APP="$DERIVED_DATA/Build/Products/${CONFIG}-iphoneos/TiebaPure.app"
           test -d "$APP"
           echo "APP_PATH=$APP" >> "$GITHUB_ENV"
