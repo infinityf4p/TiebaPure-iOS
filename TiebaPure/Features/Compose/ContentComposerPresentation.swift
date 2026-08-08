@@ -272,12 +272,14 @@ struct ContentComposerPresentation: View {
         let updatedAt = Date()
         do {
             try await environment.contentDraftStore.saveAsync(
-                accountID: account.id,
-                target: request.target,
-                title: request.title,
-                body: request.body,
-                images: request.images,
-                updatedAt: updatedAt
+                ContentDraft(
+                    accountID: account.id,
+                    target: request.target,
+                    title: request.title,
+                    body: request.body,
+                    images: request.images,
+                    updatedAt: updatedAt
+                )
             )
         } catch is CancellationError {
             throw CancellationError()

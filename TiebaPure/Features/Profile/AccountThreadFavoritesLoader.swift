@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 
 /// Pages through the collection Baidu keeps for the account, so the favorites

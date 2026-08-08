@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 
 enum BlocklistEntryKind: String, Codable, CaseIterable, Sendable {

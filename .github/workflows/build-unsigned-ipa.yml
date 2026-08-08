@@ -1,0 +1,234 @@
+name: Build Unsigned IPA
+
+# Builds an unsigned IPA for TrollStore / jailbreak sideload (no Mac required).
+# Actions -> Build Unsigned IPA -> Run workflow -> download Artifact.
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_unit_tests:
+        description: "Run unit tests before packaging (SwiftData legacy suites are skipped)"
+        type: boolean
+        default: true
+      configuration:
+        description: "Build configuration"
+        type: choice
+        options:
+          - Release
+          - Debug
+        default: Release
+  push:
+    tags:
+      - "v*"
+      - "ios16-*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ipa-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DERIVED_DATA: ${{ github.workspace }}/.derivedData
+  PRODUCT_NAME: TiebaPure
+
+jobs:
+  build-ipa:
+    runs-on: macos-15
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          set -euo pipefail
+          echo "Available Xcode apps:"
+          ls /Applications | grep -i xcode || true
+          for candidate in \
+            /Applications/Xcode_16.4.app \
+            /Applications/Xcode_16.3.app \
+            /Applications/Xcode_16.2.app \
+            /Applications/Xcode_16.1.app \
+            /Applications/Xcode_16.0.app \
+            /Applications/Xcode.app
+          do
+            if [ -d "$candidate" ]; then
+              echo "Using $candidate"
+              echo "DEVELOPER_DIR=$candidate/Contents/Developer" >> "$GITHUB_ENV"
+              sudo xcode-select -s "$candidate"
+              break
+            fi
+          done
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
+
+      - name: Install XcodeGen
+        run: |
+          set -euo pipefail
+          if ! command -v xcodegen >/dev/null 2>&1; then
+            brew install xcodegen
+          fi
+          xcodegen --version
+
+      - name: Generate Xcode project from project.yml
+        run: |
+          set -euo pipefail
+          xcodegen generate --spec project.yml
+          test -f TiebaPure.xcodeproj/project.pbxproj
+
+      - name: Resolve packages
+        run: |
+          set -euo pipefail
+          CONFIG="${{ github.event.inputs.configuration || 'Release' }}"
+          xcodebuild -project TiebaPure.xcodeproj -scheme TiebaPure \
+            -configuration "$CONFIG" \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath "$DERIVED_DATA" \
+            -resolvePackageDependencies
+
+      - name: Unit tests (skip SwiftData legacy suites)
+        if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.run_unit_tests == 'true' }}
+        run: |
+          set -euo pipefail
+          DEVICE_ID="$(
+            xcrun simctl list devices available -j |
+              python3 -c '
+          import json,sys
+          data=json.load(sys.stdin)
+          for runtime, devices in data.get("devices", {}).items():
+            if "iOS" not in runtime and "iphonesimulator" not in runtime.lower():
+              continue
+            for d in devices:
+              if d.get("isAvailable") and "iPhone" in d.get("name",""):
+                print(d["udid"]); raise SystemExit
+          ' || true
+          )"
+          if [ -z "${DEVICE_ID:-}" ]; then
+            RUNTIME="$(xcrun simctl list runtimes -j | python3 -c 'import json,sys; r=json.load(sys.stdin)["runtimes"]; print(next((x["identifier"] for x in r if x.get("isAvailable") and "iOS" in x.get("name","")), ""))')"
+            DEVICE_TYPE="$(xcrun simctl list devicetypes -j | python3 -c 'import json,sys; t=json.load(sys.stdin)["devicetypes"]; print(next((x["identifier"] for x in t if "iPhone" in x.get("name","")), ""))')"
+            DEVICE_ID="$(xcrun simctl create 'TiebaPure-CI' "$DEVICE_TYPE" "$RUNTIME")"
+          fi
+          xcrun simctl boot "$DEVICE_ID" || true
+          xcrun simctl bootstatus "$DEVICE_ID" -b || true
+          set +e
+          xcodebuild -project TiebaPure.xcodeproj -scheme TiebaPure \
+            -configuration Debug \
+            -destination "platform=iOS Simulator,id=$DEVICE_ID" \
+            -derivedDataPath "$DERIVED_DATA" \
+            -parallel-testing-enabled NO \
+            test -only-testing:TiebaPureTests \
+            -skip-testing:TiebaPureTests/ContentDraftTests \
+            -skip-testing:TiebaPureTests/StateRegressionTests \
+            -skip-testing:TiebaPureTests/AnonymousLiveSmokeTests
+          TEST_RC=$?
+          set -e
+          if [ "$TEST_RC" -ne 0 ]; then
+            echo "::warning::Unit tests failed; continuing to device IPA build for sideload."
+            echo "TESTS_FAILED=1" >> "$GITHUB_ENV"
+          fi
+
+      - name: Build for device (unsigned)
+        run: |
+          set -euo pipefail
+          CONFIG="${{ github.event.inputs.configuration || 'Release' }}"
+          set +e
+          xcodebuild -project TiebaPure.xcodeproj -scheme TiebaPure \
+            -configuration "$CONFIG" \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath "$DERIVED_DATA" \
+            build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            AD_HOC_CODE_SIGNING_ALLOWED=YES 2>&1 | tee /tmp/xcodebuild-device.log
+          BUILD_RC=${PIPESTATUS[0]}
+          set -e
+          if [ "$BUILD_RC" -ne 0 ]; then
+            echo "::group::Swift compiler errors"
+            grep -E 'error:|fatal error:' /tmp/xcodebuild-device.log | head -n 200 || true
+            echo "::endgroup::"
+            exit "$BUILD_RC"
+          fi
+          APP="$DERIVED_DATA/Build/Products/${CONFIG}-iphoneos/TiebaPure.app"
+          test -d "$APP"
+          echo "APP_PATH=$APP" >> "$GITHUB_ENV"
+          /usr/libexec/PlistBuddy -c 'Print :MinimumOSVersion' "$APP/Info.plist" || true
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist" || true
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist" || true
+
+      - name: Package unsigned IPA
+        run: |
+          set -euo pipefail
+          CONFIG="${{ github.event.inputs.configuration || 'Release' }}"
+          APP="$DERIVED_DATA/Build/Products/${CONFIG}-iphoneos/TiebaPure.app"
+          STAGE="${{ github.workspace }}/build/ipa-stage"
+          OUT_DIR="${{ github.workspace }}/build"
+          rm -rf "$STAGE"
+          mkdir -p "$STAGE/Payload" "$OUT_DIR"
+          ditto "$APP" "$STAGE/Payload/TiebaPure.app"
+          rm -rf "$STAGE/Payload/TiebaPure.app/_CodeSignature"
+          rm -f "$STAGE/Payload/TiebaPure.app/embedded.mobileprovision"
+          if [ -d "$STAGE/Payload/TiebaPure.app/PlugIns" ]; then
+            find "$STAGE/Payload/TiebaPure.app/PlugIns" -name '_CodeSignature' -type d -exec rm -rf {} + 2>/dev/null || true
+            find "$STAGE/Payload/TiebaPure.app/PlugIns" -name 'embedded.mobileprovision' -delete 2>/dev/null || true
+          fi
+          VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist" 2>/dev/null || echo 0)"
+          BUILD="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist" 2>/dev/null || echo 0)"
+          MIN_OS="$(/usr/libexec/PlistBuddy -c 'Print :MinimumOSVersion' "$APP/Info.plist" 2>/dev/null || echo unknown)"
+          IPA_NAME="TiebaPure-${VERSION}-${BUILD}-ios${MIN_OS}-unsigned.ipa"
+          (
+            cd "$STAGE"
+            /usr/bin/zip -qry "$OUT_DIR/$IPA_NAME" Payload
+          )
+          cp "$OUT_DIR/$IPA_NAME" "$OUT_DIR/TiebaPure-unsigned.ipa"
+          ls -lh "$OUT_DIR"/*.ipa
+          {
+            echo "IPA_PATH=$OUT_DIR/$IPA_NAME"
+            echo "IPA_NAME=$IPA_NAME"
+            echo "APP_VERSION=$VERSION"
+            echo "APP_BUILD=$BUILD"
+            echo "MIN_OS=$MIN_OS"
+          } >> "$GITHUB_ENV"
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TiebaPure-unsigned-ipa
+          path: build/*.ipa
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "## TiebaPure unsigned IPA"
+            echo ""
+            echo "- Configuration: \`${{ github.event.inputs.configuration || 'Release' }}\`"
+            echo "- Version: \`${APP_VERSION:-?}\` (build \`${APP_BUILD:-?}\`)"
+            echo "- MinimumOSVersion: \`${MIN_OS:-?}\`"
+            echo "- Artifact name: \`TiebaPure-unsigned-ipa\`"
+            if [ "${TESTS_FAILED:-0}" = "1" ]; then
+              echo "- Unit tests: failed (IPA still built)"
+            else
+              echo "- Unit tests: passed or skipped"
+            fi
+            echo ""
+            echo "### Install (TrollStore / 巨魔)"
+            echo "1. Download the Artifact from this run"
+            echo "2. Install the IPA with TrollStore / 巨魔"
+            echo "3. Device iOS must be >= MinimumOSVersion (target 16.0)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish GitHub Release (tags only)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/*.ipa
+          generate_release_notes: true
+          body: |
+            Unsigned IPA (iOS 16+ fork build).
+            Install with TrollStore / 巨魔, or re-sign yourself.

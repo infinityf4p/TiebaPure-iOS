@@ -92,8 +92,11 @@ private struct NativeNavigationPopGestureControl: UIViewControllerRepresentable 
             if let previousEdgeGestureState {
                 navigationController.interactivePopGestureRecognizer?.isEnabled = previousEdgeGestureState
             }
-            if #available(iOS 26.0, *), let previousContentGestureState {
-                navigationController.interactiveContentPopGestureRecognizer?.isEnabled = previousContentGestureState
+            if let previousContentGestureState {
+                Self.setContentPopGestureEnabled(
+                    on: navigationController,
+                    enabled: previousContentGestureState
+                )
             }
             controlledNavigationController = nil
             previousEdgeGestureState = nil
@@ -111,15 +114,43 @@ private struct NativeNavigationPopGestureControl: UIViewControllerRepresentable 
                 controlledNavigationController = navigationController
                 previousEdgeGestureState = navigationController
                     .interactivePopGestureRecognizer?.isEnabled
-                if #available(iOS 26.0, *) {
-                    previousContentGestureState = navigationController
-                        .interactiveContentPopGestureRecognizer?.isEnabled
-                }
+                previousContentGestureState = Self.contentPopGestureEnabled(
+                    on: navigationController
+                )
             }
             navigationController.interactivePopGestureRecognizer?.isEnabled = false
-            if #available(iOS 26.0, *) {
-                navigationController.interactiveContentPopGestureRecognizer?.isEnabled = false
+            Self.setContentPopGestureEnabled(on: navigationController, enabled: false)
+        }
+
+        /// iOS 26 adds `interactiveContentPopGestureRecognizer`. Access via KVC so
+        /// this file still compiles against the iOS 18 SDK used by Xcode 16.
+        private static func contentPopGestureEnabled(
+            on navigationController: UINavigationController
+        ) -> Bool? {
+            guard navigationController.responds(
+                to: Selector(("interactiveContentPopGestureRecognizer"))
+            ) else {
+                return nil
             }
+            let gesture = navigationController.value(
+                forKey: "interactiveContentPopGestureRecognizer"
+            ) as? UIGestureRecognizer
+            return gesture?.isEnabled
+        }
+
+        private static func setContentPopGestureEnabled(
+            on navigationController: UINavigationController,
+            enabled: Bool
+        ) {
+            guard navigationController.responds(
+                to: Selector(("interactiveContentPopGestureRecognizer"))
+            ) else {
+                return
+            }
+            let gesture = navigationController.value(
+                forKey: "interactiveContentPopGestureRecognizer"
+            ) as? UIGestureRecognizer
+            gesture?.isEnabled = enabled
         }
     }
 }

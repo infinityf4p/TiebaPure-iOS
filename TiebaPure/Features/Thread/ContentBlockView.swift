@@ -512,14 +512,30 @@ final class InlineContentTextView: UITextView {
         // changes, so the next apply() would compare equal against metrics
         // measured for the old font size. Drop the memoized state so it
         // re-measures.
-        registerForTraitChanges(
-            [UITraitPreferredContentSizeCategory.self, UITraitLegibilityWeight.self]
-        ) { (view: InlineContentTextView, _) in
-            view.appliedDisplayScale = 0
-            view.appliedRenderID = nil
-            view.cachedFittingText = nil
-            view.cachedFittingRenderID = nil
+        if #available(iOS 17.0, *) {
+            registerForTraitChanges(
+                [UITraitPreferredContentSizeCategory.self, UITraitLegibilityWeight.self]
+            ) { (view: InlineContentTextView, _) in
+                view.appliedDisplayScale = 0
+                view.appliedRenderID = nil
+                view.cachedFittingText = nil
+                view.cachedFittingRenderID = nil
+            }
+        } else {
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(handleContentSizeCategoryChange),
+                name: UIContentSizeCategory.didChangeNotification,
+                object: nil
+            )
         }
+    }
+
+    @objc private func handleContentSizeCategoryChange() {
+        appliedDisplayScale = 0
+        appliedRenderID = nil
+        cachedFittingText = nil
+        cachedFittingRenderID = nil
     }
 
     @available(*, unavailable)

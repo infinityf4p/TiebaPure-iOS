@@ -75,17 +75,17 @@ private struct OpenSourceLicenseView: View {
                         .textSelection(.enabled)
                 }
             } else {
-                ContentUnavailableView(
+                CompatibleContentUnavailableSimple(
                     "无法读取许可证",
                     systemImage: "doc.text",
-                    description: Text("可通过右上角按钮查看官方许可证。")
+                    description: "可通过右上角按钮查看官方许可证。"
                 )
             }
         }
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
                     openURL(fallbackURL)
                 } label: {

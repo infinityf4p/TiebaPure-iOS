@@ -319,7 +319,12 @@ final class VoicePlaybackCoordinator: ObservableObject {
 
     func handleInterruptionBegan(reason: AVAudioSession.InterruptionReason? = nil) {
         isAudioSessionInterrupted = true
-        let preventsAutomaticResume = reason == .routeDisconnected
+        let preventsAutomaticResume: Bool
+        if #available(iOS 17.0, *) {
+            preventsAutomaticResume = reason == .routeDisconnected
+        } else {
+            preventsAutomaticResume = false
+        }
         switch state.phase {
         case .loading:
             cancel()

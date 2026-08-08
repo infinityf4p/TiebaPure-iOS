@@ -3,7 +3,7 @@ options:
   minimumXcodeGenVersion: 2.45.0
   bundleIdPrefix: dev.infinityf4p
   deploymentTarget:
-    iOS: "18.0"
+    iOS: "16.0"
 packages:
   SwiftProtobuf:
     url: https://github.com/apple/swift-protobuf.git
@@ -11,7 +11,7 @@ packages:
 settings:
   base:
     SWIFT_VERSION: 5.9
-    IPHONEOS_DEPLOYMENT_TARGET: 18.0
+    IPHONEOS_DEPLOYMENT_TARGET: 16.0
 targets:
   TiebaPure:
     type: application
@@ -34,8 +34,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: dev.infinityf4p.tiebapure
         INFOPLIST_FILE: TiebaPure/Resources/Info.plist
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        MARKETING_VERSION: 1.4.4
-        CURRENT_PROJECT_VERSION: 48
+        MARKETING_VERSION: 1.4.5
+        CURRENT_PROJECT_VERSION: 49
   TiebaPureOpenIn:
     type: app-extension
     platform: iOS
@@ -54,8 +54,8 @@ targets:
         INFOPLIST_FILE: TiebaPureOpenIn/Info.plist
         APPLICATION_EXTENSION_API_ONLY: YES
         SKIP_INSTALL: YES
-        MARKETING_VERSION: 1.4.4
-        CURRENT_PROJECT_VERSION: 48
+        MARKETING_VERSION: 1.4.5
+        CURRENT_PROJECT_VERSION: 49
   TiebaPureTests:
     type: bundle.unit-test
     platform: iOS

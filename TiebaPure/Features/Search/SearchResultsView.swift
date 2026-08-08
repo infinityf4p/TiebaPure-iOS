@@ -1,4 +1,3 @@
-import SwiftData
 import SwiftUI
 
 enum SearchScope: Equatable {
@@ -97,7 +96,7 @@ struct SearchResultsView: View {
         .contentShape(Rectangle())
         .navigationTitle(scope.title)
         .navigationBarTitleDisplayMode(.inline)
-        .navigationDestination(isPresented: threadIsActive) {
+        .navigationDestinationCompat(isPresented: threadIsActive) {
             if let activeThread {
                 ThreadDetailView(
                     account: account,
@@ -110,7 +109,7 @@ struct SearchResultsView: View {
                 }
             }
         }
-        .navigationDestination(isPresented: forumIsActive) {
+        .navigationDestinationCompat(isPresented: forumIsActive) {
             if let activeForum {
                 ForumThreadsView(account: account, forum: activeForum)
                     .interactiveNavigationPopStateSync {
@@ -118,7 +117,7 @@ struct SearchResultsView: View {
                     }
             }
         }
-        .navigationDestination(isPresented: userIsActive) {
+        .navigationDestinationCompat(isPresented: userIsActive) {
             if let selectedUser {
                 UserProfileView(account: account, user: selectedUser)
                     .interactiveNavigationPopStateSync {
@@ -752,7 +751,6 @@ final class SearchHistoryStore: ObservableObject {
     private let defaults: UserDefaults
     private let key: String
     private let limit: Int
-    private let modelContext: ModelContext
     private let persistentBackendIsAvailable: Bool
     private let faultInjector: PersistenceFaultInjector
     @Published private(set) var items: [String]
@@ -761,33 +759,25 @@ final class SearchHistoryStore: ObservableObject {
     init(
         defaults: UserDefaults = .standard,
         key: String = "dev.infinityf4p.tiebapure.searchHistory",
-        limit: Int = SearchHistoryPolicy.maximumStoredEntries,
-        modelContainer: ModelContainer = AppModelContainer.shared,
+        limit: Int = 20,
         persistenceAvailability: PersistenceAvailability? = nil,
         faultInjector: PersistenceFaultInjector = .none
     ) {
-        let configuredLimit = min(max(limit, 0), SearchHistoryPolicy.maximumStoredEntries)
         self.defaults = defaults
         self.key = key
-        self.limit = configuredLimit
+        self.limit = max(limit, 0)
         self.faultInjector = faultInjector
-        let context = modelContainer.mainContext
-        modelContext = context
-        let initialAvailability = persistenceAvailability
-            ?? AppModelContainer.persistenceAvailability(for: modelContainer)
-        persistentBackendIsAvailable = initialAvailability.canPersist
-        self.persistenceAvailability = initialAvailability
-        let destinationIsDurable = initialAvailability.canPersist
-            && AppModelContainer.allowsLegacyCleanup(for: modelContainer)
+        let initial = persistenceAvailability ?? .available
+        persistentBackendIsAvailable = initial.canPersist
+        self.persistenceAvailability = initial
         var legacyFallback: [String]?
         var migrationFailed = false
         do {
             try Self.migrateLegacyStorage(
                 defaults: defaults,
                 key: key,
-                context: context,
-                limit: configuredLimit,
-                destinationIsDurable: destinationIsDurable,
+                limit: self.limit,
+                destinationIsDurable: initial.canPersist,
                 legacyFallback: &legacyFallback,
                 faultInjector: faultInjector
             )
@@ -798,8 +788,7 @@ final class SearchHistoryStore: ObservableObject {
         }
         do {
             let result = try Self.loadAndRepairItems(
-                context: context,
-                limit: configuredLimit,
+                limit: self.limit,
                 canRepair: persistentBackendIsAvailable,
                 faultInjector: faultInjector
             )
@@ -822,7 +811,6 @@ final class SearchHistoryStore: ObservableObject {
     func reload() -> Bool {
         do {
             let result = try Self.loadAndRepairItems(
-                context: modelContext,
                 limit: limit,
                 canRepair: persistentBackendIsAvailable,
                 faultInjector: faultInjector
@@ -844,37 +832,49 @@ final class SearchHistoryStore: ObservableObject {
 
     @discardableResult
     func record(_ keyword: String) -> Bool {
-        persist(SearchHistoryPolicy.adding(keyword, to: items, limit: limit))
+        let trimmed = keyword.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.isEmpty == false else { return false }
+        var updated = items.filter { Self.isSameKeyword($0, trimmed) == false }
+        updated.insert(trimmed, at: 0)
+        if updated.count > limit {
+            updated = Array(updated.prefix(limit))
+        }
+        return persist(updated)
     }
 
     @discardableResult
     func remove(_ keyword: String) -> Bool {
-        persist(SearchHistoryPolicy.removing(keyword, from: items))
+        let updated = items.filter { Self.isSameKeyword($0, keyword) == false }
+        guard updated.count != items.count else { return true }
+        return persist(updated)
     }
 
     @discardableResult
     func clear() -> Bool {
-        let succeeded = persist([])
-        if succeeded {
-            defaults.removeObject(forKey: key)
+        guard persistentBackendIsAvailable else {
+            persistenceAvailability = .unavailable
+            return false
         }
-        return succeeded
+        do {
+            try PersistedRecordStore.saveSearchHistory([])
+            defaults.removeObject(forKey: key)
+            items = []
+            markPersistenceSucceeded()
+            return true
+        } catch {
+            PersistenceDiagnostics.report(error, operation: "clear search history")
+            persistenceAvailability = .unavailable
+            return false
+        }
     }
 
-    @discardableResult
     private func persist(_ updated: [String]) -> Bool {
         guard persistentBackendIsAvailable else {
             persistenceAvailability = .unavailable
             return false
         }
         do {
-            try PersistedRecordStore.replaceAll(
-                SearchHistoryRecord.self,
-                with: updated.enumerated().map {
-                    SearchHistoryRecord(keyword: $0.element, sortIndex: $0.offset)
-                },
-                in: modelContext
-            )
+            try PersistedRecordStore.saveSearchHistory(updated)
             items = updated
             markPersistenceSucceeded()
             return true
@@ -890,31 +890,30 @@ final class SearchHistoryStore: ObservableObject {
         persistenceAvailability = .available
     }
 
+    private static func isSameKeyword(_ lhs: String, _ rhs: String) -> Bool {
+        lhs.compare(rhs, options: [.caseInsensitive, .widthInsensitive]) == .orderedSame
+    }
+
     private static func loadAndRepairItems(
-        context: ModelContext,
         limit: Int,
         canRepair: Bool,
         faultInjector: PersistenceFaultInjector = .none
     ) throws -> PersistenceLoadResult<[String]> {
-        let raw = try PersistedRecordStore.fetchOrdered(
-            SearchHistoryRecord.self,
-            in: context
-        ).map(\.keyword)
-        let sanitized = SearchHistoryPolicy.sanitized(
-            raw,
-            limit: limit
-        )
+        let raw = try PersistedRecordStore.loadSearchHistory()
+        var seen = Set<String>()
+        var sanitized: [String] = []
+        for item in raw {
+            let trimmed = item.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard trimmed.isEmpty == false else { continue }
+            let key = trimmed.lowercased()
+            guard seen.insert(key).inserted else { continue }
+            sanitized.append(trimmed)
+            if sanitized.count == limit { break }
+        }
         if canRepair, raw != sanitized {
             do {
-                try PersistedRecordStore.replaceAll(
-                    SearchHistoryRecord.self,
-                    with: sanitized.enumerated().map {
-                        SearchHistoryRecord(keyword: $0.element, sortIndex: $0.offset)
-                    },
-                    in: context
-                ) {
-                    try faultInjector.check(.repair)
-                }
+                try faultInjector.check(.repair)
+                try PersistedRecordStore.saveSearchHistory(sanitized)
             } catch {
                 return PersistenceLoadResult(value: sanitized, repairError: error)
             }
@@ -922,46 +921,45 @@ final class SearchHistoryStore: ObservableObject {
         return PersistenceLoadResult(value: sanitized, repairError: nil)
     }
 
-    // One-time import of the pre-SwiftData UserDefaults string array.
     private static func migrateLegacyStorage(
         defaults: UserDefaults,
         key: String,
-        context: ModelContext,
         limit: Int,
         destinationIsDurable: Bool,
         legacyFallback: inout [String]?,
         faultInjector: PersistenceFaultInjector
     ) throws {
-        guard defaults.object(forKey: key) != nil else { return }
-        let existing = try PersistedRecordStore.fetchOrdered(
-            SearchHistoryRecord.self,
-            in: context
-        ).map(\.keyword)
+        // legacy may be string array or data
+        let existing = try PersistedRecordStore.loadSearchHistory()
+        if existing.isEmpty == false { return }
         let source: [String]
-        if existing.isEmpty {
-            guard let legacy = defaults.stringArray(forKey: key) else {
-                throw LegacyStorageMigration.DecodeError.invalidTopLevelArray
-            }
-            source = SearchHistoryPolicy.sanitized(legacy, limit: limit)
-            legacyFallback = source
+        if let arr = defaults.stringArray(forKey: key) {
+            source = arr
+            legacyFallback = arr
+        } else if let data = defaults.data(forKey: key),
+                  let decoded = try? JSONDecoder().decode([String].self, from: data) {
+            source = decoded
+            legacyFallback = decoded
         } else {
-            source = existing
+            return
         }
-        let sanitized = SearchHistoryPolicy.sanitized(source, limit: limit)
+        var seen = Set<String>()
+        var sanitized: [String] = []
+        for item in source {
+            let trimmed = item.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard trimmed.isEmpty == false else { continue }
+            let id = trimmed.lowercased()
+            guard seen.insert(id).inserted else { continue }
+            sanitized.append(trimmed)
+            if sanitized.count == limit { break }
+        }
         try LegacyStorageMigration.persistThenRemoveLegacyValue(
             defaults: defaults,
             key: key,
             destinationIsDurable: destinationIsDurable
         ) {
-            try PersistedRecordStore.replaceAll(
-                SearchHistoryRecord.self,
-                with: sanitized.enumerated().map {
-                    SearchHistoryRecord(keyword: $0.element, sortIndex: $0.offset)
-                },
-                in: context
-            ) {
-                try faultInjector.check(.legacyMigration)
-            }
+            try faultInjector.check(.legacyMigration)
+            try PersistedRecordStore.saveSearchHistory(sanitized)
         }
     }
 }

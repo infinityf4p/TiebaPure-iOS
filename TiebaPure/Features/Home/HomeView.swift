@@ -41,7 +41,7 @@ struct HomeView: View {
                 // Regular width routes global search into the detail column so
                 // the feed list stays visible and drivable next to it.
                 placeholder
-                    .navigationDestination(isPresented: splitSearchIsActive) {
+                    .navigationDestinationCompat(isPresented: splitSearchIsActive) {
                         if let activeSearch {
                             SearchResultsView(account: account, scope: .global, initialKeyword: activeSearch.keyword)
                                 .interactiveNavigationPopStateSync {
@@ -75,7 +75,7 @@ struct HomeView: View {
         .navigationTitle("首页")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
                     activeSearch = SearchRoute(keyword: "")
                 } label: {
@@ -87,7 +87,7 @@ struct HomeView: View {
                 .accessibilityIdentifier("home-search-button")
             }
         }
-        .navigationDestination(isPresented: searchIsActive) {
+        .navigationDestinationCompat(isPresented: searchIsActive) {
             if let activeSearch {
                 SearchResultsView(account: account, scope: .global, initialKeyword: activeSearch.keyword)
                     .interactiveNavigationPopStateSync {
@@ -128,7 +128,7 @@ struct HomeView: View {
                 }
             }
         }
-        .navigationDestination(isPresented: selectedUserIsActive) {
+        .navigationDestinationCompat(isPresented: selectedUserIsActive) {
             if let selectedUser {
                 UserProfileView(account: account, user: selectedUser)
                     .interactiveNavigationPopStateSync {
@@ -405,7 +405,7 @@ struct HomeView: View {
             .frame(maxWidth: .infinity)
             .contentShape(Rectangle())
         }
-        .scrollBounceBehavior(.always, axes: .vertical)
+        .scrollBounceBehaviorAlwaysVertical()
         .accessibilityIdentifier("home-feed-scroll-view")
         .shortPullRefresh(
             isEnabled: didLoad && isLoading == false,

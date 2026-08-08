@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A16C0MPA7000000000000002 /* iOS16Compatibility.swift in Sources */ = {isa = PBXBuildFile; fileRef = A16C0MPA7000000000000001 /* iOS16Compatibility.swift */; };
 		03BFC1CB27519F2A9851619C /* ContentDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5A1C1C285AED2131947564A /* ContentDraft.swift */; };
 		06132F36C724DF5F6A7409D5 /* ThreadDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1626D4B0DD88E88576EBC2EB /* ThreadDetailView.swift */; };
 		07DE68396A13E2AD45D1B77F /* VoicePlaybackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 273C5E55B0D298678C72F894 /* VoicePlaybackTests.swift */; };
@@ -223,6 +224,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		A16C0MPA7000000000000001 /* iOS16Compatibility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iOS16Compatibility.swift; sourceTree = "<group>"; };
 		00339148CB9511CB5F6A624F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		0060EA54C03E209E46FB2C40 /* ForumThreadsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForumThreadsView.swift; sourceTree = "<group>"; };
 		034D76B7DA1D80733B718828 /* MediaPreviewHeroAnimator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaPreviewHeroAnimator.swift; sourceTree = "<group>"; };
@@ -421,6 +423,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		A16C0MPA7000000000000003 /* Compatibility */ = {
+			isa = PBXGroup;
+			children = (
+				A16C0MPA7000000000000001 /* iOS16Compatibility.swift */,
+			);
+			path = Compatibility;
+			sourceTree = "<group>";
+		};
 		04FC9D5FB2615BED7213A466 /* TiebaPure */ = {
 			isa = PBXGroup;
 			children = (
@@ -583,7 +593,8 @@
 				C565AEACE7A674D5A1835546 /* Protobuf */,
 				83CD19E2D26B92FC58D823F0 /* State */,
 				2416587850EC52A5464A0D2B /* UI */,
-			);
+			
+				A16C0MPA7000000000000003 /* Compatibility */,);
 			path = Core;
 			sourceTree = "<group>";
 		};
@@ -1025,6 +1036,7 @@
 				DEF7E4F5C3BB5C3AC25E89EF /* AppAppearance.swift in Sources */,
 				89331B1C9CEFD4999D01A906 /* AppEnvironment.swift in Sources */,
 				42DE9B83B9572D1EA986C997 /* AppPersistence.swift in Sources */,
+				A16C0MPA7000000000000002 /* iOS16Compatibility.swift in Sources */,
 				F91AF0FEAF078DC66EA3C184 /* AppPosInfo.pb.swift in Sources */,
 				C093E45405F12EC29B1F62B5 /* AuthSession.swift in Sources */,
 				B0A89B13400DEB2576E1A025 /* AvatarView.swift in Sources */,
@@ -1271,7 +1283,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1287,13 +1299,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 48;
+				CURRENT_PROJECT_VERSION = 49;
 				INFOPLIST_FILE = TiebaPure/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.4.4;
+				MARKETING_VERSION = 1.4.5;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.infinityf4p.tiebapure;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -1304,14 +1316,14 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
-				CURRENT_PROJECT_VERSION = 48;
+				CURRENT_PROJECT_VERSION = 49;
 				INFOPLIST_FILE = TiebaPureOpenIn/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.4.4;
+				MARKETING_VERSION = 1.4.5;
 				PRODUCT_BUNDLE_IDENTIFIER = "dev.infinityf4p.tiebapure.open-in";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -1357,14 +1369,14 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
-				CURRENT_PROJECT_VERSION = 48;
+				CURRENT_PROJECT_VERSION = 49;
 				INFOPLIST_FILE = TiebaPureOpenIn/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.4.4;
+				MARKETING_VERSION = 1.4.5;
 				PRODUCT_BUNDLE_IDENTIFIER = "dev.infinityf4p.tiebapure.open-in";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -1377,13 +1389,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 48;
+				CURRENT_PROJECT_VERSION = 49;
 				INFOPLIST_FILE = TiebaPure/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.4.4;
+				MARKETING_VERSION = 1.4.5;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.infinityf4p.tiebapure;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -1475,7 +1487,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
