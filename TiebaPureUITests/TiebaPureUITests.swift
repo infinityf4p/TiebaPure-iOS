@@ -4985,6 +4985,39 @@ final class TiebaPureUITests: XCTestCase {
         XCTAssertTrue(app.buttons["更多"].waitForExistence(timeout: 8))
     }
 
+    func testIPadLandscapeReaderListUsesAvailableWidth() throws {
+        guard UIDevice.current.userInterfaceIdiom == .pad else {
+            throw XCTSkip("仅在 iPad 设备矩阵中运行。")
+        }
+        let app = launchApp()
+        XCUIDevice.shared.orientation = .landscapeLeft
+        addTeardownBlock {
+            XCUIDevice.shared.orientation = .portrait
+        }
+
+        let landscape = XCTNSPredicateExpectation(
+            predicate: NSPredicate { object, _ in
+                guard let application = object as? XCUIApplication else { return false }
+                return application.frame.width > application.frame.height
+            },
+            object: app
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [landscape], timeout: 8), .completed)
+
+        let firstThreadRow = threadRows(in: app).firstMatch
+        XCTAssertTrue(firstThreadRow.waitForExistence(timeout: 8))
+        XCTAssertGreaterThanOrEqual(
+            firstThreadRow.frame.width,
+            app.frame.width * 0.35,
+            "iPad 横屏帖子行应使用足够的横向空间展示标题"
+        )
+        XCTAssertLessThan(
+            firstThreadRow.frame.maxX,
+            app.frame.midX,
+            "左侧帖子列表不能挤占右侧详情栏"
+        )
+    }
+
     func testIPadForumThreadOpensSharedDetailInsteadOfLeadingLocalStack() throws {
         guard UIDevice.current.userInterfaceIdiom == .pad else {
             throw XCTSkip("仅在 iPad 设备矩阵中运行。")

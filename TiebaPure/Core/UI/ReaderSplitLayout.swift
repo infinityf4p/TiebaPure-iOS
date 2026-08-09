@@ -37,10 +37,35 @@ private struct ReaderSplitOpenThreadKey: EnvironmentKey {
     static let defaultValue: ReaderSplitOpenThreadAction? = nil
 }
 
+private struct ReaderSplitListColumnKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
 extension EnvironmentValues {
     var readerSplitOpenThread: ReaderSplitOpenThreadAction? {
         get { self[ReaderSplitOpenThreadKey.self] }
         set { self[ReaderSplitOpenThreadKey.self] = newValue }
+    }
+
+    var isReaderSplitListColumn: Bool {
+        get { self[ReaderSplitListColumnKey.self] }
+        set { self[ReaderSplitListColumnKey.self] = newValue }
+    }
+}
+
+enum ReaderSplitColumnWidthPolicy {
+    private static let minimumListWidth: CGFloat = 320
+    private static let maximumListWidth: CGFloat = 560
+    private static let minimumDetailWidth: CGFloat = 440
+    private static let listFraction: CGFloat = 0.4
+
+    static func preferredWidth(containerWidth: CGFloat) -> CGFloat {
+        guard containerWidth.isFinite, containerWidth > 0 else { return 400 }
+        let maximumLeavingDetail = max(containerWidth - minimumDetailWidth, 0)
+        return min(
+            max(containerWidth * listFraction, minimumListWidth),
+            min(maximumListWidth, maximumLeavingDetail)
+        )
     }
 }
 
@@ -93,46 +118,60 @@ struct ReaderSplitLayout<Route: Hashable, ListColumn: View, DetailRoot: View>: V
 
     var body: some View {
         if horizontalSizeClass == .regular {
-            NavigationSplitView(columnVisibility: .constant(.doubleColumn)) {
-                NavigationStack(path: $navigationPath) {
-                    listColumn()
-                }
-                // The columns are fixed. A sidebar toggle could hide the list
-                // and strand the detail thread without a way back.
-                .toolbar(removing: .sidebarToggle)
-                .navigationSplitViewColumnWidth(min: 320, ideal: 400, max: 480)
-                .environment(
-                    \.readerSplitOpenThread,
-                    ReaderSplitOpenThreadAction(open: resolvedOpenThread)
+            GeometryReader { geometry in
+                let leadingColumnWidth = ReaderSplitColumnWidthPolicy.preferredWidth(
+                    containerWidth: geometry.size.width
                 )
-            } detail: {
-                NavigationStack(path: $detailPath) {
-                    detailRoot(ReaderSplitDetailPlaceholder())
-                        .navigationDestination(for: ReaderSplitThreadRoute.self) { route in
-                            ThreadDetailView(
-                                account: account,
-                                threadID: route.threadID,
-                                forumID: route.forumID,
-                                initialPostID: route.initialPostID,
-                                ownThreadDeletionTarget: route.ownThreadDeletionTarget
-                            )
-                            // Replacing the selection must never reuse the
-                            // previous thread's loaded state.
-                            .id(route)
-                        }
-                }
+
+                splitNavigation(leadingColumnWidth: leadingColumnWidth)
             }
-            .navigationSplitViewStyle(.balanced)
         } else {
+            compactNavigation
+        }
+    }
+
+    private func splitNavigation(leadingColumnWidth: CGFloat) -> some View {
+        NavigationSplitView(columnVisibility: .constant(.doubleColumn)) {
             NavigationStack(path: $navigationPath) {
                 listColumn()
             }
-            // A compact handler lets the parent keep ownership of a thread
-            // opened by a nested list (for example ForumThreadsView). This is
-            // what makes the same selection transferable when an iPad window
-            // crosses the compact/regular size-class boundary.
-            .environment(\.readerSplitOpenThread, compactOpenThreadAction)
+            // A sidebar toggle could hide the list and strand the detail
+            // thread without a way back.
+            .toolbar(removing: .sidebarToggle)
+            .navigationSplitViewColumnWidth(leadingColumnWidth)
+            .environment(\.isReaderSplitListColumn, true)
+            .environment(
+                \.readerSplitOpenThread,
+                ReaderSplitOpenThreadAction(open: resolvedOpenThread)
+            )
+        } detail: {
+            NavigationStack(path: $detailPath) {
+                detailRoot(ReaderSplitDetailPlaceholder())
+                    .navigationDestination(for: ReaderSplitThreadRoute.self) { route in
+                        ThreadDetailView(
+                            account: account,
+                            threadID: route.threadID,
+                            forumID: route.forumID,
+                            initialPostID: route.initialPostID,
+                            ownThreadDeletionTarget: route.ownThreadDeletionTarget
+                        )
+                        // Replacing the selection must never reuse the
+                        // previous thread's loaded state.
+                        .id(route)
+                    }
+            }
         }
+        .navigationSplitViewStyle(.balanced)
+    }
+
+    private var compactNavigation: some View {
+        NavigationStack(path: $navigationPath) {
+            listColumn()
+        }
+        // A compact handler lets the parent keep ownership of a thread opened
+        // by a nested list. The same selection remains transferable when the
+        // horizontal size class changes between compact and regular.
+        .environment(\.readerSplitOpenThread, compactOpenThreadAction)
     }
 
     private var resolvedOpenThread: (ReaderSplitThreadRoute) -> Void {

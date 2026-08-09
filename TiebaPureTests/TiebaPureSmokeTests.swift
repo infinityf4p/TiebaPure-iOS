@@ -4,6 +4,68 @@ import XCTest
 @testable import TiebaPure
 
 final class TiebaPureSmokeTests: XCTestCase {
+    func testReaderSplitColumnWidthUsesLandscapeSpaceWithoutStarvingDetail() {
+        XCTAssertEqual(
+            ReaderSplitColumnWidthPolicy.preferredWidth(
+                containerWidth: 1_366
+            ),
+            546.4,
+            accuracy: 0.01
+        )
+        XCTAssertEqual(
+            ReaderSplitColumnWidthPolicy.preferredWidth(
+                containerWidth: 1_194
+            ),
+            477.6,
+            accuracy: 0.01
+        )
+        XCTAssertGreaterThanOrEqual(
+            1_194 - ReaderSplitColumnWidthPolicy.preferredWidth(
+                containerWidth: 1_194
+            ),
+            440
+        )
+    }
+
+    func testReaderSplitColumnWidthChangesContinuouslyAndPreservesNarrowDetail() {
+        XCTAssertEqual(
+            ReaderSplitColumnWidthPolicy.preferredWidth(
+                containerWidth: 1_024
+            ),
+            409.6,
+            accuracy: 0.01
+        )
+        XCTAssertEqual(
+            ReaderSplitColumnWidthPolicy.preferredWidth(containerWidth: 700),
+            260,
+            accuracy: 0.01
+        )
+        XCTAssertEqual(
+            ReaderSplitColumnWidthPolicy.preferredWidth(containerWidth: 940)
+                - ReaderSplitColumnWidthPolicy.preferredWidth(containerWidth: 939),
+            0.4,
+            accuracy: 0.01
+        )
+        XCTAssertEqual(
+            ReaderSplitColumnWidthPolicy.preferredWidth(
+                containerWidth: 0
+            ),
+            400,
+            accuracy: 0.01
+        )
+    }
+
+    func testForumThreadRowShowsMoreTitleLinesOnlyInSplitList() {
+        XCTAssertEqual(
+            ForumThreadRowTextPolicy.primaryLineLimit(isReaderSplitListColumn: true),
+            3
+        )
+        XCTAssertEqual(
+            ForumThreadRowTextPolicy.primaryLineLimit(isReaderSplitListColumn: false),
+            ThreadContentDisplayPolicy.summaryLineLimit
+        )
+    }
+
     func testInteractionCountUsesRequestedSingleLineKAndWFormat() {
         XCTAssertEqual(CompactInteractionCountText.string(for: -1), "0")
         XCTAssertEqual(CompactInteractionCountText.string(for: 0), "0")

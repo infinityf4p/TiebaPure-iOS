@@ -74,6 +74,23 @@ jobs:
             -retry-tests-on-failure -test-iterations 2 \
             -test-repetition-relaunch-enabled YES
 
+      - name: Reset simulator for iPad layout test
+        run: |
+          source scripts/ci-simulator.sh
+          udid="$(ci_reset_simulator "$SIMULATOR_UDID" "$(ci_ipad_device_type)" 'TiebaPure CI iPad')"
+          test -n "$udid"
+          echo "SIMULATOR_UDID=$udid" >> "$GITHUB_ENV"
+
+      - name: iPad split layout smoke test
+        run: |
+          xcodebuild -project TiebaPure.xcodeproj -scheme TiebaPure \
+            -configuration Debug \
+            -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" \
+            -derivedDataPath "$DERIVED_DATA" \
+            -parallel-testing-enabled NO \
+            test \
+            -only-testing:TiebaPureUITests/TiebaPureUITests/testIPadLandscapeReaderListUsesAvailableWidth
+
       - name: Release build and bundled notices
         run: |
           xcodebuild -project TiebaPure.xcodeproj -scheme TiebaPure \

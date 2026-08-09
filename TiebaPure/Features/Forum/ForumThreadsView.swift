@@ -984,6 +984,8 @@ enum ForumSearchLaunchPolicy {
 }
 
 struct ForumThreadRow: View {
+    @Environment(\.isReaderSplitListColumn) private var isReaderSplitListColumn
+
     enum Presentation {
         case list
         case homeFeed
@@ -1160,13 +1162,13 @@ struct ForumThreadRow: View {
                         text: thread.title,
                         keyword: highlightKeyword,
                         font: .body.weight(.semibold),
-                        lineLimit: ThreadContentDisplayPolicy.summaryLineLimit
+                        lineLimit: primaryTextLineLimit
                     )
                 } else if inlinePreviewBlocks.isEmpty == false {
                     InlineContentText(
                         blocks: inlinePreviewBlocks,
                         style: .body,
-                        lineLimit: ThreadContentDisplayPolicy.summaryLineLimit,
+                        lineLimit: primaryTextLineLimit,
                         highlightKeyword: highlightKeyword,
                         allowsLinkInteraction: false
                     )
@@ -1276,6 +1278,12 @@ struct ForumThreadRow: View {
         }
     }
 
+    private var primaryTextLineLimit: Int {
+        ForumThreadRowTextPolicy.primaryLineLimit(
+            isReaderSplitListColumn: isReaderSplitListColumn
+        )
+    }
+
     private func mediaPreviewItems(from mediaItems: [ReaderMediaItem]) -> [ReaderMediaItem] {
         guard let limit = presentation.mediaLimit(totalCount: mediaItems.count) else {
             return mediaItems
@@ -1289,6 +1297,12 @@ struct ForumThreadRow: View {
 
     private var forumBlockDisplayName: String {
         thread.forumDisplayNameResolved ?? "该吧"
+    }
+}
+
+enum ForumThreadRowTextPolicy {
+    static func primaryLineLimit(isReaderSplitListColumn: Bool) -> Int {
+        isReaderSplitListColumn ? 3 : ThreadContentDisplayPolicy.summaryLineLimit
     }
 }
 
