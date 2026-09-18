@@ -2770,25 +2770,6 @@ final class TiebaPureSmokeTests: XCTestCase {
         XCTAssertFalse(HomeRefreshAnimationPolicy.disablesUITestAnimations(arguments: []))
     }
 
-    func testHomeTabRefreshRevealsInlineAnimationAtTop() {
-        XCTAssertTrue(HomeRefreshRevealPolicy.shouldScrollToTop(
-            trigger: .tabTap,
-            hasExistingContent: true
-        ))
-        XCTAssertFalse(HomeRefreshRevealPolicy.shouldScrollToTop(
-            trigger: .pullToRefresh,
-            hasExistingContent: true
-        ))
-        XCTAssertFalse(HomeRefreshRevealPolicy.shouldScrollToTop(
-            trigger: .appOpen,
-            hasExistingContent: true
-        ))
-        XCTAssertFalse(HomeRefreshRevealPolicy.shouldScrollToTop(
-            trigger: .tabTap,
-            hasExistingContent: false
-        ))
-    }
-
     func testShortPullRefreshRequiresTopAndVertical80PointPull() {
         XCTAssertEqual(
             ShortPullRefreshPolicy.distanceFromTop(contentOffsetY: -59, topInset: 59),

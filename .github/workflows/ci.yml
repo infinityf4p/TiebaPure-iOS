@@ -77,6 +77,10 @@ jobs:
             -parallel-testing-enabled NO \
             test \
             -only-testing:TiebaPureUITests/TiebaPureUITests/testLaunchShowsHomeWithoutLoginAndRootTabs \
+            -only-testing:TiebaPureUITests/TiebaPureUITests/testHomeTabReselectWithNormalAnimations \
+            -only-testing:TiebaPureUITests/TiebaPureUITests/testHomeTabReselectFromDetailOnlyReturnsToFeed \
+            -only-testing:TiebaPureUITests/TiebaPureUITests/testHomeTabReselectFromSearchOnlyReturnsToFeed \
+            -only-testing:TiebaPureUITests/TiebaPureUITests/testHomeTabReselectDuringInFlightRefreshReturnsToTop \
             -only-testing:TiebaPureUITests/TiebaPureUITests/testSearchResultRoutesToMatchedReply \
             -only-testing:TiebaPureUITests/TiebaPureUITests/testForumLatestMenuSwitchesReplyPublishAndFeaturedCategories \
             -only-testing:TiebaPureUITests/TiebaPureUITests/testLoggedInUserCanToggleProfileFollowState \

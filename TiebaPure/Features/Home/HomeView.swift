@@ -5,7 +5,6 @@ struct HomeView: View {
     @EnvironmentObject private var environment: AppEnvironment
     @EnvironmentObject private var contentSubmissionSettingsStore: ContentSubmissionSettingsStore
     @Environment(\.scenePhase) private var scenePhase
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.readingPreferences) private var readingPreferences
     let account: Account?
@@ -58,6 +57,21 @@ struct HomeView: View {
         .onChange(of: horizontalSizeClass) { sizeClass in
             foldNavigationForSizeClassChange(to: sizeClass)
         }
+        .onChange(of: refreshToken) { _ in
+            // Observe outside the feed's navigation destination so reselecting
+            // Home also works while a detail or search view covers the list.
+            if navigationPath.isEmpty == false || activeSearch != nil
+                || splitDetailPath.isEmpty == false {
+                navigationPath = []
+                activeSearch = nil
+                splitDetailPath = []
+                return
+            }
+            // Returning to the top must still work during an existing refresh;
+            // the refresh modifier separately coalesces duplicate requests.
+            scrollToTopRequest &+= 1
+            programmaticRefreshToken &+= 1
+        }
         .alert("提示", isPresented: likeActionErrorIsPresented) {
             Button("好", role: .cancel) { likeActionError = nil }
         } message: {
@@ -71,12 +85,13 @@ struct HomeView: View {
                 feedContent
             }
             .onChange(of: scrollToTopRequest) { _ in
-                if reduceMotion || disablesUITestAnimations {
+                // Feed changes during an animated scroll-to-top can make the
+                // lazy layout update endlessly on iOS 26. Finish the jump in
+                // a transaction that cannot inherit the refresh animation.
+                var transaction = Transaction(animation: nil)
+                transaction.disablesAnimations = true
+                withTransaction(transaction) {
                     scrollProxy.scrollTo(HomeScrollTarget.top, anchor: .top)
-                } else {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        scrollProxy.scrollTo(HomeScrollTarget.top, anchor: .top)
-                    }
                 }
             }
         }
@@ -162,21 +177,7 @@ struct HomeView: View {
         .interactiveNavigationPopRevealSource()
         .task {
             guard didLoad == false else { return }
-            await reload(trigger: .initial)
-        }
-        .onChange(of: refreshToken) { _ in
-            // Tab re-tap while pushed pops to root instead of refreshing
-            // the covered feed, matching the iOS tab-reselect convention. In
-            // the split layout the detail selection likewise clears back to
-            // the placeholder without reloading.
-            if navigationPath.isEmpty == false || activeSearch != nil
-                || splitDetailPath.isEmpty == false {
-                navigationPath = []
-                activeSearch = nil
-                splitDetailPath = []
-                return
-            }
-            programmaticRefreshToken &+= 1
+            await reload()
         }
         .onChange(of: account?.sessionIdentity) { _ in
             cancelHomeLikeTasks()
@@ -192,7 +193,7 @@ struct HomeView: View {
             errorMessage = nil
             navigationPath = []
             splitDetailPath = []
-            Task { await reload(trigger: .initial) }
+            Task { await reload() }
         }
         .onChange(of: blocklistStore.entries) { _ in
             threads.removeAll { TiebaContentFilter.shouldKeep(thread: $0) == false }
@@ -207,7 +208,7 @@ struct HomeView: View {
             ) else {
                 return
             }
-            Task { await reload(trigger: .appOpen) }
+            Task { await reload() }
         }
         .onDisappear {
             loadTask?.cancel()
@@ -332,7 +333,7 @@ struct HomeView: View {
             ReaderStateView.loading("正在加载帖子")
         } else if let errorMessage, threads.isEmpty {
             ReaderStateView.error(message: errorMessage) {
-                Task { await reload(trigger: .retry) }
+                Task { await reload() }
             }
             .frame(maxWidth: .infinity)
             .padding(.top, TiebaPureTheme.Spacing.lg)
@@ -420,7 +421,7 @@ struct HomeView: View {
                 if let errorMessage {
                     InlineLoadErrorView(message: errorMessage) {
                         Task {
-                            if page <= 1 { await reload(trigger: .retry) }
+                            if page <= 1 { await reload() }
                             else {
                                 self.errorMessage = nil
                                 await loadMore()
@@ -551,20 +552,12 @@ struct HomeView: View {
             if source == .pullGesture {
                 guard isLoading == false else { return }
             }
-            await reload(
-                trigger: source == .programmatic ? .tabTap : .pullToRefresh
-            )
+            await reload()
         }
         .background(TiebaPureTheme.ColorToken.readerGroupedBackground)
     }
 
-    private func reload(trigger: HomeRefreshTrigger) async {
-        if HomeRefreshRevealPolicy.shouldScrollToTop(
-            trigger: trigger,
-            hasExistingContent: threads.isEmpty == false
-        ) {
-            scrollToTopRequest += 1
-        }
+    private func reload() async {
         loadTask?.cancel()
         requestGeneration += 1
         let generation = requestGeneration
@@ -575,12 +568,6 @@ struct HomeView: View {
         hasMore = true
         errorMessage = nil
         await loadMore(generation: generation)
-    }
-
-    private var disablesUITestAnimations: Bool {
-        HomeRefreshAnimationPolicy.disablesUITestAnimations(
-            arguments: ProcessInfo.processInfo.arguments
-        )
     }
 
     private func loadMore() async {
@@ -694,14 +681,6 @@ struct HomeView: View {
     }
 }
 
-enum HomeRefreshTrigger {
-    case initial
-    case retry
-    case pullToRefresh
-    case tabTap
-    case appOpen
-}
-
 enum HomeRefreshAnimationPolicy {
     static var minimumVisibleDurationNanoseconds: UInt64 {
         minimumVisibleDurationNanoseconds(arguments: ProcessInfo.processInfo.arguments)
@@ -727,12 +706,6 @@ enum HomeRefreshAnimationPolicy {
 
     static func remainingVisibleDurationNanoseconds(minimum: UInt64, elapsed: UInt64) -> UInt64 {
         minimum > elapsed ? minimum - elapsed : 0
-    }
-}
-
-enum HomeRefreshRevealPolicy {
-    static func shouldScrollToTop(trigger: HomeRefreshTrigger, hasExistingContent: Bool) -> Bool {
-        hasExistingContent && trigger == .tabTap
     }
 }
 

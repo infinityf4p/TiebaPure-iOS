@@ -1815,6 +1815,81 @@ final class TiebaPureUITests: XCTestCase {
         }
     }
 
+    func testHomeTabReselectWithNormalAnimations() {
+        let app = launchApp(scenario: "refreshUpdate", disableAnimations: false)
+        let scrollView = app.scrollViews["home-feed-scroll-view"]
+        XCTAssertTrue(threadRows(in: app).firstMatch.waitForExistence(timeout: 20))
+        let homeTabCoordinate = rootTabCoordinate("首页", in: app)
+        for cycle in 1...5 {
+            scrollView.swipeUp()
+            scrollView.swipeUp()
+            homeTabCoordinate.tap()
+            let refreshedTitle = app.buttons["下拉刷新已更新"]
+            XCTAssertTrue(refreshedTitle.waitForExistence(timeout: 5))
+            XCTAssertTrue(waitForHittable(refreshedTitle, expected: true, timeout: 5), "第\(cycle)次点击首页后应回到新内容")
+            XCTAssertTrue(app.descendants(matching: .any)["home-refresh-animation"].waitForNonExistence(timeout: 5))
+            let firstRow = threadRows(in: app).firstMatch
+            guard let frame = waitForStableFrame(of: firstRow) else {
+                return XCTFail("刷新后的首行位置未稳定")
+            }
+            XCTAssertEqual(frame.minY, app.navigationBars["首页"].frame.maxY, accuracy: 24)
+        }
+    }
+
+    func testHomeTabReselectFromDetailOnlyReturnsToFeed() {
+        let app = launchApp(scenario: "refreshUpdate", disableAnimations: false)
+        XCTAssertTrue(threadRows(in: app).firstMatch.waitForExistence(timeout: 20))
+        let homeTabCoordinate = rootTabCoordinate("首页", in: app)
+        openFirstThread(in: app)
+        homeTabCoordinate.tap()
+        XCTAssertTrue(app.scrollViews["thread-detail-scroll-view"].waitForNonExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["首页"].waitForExistence(timeout: 5), "点击首页应退出帖子详情")
+        XCTAssertFalse(app.buttons["下拉刷新已更新"].waitForExistence(timeout: 2), "第一次点击只返回列表，不应同时刷新")
+        homeTabCoordinate.tap()
+        XCTAssertTrue(app.buttons["下拉刷新已更新"].waitForExistence(timeout: 5), "返回列表后再点首页应刷新")
+    }
+
+    func testHomeTabReselectDuringInFlightRefreshReturnsToTop() {
+        let app = launchApp(
+            scenario: "slowHomeRefresh",
+            disableAnimations: false
+        )
+        let firstTitle = app.buttons["确定性主帖：回复筛选与媒体布局"]
+        XCTAssertTrue(firstTitle.waitForExistence(timeout: 25))
+        let tabCoordinate = rootTabCoordinate("首页", in: app)
+        tabCoordinate.tap()
+        let indicator = app.descendants(matching: .any)["home-refresh-animation"]
+        XCTAssertTrue(indicator.waitForExistence(timeout: 2))
+        let scrollView = app.scrollViews["home-feed-scroll-view"]
+        scrollView.swipeUp()
+        scrollView.swipeUp()
+        XCTAssertFalse(firstTitle.isHittable, "应先滚离列表顶部")
+        XCTAssertTrue(indicator.exists, "复现必须发生在请求仍未结束时")
+        tabCoordinate.tap()
+        XCTAssertTrue(waitForHittable(firstTitle, expected: true, timeout: 2), "刷新进行中再点首页，也应返回顶部")
+        XCTAssertTrue(app.buttons["下拉刷新已更新"].waitForExistence(timeout: 25))
+        XCTAssertTrue(indicator.waitForNonExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["重复的首页刷新请求"].exists, "连续点击应共用进行中的刷新请求")
+    }
+
+    func testHomeTabReselectFromSearchOnlyReturnsToFeed() {
+        let app = launchApp(scenario: "refreshUpdate", disableAnimations: false)
+        XCTAssertTrue(threadRows(in: app).firstMatch.waitForExistence(timeout: 20))
+        let homeTabCoordinate = rootTabCoordinate("首页", in: app)
+        app.buttons["home-search-button"].tap()
+        XCTAssertTrue(app.navigationBars["搜索"].waitForExistence(timeout: 5))
+        let searchField = app.textFields["search-input"]
+        XCTAssertTrue(searchField.waitForExistence(timeout: 5))
+        searchField.typeText("首页刷新\n")
+        XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 5))
+        homeTabCoordinate.tap()
+        XCTAssertTrue(app.navigationBars["搜索"].waitForNonExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["首页"].exists)
+        XCTAssertFalse(app.buttons["下拉刷新已更新"].waitForExistence(timeout: 2))
+        homeTabCoordinate.tap()
+        XCTAssertTrue(app.buttons["下拉刷新已更新"].waitForExistence(timeout: 5))
+    }
+
     func testHomeTabReselectAfterScrollingRefreshesContent() {
         let app = launchApp(
             scenario: "refreshUpdate",
@@ -6123,6 +6198,17 @@ final class TiebaPureUITests: XCTestCase {
         XCTAssertTrue(waitForHittable(forumRow, expected: true, timeout: 5))
         forumRow.tap()
         XCTAssertTrue(app.navigationBars["测试吧"].waitForExistence(timeout: 8))
+    }
+
+    private func rootTabCoordinate(_ label: String, in app: XCUIApplication) -> XCUICoordinate {
+        // Capture on the root screen: a pushed screen can have a back button
+        // with the same label, and search initially covers the tab with a keyboard.
+        let tabFrame = rootTab(label, in: app).frame
+        let appFrame = app.frame
+        return app.coordinate(withNormalizedOffset: CGVector(
+            dx: (tabFrame.midX - appFrame.minX) / appFrame.width,
+            dy: (tabFrame.midY - appFrame.minY) / appFrame.height
+        ))
     }
 
     private func rootTab(_ label: String, in app: XCUIApplication) -> XCUIElement {

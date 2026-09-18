@@ -1,7 +1,51 @@
 import XCTest
+import UIKit
 @testable import TiebaPure
 
 final class HomeNavigationTests: XCTestCase {
+    @MainActor
+    func testHomeReselectIsHandledBeforeNativeNavigationCanChange() {
+        let tabBar = UITabBarController()
+        let home = UIViewController()
+        let forums = UIViewController()
+        tabBar.viewControllers = [home, forums]
+        tabBar.selectedViewController = home
+        let nativeDelegate = RecordingTabDelegate()
+        tabBar.delegate = nativeDelegate
+        var reselectCount = 0
+        let observer = TabSelectionObserver.Coordinator { reselectCount += 1 }
+        observer.attach(to: tabBar)
+
+        XCTAssertFalse(observer.tabBarController(tabBar, shouldSelect: home))
+        XCTAssertEqual(reselectCount, 1, "Handle the tap synchronously before navigation changes")
+        XCTAssertEqual(nativeDelegate.selectionCount, 0, "Native reselection must not also pop or scroll")
+        XCTAssertTrue(tabBar.selectedViewController === home)
+    }
+
+    @MainActor
+    func testSwitchingTabsPreservesNativeSelectionAndVeto() {
+        let tabBar = UITabBarController()
+        let home = UIViewController()
+        let forums = UIViewController()
+        tabBar.viewControllers = [home, forums]
+        tabBar.selectedViewController = forums
+        let nativeDelegate = RecordingTabDelegate()
+        tabBar.delegate = nativeDelegate
+        var reselectCount = 0
+        let observer = TabSelectionObserver.Coordinator { reselectCount += 1 }
+        observer.attach(to: tabBar)
+
+        XCTAssertTrue(observer.tabBarController(tabBar, shouldSelect: home))
+        nativeDelegate.permitsSelection = false
+        XCTAssertFalse(observer.tabBarController(tabBar, shouldSelect: home))
+        XCTAssertEqual(nativeDelegate.selectionCount, 2)
+        XCTAssertEqual(reselectCount, 0, "Returning from another tab must not refresh Home")
+        observer.tabBarController(tabBar, didSelect: home)
+        XCTAssertTrue(nativeDelegate.lastSelectedController === home)
+        observer.detach()
+        XCTAssertTrue(tabBar.delegate === nativeDelegate)
+    }
+
     func testBackFromForumThreadKeepsForumAsCurrentRoute() {
         let threadA = ReaderSplitThreadRoute(threadID: 101, forumID: 7)
         let threadB = ReaderSplitThreadRoute(threadID: 202, forumID: 7)
@@ -80,5 +124,21 @@ final class HomeNavigationTests: XCTestCase {
             ),
             .parentReader
         )
+    }
+}
+
+@MainActor
+private final class RecordingTabDelegate: NSObject, UITabBarControllerDelegate {
+    var permitsSelection = true
+    var selectionCount = 0
+    var lastSelectedController: UIViewController?
+
+    func tabBarController(_ tabBarController: UITabBarController, shouldSelect viewController: UIViewController) -> Bool {
+        selectionCount += 1
+        return permitsSelection
+    }
+
+    func tabBarController(_ tabBarController: UITabBarController, didSelect viewController: UIViewController) {
+        lastSelectedController = viewController
     }
 }

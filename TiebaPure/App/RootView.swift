@@ -361,7 +361,7 @@ enum RootTab: Hashable {
     case me
 }
 
-private struct TabSelectionObserver: UIViewControllerRepresentable {
+struct TabSelectionObserver: UIViewControllerRepresentable {
     let onReselectHome: () -> Void
 
     func makeCoordinator() -> Coordinator {
@@ -478,18 +478,18 @@ private struct TabSelectionObserver: UIViewControllerRepresentable {
             _ tabBarController: UITabBarController,
             shouldSelect viewController: UIViewController
         ) -> Bool {
-            let permitsSelection = previousDelegate?.tabBarController?(
+            if tabBarController.selectedViewController === viewController,
+               tabBarController.viewControllers?.first === viewController {
+                // Home owns both returning to its root and refreshing. Letting
+                // UIKit reselect first can pop the navigation path before the
+                // SwiftUI callback decides which action the user requested.
+                onReselectHome()
+                return false
+            }
+            return previousDelegate?.tabBarController?(
                 tabBarController,
                 shouldSelect: viewController
             ) ?? true
-            guard permitsSelection else { return false }
-
-            if tabBarController.selectedViewController === viewController,
-               tabBarController.viewControllers?.first === viewController {
-                let callback = onReselectHome
-                DispatchQueue.main.async(execute: callback)
-            }
-            return true
         }
 
         func tabBarController(

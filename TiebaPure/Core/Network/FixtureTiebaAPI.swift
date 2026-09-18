@@ -5,6 +5,7 @@ enum FixtureScenario: String {
     case success
     case refreshUpdate
     case slowPaginationRefresh
+    case slowHomeRefresh
     case emptyThenSuccess
     case empty
     case error
@@ -53,6 +54,17 @@ struct FixtureTiebaAPI: TiebaAPIService {
     func personalizedThreads(account: Account?, page: Int, loadType: Int) async throws -> [ThreadSummary] {
         try await prepare(page: page)
         guard scenario != .empty else { return [] }
+        if scenario == .slowHomeRefresh, page == 1 {
+            let requestNumber = await state.nextPersonalizedPageOneRequestNumber()
+            guard requestNumber > 1 else { return Self.threads }
+            if requestNumber == 2 {
+                try await Task.sleep(nanoseconds: 20_000_000_000)
+                return [Self.refreshedThread]
+            }
+            var duplicate = Self.refreshedThread
+            duplicate.title = "重复的首页刷新请求"
+            return [duplicate]
+        }
         if scenario == .slowPaginationRefresh, page > 1 {
             try await Task.sleep(nanoseconds: 10_000_000_000)
         }
