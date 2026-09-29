@@ -8,6 +8,12 @@ struct HomeView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.readingPreferences) private var readingPreferences
     let account: Account?
+    /// Single tap on the Home tab: collapse any detail/search back to the feed
+    /// root without refreshing.
+    var returnToRootToken: Int = 0
+    /// Double tap on the Home tab: return to the feed root and scroll to top.
+    var scrollToTopToken: Int = 0
+    /// Long press on the Home tab: return to the feed root and refresh.
     var refreshToken: Int = 0
 
     @ObservedObject private var blocklistStore = BlocklistStore.shared
@@ -57,18 +63,20 @@ struct HomeView: View {
         .onChange(of: horizontalSizeClass) { sizeClass in
             foldNavigationForSizeClassChange(to: sizeClass)
         }
+        .onChange(of: returnToRootToken) { _ in
+            // Single tap: collapse any pushed detail/search back to the feed
+            // root without refreshing. Already at the root feed -> no-op.
+            collapseHomeNavigation()
+        }
+        .onChange(of: scrollToTopToken) { _ in
+            // Double tap: return to the feed root and scroll to top, no
+            // refresh so the user can re-read what is already loaded.
+            collapseHomeNavigation()
+            scrollToTopRequest &+= 1
+        }
         .onChange(of: refreshToken) { _ in
-            // Observe outside the feed's navigation destination so reselecting
-            // Home also works while a detail or search view covers the list.
-            if navigationPath.isEmpty == false || activeSearch != nil
-                || splitDetailPath.isEmpty == false {
-                navigationPath = []
-                activeSearch = nil
-                splitDetailPath = []
-                return
-            }
-            // Returning to the top must still work during an existing refresh;
-            // the refresh modifier separately coalesces duplicate requests.
+            // Long press: return to the feed root, scroll to top, then refresh.
+            collapseHomeNavigation()
             scrollToTopRequest &+= 1
             programmaticRefreshToken &+= 1
         }
@@ -245,6 +253,14 @@ struct HomeView: View {
                 }
             }
         )
+    }
+
+    private func collapseHomeNavigation() {
+        guard navigationPath.isEmpty == false || activeSearch != nil
+            || splitDetailPath.isEmpty == false else { return }
+        navigationPath = []
+        activeSearch = nil
+        splitDetailPath = []
     }
 
     private func removeNavigationRouteIfCurrent(_ route: HomeNavigationRoute) {

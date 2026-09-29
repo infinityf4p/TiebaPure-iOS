@@ -4,7 +4,7 @@ import UIKit
 
 final class HomeNavigationTests: XCTestCase {
     @MainActor
-    func testHomeReselectIsHandledBeforeNativeNavigationCanChange() {
+    func testHomeReselectIsVetoedWithoutRoutingAnAction() {
         let tabBar = UITabBarController()
         let home = UIViewController()
         let forums = UIViewController()
@@ -12,14 +12,42 @@ final class HomeNavigationTests: XCTestCase {
         tabBar.selectedViewController = home
         let nativeDelegate = RecordingTabDelegate()
         tabBar.delegate = nativeDelegate
-        var reselectCount = 0
-        let observer = TabSelectionObserver.Coordinator { reselectCount += 1 }
+        var singleCount = 0
+        var doubleCount = 0
+        var longPressCount = 0
+        let observer = TabSelectionObserver.Coordinator(
+            onHomeSingleTap: { singleCount += 1 },
+            onHomeDoubleTap: { doubleCount += 1 },
+            onHomeLongPress: { longPressCount += 1 }
+        )
         observer.attach(to: tabBar)
 
+        // A reselect of the already-selected Home tab is rejected locally (so
+        // UIKit cannot also pop/scroll), but it must not itself route refresh
+        // or scroll actions — those are delivered by the gesture recognizers.
         XCTAssertFalse(observer.tabBarController(tabBar, shouldSelect: home))
-        XCTAssertEqual(reselectCount, 1, "Handle the tap synchronously before navigation changes")
-        XCTAssertEqual(nativeDelegate.selectionCount, 0, "Native reselection must not also pop or scroll")
+        XCTAssertEqual(singleCount, 0)
+        XCTAssertEqual(doubleCount, 0)
+        XCTAssertEqual(longPressCount, 0)
+        XCTAssertEqual(nativeDelegate.selectionCount, 0)
         XCTAssertTrue(tabBar.selectedViewController === home)
+    }
+
+    @MainActor
+    func testMultiTouchCallbacksAreDeliveredInOrder() {
+        let observer = TabSelectionObserver.Coordinator(
+            onHomeSingleTap: {},
+            onHomeDoubleTap: {},
+            onHomeLongPress: {}
+        )
+        var order: [String] = []
+        observer.onHomeSingleTap = { order.append("single") }
+        observer.onHomeDoubleTap = { order.append("double") }
+        observer.onHomeLongPress = { order.append("long") }
+        observer.onHomeSingleTap()
+        observer.onHomeLongPress()
+        observer.onHomeDoubleTap()
+        XCTAssertEqual(order, ["single", "long", "double"])
     }
 
     @MainActor
@@ -31,15 +59,19 @@ final class HomeNavigationTests: XCTestCase {
         tabBar.selectedViewController = forums
         let nativeDelegate = RecordingTabDelegate()
         tabBar.delegate = nativeDelegate
-        var reselectCount = 0
-        let observer = TabSelectionObserver.Coordinator { reselectCount += 1 }
+        var singleCount = 0
+        let observer = TabSelectionObserver.Coordinator(
+            onHomeSingleTap: { singleCount += 1 },
+            onHomeDoubleTap: {},
+            onHomeLongPress: {}
+        )
         observer.attach(to: tabBar)
 
         XCTAssertTrue(observer.tabBarController(tabBar, shouldSelect: home))
         nativeDelegate.permitsSelection = false
         XCTAssertFalse(observer.tabBarController(tabBar, shouldSelect: home))
         XCTAssertEqual(nativeDelegate.selectionCount, 2)
-        XCTAssertEqual(reselectCount, 0, "Returning from another tab must not refresh Home")
+        XCTAssertEqual(singleCount, 0, "Returning from another tab must not route a Home action")
         observer.tabBarController(tabBar, didSelect: home)
         XCTAssertTrue(nativeDelegate.lastSelectedController === home)
         observer.detach()
