@@ -1,6 +1,7 @@
 import Security
 import SwiftUI
 import ImageIO
+import UIKit
 import XCTest
 @testable import TiebaPure
 
@@ -188,9 +189,22 @@ final class TiebaPureSmokeTests: XCTestCase {
         )
     }
 
-    func testInlineContentTextOnlyMeasuresGlyphOutlinesForCombiningMarks() {
-        XCTAssertFalse(InlineContentTextLayout.requiresGlyphOutlineMeasurement("普通中文回复"))
-        XCTAssertTrue(InlineContentTextLayout.requiresGlyphOutlineMeasurement("a\u{0301}"))
+    func testTextContainerInsetsGuaranteeFirstNameHeadroom() {
+        // Top inset always keeps a flat point floor for the first line's ink,
+        // on top of the scale-aware raster guard, so the heading cannot be
+        // clipped even when CoreText reports no measurable ascent overflow.
+        let scale = CGFloat(3)
+        let insets = InlineContentTextLayout.textContainerInsets(
+            for: NSAttributedString(string: "普通中文回复", attributes: [
+                .font: UIFont.preferredFont(forTextStyle: .callout)
+            ]),
+            displayScale: scale
+        )
+        let bottomGuard = 1 + 2 / scale
+        XCTAssertEqual(insets.top, 3 + bottomGuard, accuracy: 0.02)
+        XCTAssertEqual(insets.bottom, bottomGuard, accuracy: 0.02)
+        XCTAssertEqual(insets.left, 0)
+        XCTAssertEqual(insets.right, 0)
     }
 
     func testThreadPaginationContinuesAfterServerLocatedPostPage() {

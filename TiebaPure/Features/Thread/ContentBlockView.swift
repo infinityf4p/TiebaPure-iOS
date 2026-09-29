@@ -1562,36 +1562,26 @@ enum InlineContentTextLayout {
         let fractionalBaselineGuard: CGFloat = 1
         let physicalPixel = 1 / scale
         let rasterizationGuard = fractionalBaselineGuard + physicalPixel * 2
-        let baselineInsets = UIEdgeInsets(
-            top: rasterizationGuard,
-            left: 0,
-            bottom: rasterizationGuard,
-            right: 0
-        )
-        guard requiresGlyphOutlineMeasurement(attributedText.string) else {
-            return baselineInsets
-        }
 
+        // Measure the real glyph ink on the first line so extreme ascenders
+        // and descenders are covered even without a non-base character.
         let line = CTLineCreateWithAttributedString(attributedText)
         var ascent: CGFloat = 0
         var descent: CGFloat = 0
         var leading: CGFloat = 0
         CTLineGetTypographicBounds(line, &ascent, &descent, &leading)
         let inkBounds = CTLineGetBoundsWithOptions(line, [.useGlyphPathBounds])
-        let topOverflow = max(inkBounds.maxY - ascent, 0)
-        let bottomOverflow = max(-inkBounds.minY - descent, 0)
-        // Glyph-path bounds are vector bounds. TextKit can shift a fallback
-        // font's live baseline by as much as the adjacent logical point. One
-        // physical pixel absorbs fractional raster rounding and a second keeps
-        // the final antialiased pixel inside (rather than on) the clip edge.
-        // Keeping those two quantities separate avoids a scale-dependent edge
-        // clip: on a 2x iPad, a plain 1pt inset leaves the last two pixels of a
-        // tall script on the clipping boundary even though it is sufficient on
-        // a 3x phone.
+        // A flat point floor for the heading's headroom. CoreText can report
+        // zero ink overflow above ascent while the live `.oversize` layout
+        // still draws the first line high enough to clip the guard above, so
+        // keep a meaningful constant on top regardless of the measurement.
+        let minimumTopPadding: CGFloat = 3
+        let scaledTopOverflow = ceil(max(inkBounds.maxY - ascent, 0) * scale) / scale
+        let scaledBottomOverflow = ceil(max(-inkBounds.minY - descent, 0) * scale) / scale
         return UIEdgeInsets(
-            top: ceil(topOverflow * scale) / scale + rasterizationGuard,
+            top: max(scaledTopOverflow, minimumTopPadding) + rasterizationGuard,
             left: 0,
-            bottom: ceil(bottomOverflow * scale) / scale + rasterizationGuard,
+            bottom: scaledBottomOverflow + rasterizationGuard,
             right: 0
         )
     }
@@ -1603,19 +1593,19 @@ enum InlineContentTextLayout {
             && abs(lhs.right - rhs.right) < 0.01
     }
 
-    static func requiresGlyphOutlineMeasurement(_ text: String) -> Bool {
-        text.unicodeScalars.contains {
-            CharacterSet.nonBaseCharacters.contains($0)
-        }
-    }
-
     static func measuredHeight(
         usedRect: CGRect,
         extraLineFragmentRect: CGRect,
         containerInset: UIEdgeInsets
     ) -> CGFloat {
-        ceil(
-            containerInset.top
+        // With the `.oversize` sizing rule UIKit can draw the first line's ink
+        // above the container's origin (negative minY). Reserve top space for
+        // that extent on top of containerInset.top so the heading is never
+        // clipped, instead of only summing positive usedRect.maxY.
+        let glyphTopOverflow = min(usedRect.minY, 0)
+        let topReservation = max(containerInset.top, -glyphTopOverflow)
+        return ceil(
+            topReservation
                 + max(usedRect.maxY, extraLineFragmentRect.maxY, 0)
                 + containerInset.bottom
         )
