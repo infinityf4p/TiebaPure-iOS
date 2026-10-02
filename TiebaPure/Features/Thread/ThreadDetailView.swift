@@ -83,6 +83,7 @@ struct ThreadDetailView: View {
     @State private var contentNavigationGeneration = 0
     @State private var contentNavigationTask: Task<Void, Never>?
     @State private var pendingSubpostInitialID: UInt64?
+    @State private var linkedRoute: ExternalRoute?
     @State private var contentActionError: String?
     @State private var showsOwnThreadDeleteConfirmation = false
     @State private var isDeletingOwnThread = false
@@ -130,6 +131,15 @@ struct ThreadDetailView: View {
             .fullScreenInteractiveNavigationPop(
                 isEnabled: selectedSubpostPost == nil && isDeletingOwnThread == false
             )
+            // A tieba.baidu.com link tapped inside a post opens here instead of
+            // leaving for Safari or the official client. The cover carries its
+            // own stack, so a thread opened from a link can itself open the
+            // next link without unwinding the reader underneath.
+            .fullScreenCover(item: $linkedRoute) { route in
+                ExternalRouteView(account: account, route: route) {
+                    linkedRoute = nil
+                }
+            }
     }
 
     private var decoratedContent: some View {
@@ -405,6 +415,7 @@ struct ThreadDetailView: View {
         pendingSubmissionAccount = nil
         pendingSubmissionRouteID = nil
         pendingSubpostInitialID = nil
+        linkedRoute = nil
         isSearchActive = false
         isStandaloneSearchPresented = false
         selectedUser = nil
@@ -569,6 +580,7 @@ struct ThreadDetailView: View {
                     isMainPost: true,
                     onOpenSubposts: openSubpostsIfPossible,
                     onOpenUser: openUser,
+                    onOpenTiebaRoute: openTiebaRoute,
                     isLikeUpdating: updatingPostLikeIDs.contains(mainPost.id),
                     onToggleLike: contentSubmissionSettingsStore.likesEnabled && mainPost.id > 0
                         ? { toggleLike(for: mainPost, objectType: .thread) }
@@ -642,6 +654,7 @@ struct ThreadDetailView: View {
                     threadAuthorID: threadAuthorID,
                     onOpenSubposts: openSubpostsIfPossible,
                     onOpenUser: openUser,
+                    onOpenTiebaRoute: openTiebaRoute,
                     isLikeUpdating: updatingPostLikeIDs.contains(post.id),
                     onToggleLike: contentSubmissionSettingsStore.likesEnabled
                         ? { toggleLike(for: post, objectType: .post) }
@@ -2097,6 +2110,10 @@ struct ThreadDetailView: View {
         selectedSubpostPost = post
     }
 
+    private func openTiebaRoute(_ route: ExternalRoute) {
+        linkedRoute = route
+    }
+
     private func toggleLike(for post: Post, objectType: TiebaLikeObjectType) {
         guard contentSubmissionSettingsStore.likesEnabled else { return }
         guard updatingPostLikeIDs.contains(post.id) == false else { return }
@@ -2796,6 +2813,7 @@ private struct SubpostListSheet: View {
     @State private var pendingSubmissionRouteID: UUID?
     @State private var submissionReloadGeneration = 0
     @State private var submissionReloadTask: Task<Void, Never>?
+    @State private var linkedRoute: ExternalRoute?
 
     init(
         account: Account?,
@@ -2874,6 +2892,7 @@ private struct SubpostListSheet: View {
                                             readerFontFamily: readingPreferences.fontFamily,
                                             readerLineSpacing: readingPreferences.lineSpacing,
                                             inlineAccessibilityIdentifier: "thread-subpost-parent-text",
+                                            onOpenTiebaRoute: openTiebaRoute,
                                             onPlainTextTap: contentSubmissionSettingsStore.repliesEnabled
                                                 ? openParentReplyComposer
                                                 : nil
@@ -2903,6 +2922,7 @@ private struct SubpostListSheet: View {
                                     subpost: subpost,
                                     threadAuthorID: threadAuthorID,
                                     onOpenUser: openUser,
+                                    onOpenTiebaRoute: openTiebaRoute,
                                     isLikeUpdating: updatingLikeIDs.contains(subpost.id),
                                     onToggleLike: contentSubmissionSettingsStore.likesEnabled
                                         ? { toggleSubpostLike(subpost) }
@@ -3029,6 +3049,14 @@ private struct SubpostListSheet: View {
                         .environmentObject(environment)
                     }
                 }
+                // A tieba.baidu.com link tapped in the parent floor or in a
+                // 楼中楼 reply opens from here: the reader behind this sheet is
+                // already presenting it and cannot present a second cover.
+                .fullScreenCover(item: $linkedRoute) { route in
+                    ExternalRouteView(account: account, route: route) {
+                        linkedRoute = nil
+                    }
+                }
             }
             .task {
                 guard didLoad == false else { return }
@@ -3051,6 +3079,10 @@ private struct SubpostListSheet: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color(uiColor: .systemBackground))
         }
+    }
+
+    private func openTiebaRoute(_ route: ExternalRoute) {
+        linkedRoute = route
     }
 
     private var selectedUserIsActive: Binding<Bool> {
@@ -3374,6 +3406,7 @@ private struct SubpostRowView: View {
     let subpost: Subpost
     let threadAuthorID: Int64?
     let onOpenUser: ((UserSummary) -> Void)?
+    let onOpenTiebaRoute: ((ExternalRoute) -> Void)?
     let isLikeUpdating: Bool
     let onToggleLike: (() -> Void)?
     let onReply: (() -> Void)?
@@ -3407,6 +3440,7 @@ private struct SubpostRowView: View {
                         readerLineSpacing: readingPreferences.lineSpacing,
                         inlineAccessibilityIdentifier: "thread-subpost-text",
                         onOpenUser: onOpenUser,
+                        onOpenTiebaRoute: onOpenTiebaRoute,
                         onPlainTextTap: onReply
                     )
                     ThreadPostMetadataView(

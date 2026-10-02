@@ -611,6 +611,33 @@ final class ContentMappingTests: XCTestCase {
         XCTAssertEqual(mapped.previewSubposts.first?.blocks.compactMap(\.plainText).joined(), "回复内容")
     }
 
+    func testSubpostMappingKeepsImageContentForTheDetailSheet() {
+        var imageContent = Tieba_PbContent()
+        imageContent.type = 3
+        imageContent.src = "https://tiebac.baidu.com/forum/w%3D580/sign=abc.jpg"
+        imageContent.cdnSrc = "https://tiebac.baidu.com/forum/w%3D580/sign=abc.jpg"
+        imageContent.bsize = "800,600"
+        imageContent.width = 800
+        imageContent.height = 600
+
+        var subpost = Tieba_SubPostList()
+        subpost.id = 99
+        subpost.content = [imageContent]
+
+        let mapped = PostMapper.subpost(subpost)
+
+        XCTAssertEqual(mapped.blocks.count, 1)
+        guard case let .image(image)? = mapped.blocks.first else {
+            return XCTFail("Expected the subpost image block to survive mapping")
+        }
+        XCTAssertEqual(
+            image.thumbnailURL?.absoluteString,
+            "https://tiebac.baidu.com/forum/w%3D580/sign=abc.jpg"
+        )
+        XCTAssertEqual(image.width, 800)
+        XCTAssertEqual(image.height, 600)
+    }
+
     func testPreviewSubpostResolvesUIDLessStructuredReplyTargetFromUniqueUser() {
         var target = Tieba_User()
         target.id = 42

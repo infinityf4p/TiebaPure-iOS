@@ -9,6 +9,7 @@ struct PostRowView: View {
     let isMainPost: Bool
     let onOpenSubposts: ((Post) -> Void)?
     let onOpenUser: ((UserSummary) -> Void)?
+    let onOpenTiebaRoute: ((ExternalRoute) -> Void)?
     let isLikeUpdating: Bool
     let onToggleLike: (() -> Void)?
     let onReply: (() -> Void)?
@@ -20,6 +21,7 @@ struct PostRowView: View {
         isMainPost: Bool = false,
         onOpenSubposts: ((Post) -> Void)? = nil,
         onOpenUser: ((UserSummary) -> Void)? = nil,
+        onOpenTiebaRoute: ((ExternalRoute) -> Void)? = nil,
         isLikeUpdating: Bool = false,
         onToggleLike: (() -> Void)? = nil,
         onReply: (() -> Void)? = nil
@@ -30,6 +32,7 @@ struct PostRowView: View {
         self.isMainPost = isMainPost
         self.onOpenSubposts = onOpenSubposts
         self.onOpenUser = onOpenUser
+        self.onOpenTiebaRoute = onOpenTiebaRoute
         self.isLikeUpdating = isLikeUpdating
         self.onToggleLike = onToggleLike
         self.onReply = onReply
@@ -91,6 +94,7 @@ struct PostRowView: View {
                         inlineAccessibilityIdentifier: isMainPost
                             ? "thread-main-text"
                             : "thread-reply-text",
+                        onOpenTiebaRoute: onOpenTiebaRoute,
                         onPlainTextTap: onReply
                     )
 
@@ -112,7 +116,8 @@ struct PostRowView: View {
                             totalCount: post.subpostCount,
                             threadAuthorID: threadAuthorID,
                             onOpenAll: onOpenSubposts.map { open in { open(post) } },
-                            onOpenUser: onOpenUser
+                            onOpenUser: onOpenUser,
+                            onOpenTiebaRoute: onOpenTiebaRoute
                         )
                     }
                 }
@@ -136,6 +141,7 @@ extension PostRowView: Equatable {
             && lhs.isLikeUpdating == rhs.isLikeUpdating
             && (lhs.onOpenSubposts != nil) == (rhs.onOpenSubposts != nil)
             && (lhs.onOpenUser != nil) == (rhs.onOpenUser != nil)
+            && (lhs.onOpenTiebaRoute != nil) == (rhs.onOpenTiebaRoute != nil)
             && (lhs.onToggleLike != nil) == (rhs.onToggleLike != nil)
             && (lhs.onReply != nil) == (rhs.onReply != nil)
     }

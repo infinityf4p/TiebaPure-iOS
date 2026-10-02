@@ -6,19 +6,22 @@ struct SubpostPreviewView: View {
     let threadAuthorID: Int64?
     let onOpenAll: (() -> Void)?
     let onOpenUser: ((UserSummary) -> Void)?
+    let onOpenTiebaRoute: ((ExternalRoute) -> Void)?
 
     init(
         subposts: [Subpost],
         totalCount: Int,
         threadAuthorID: Int64?,
         onOpenAll: (() -> Void)? = nil,
-        onOpenUser: ((UserSummary) -> Void)? = nil
+        onOpenUser: ((UserSummary) -> Void)? = nil,
+        onOpenTiebaRoute: ((ExternalRoute) -> Void)? = nil
     ) {
         self.subposts = Array(subposts.prefix(3))
         self.totalCount = totalCount
         self.threadAuthorID = threadAuthorID
         self.onOpenAll = onOpenAll
         self.onOpenUser = onOpenUser
+        self.onOpenTiebaRoute = onOpenTiebaRoute
     }
 
     var body: some View {
@@ -30,7 +33,8 @@ struct SubpostPreviewView: View {
                             subpost: subpost,
                             threadAuthorID: threadAuthorID,
                             lineLimit: ThreadContentDisplayPolicy.detailLineLimit,
-                            onOpenUser: onOpenUser
+                            onOpenUser: onOpenUser,
+                            onOpenTiebaRoute: onOpenTiebaRoute
                         )
                     }
                 }
@@ -89,6 +93,7 @@ struct SubpostInlineRow: View {
     let threadAuthorID: Int64?
     var lineLimit: Int = ThreadContentDisplayPolicy.detailLineLimit
     var onOpenUser: ((UserSummary) -> Void)?
+    var onOpenTiebaRoute: ((ExternalRoute) -> Void)?
 
     var body: some View {
         InlineContentText(
@@ -106,7 +111,8 @@ struct SubpostInlineRow: View {
                 for: lineLimit
             ),
             accessibilityIdentifier: "thread-subpost-preview-text",
-            onOpenUser: onOpenUser
+            onOpenUser: onOpenUser,
+            onOpenTiebaRoute: onOpenTiebaRoute
         )
         .fixedSize(horizontal: false, vertical: true)
         .frame(maxWidth: .infinity, alignment: .leading)

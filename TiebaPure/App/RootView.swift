@@ -254,7 +254,9 @@ enum AccountTransitionPolicy {
 
 /// Container for externally opened destinations. A cover with its own stack
 /// keeps deep links independent of whichever tab and stack the user was in.
-private struct ExternalRouteView: View {
+/// The thread reader reuses it for tieba.baidu.com links tapped inside a post,
+/// so it must stay visible to the rest of the module.
+struct ExternalRouteView: View {
     let account: Account?
     let route: ExternalRoute
     let onClose: () -> Void

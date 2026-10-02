@@ -221,6 +221,29 @@ final class TiebaURLTests: XCTestCase {
         XCTAssertNil(ExternalRoute.parse(try XCTUnwrap(URL(string: "https://faketieba.baidu.com.evil.example/p/1"))))
     }
 
+    func testTiebaContentLinksAgreeWithTheInAppReaderRoute() throws {
+        // The reader validates a post's .link block with TiebaURL.webpage and
+        // then hands that same URL to ExternalRoute.parse. Both policies have to
+        // agree, otherwise a supported page silently leaves for Safari.
+        for supported in [
+            "https://tieba.baidu.com/p/424242?pid=99&see_lz=1#floor",
+            "https://c.tieba.baidu.com/p/31337",
+            "https://tieba.baidu.com/f?kw=%E6%B5%8B%E8%AF%95&ie=utf-8"
+        ] {
+            let url = try XCTUnwrap(TiebaURL.webpage(supported))
+            XCTAssertNotNil(ExternalRoute.parse(url), supported)
+        }
+
+        for unsupported in [
+            "https://tieba.baidu.com/home/main",
+            "https://tieba.baidu.com/p/notanumber",
+            "https://example.com/p/1"
+        ] {
+            let url = try XCTUnwrap(TiebaURL.webpage(unsupported))
+            XCTAssertNil(ExternalRoute.parse(url), unsupported)
+        }
+    }
+
     func testExternalRouteBuildsImportURLOnlyForSupportedTiebaPages() throws {
         let threadURL = try XCTUnwrap(URL(string: "https://tieba.baidu.com/p/424242?pid=99"))
         let importedThreadURL = try XCTUnwrap(ExternalRoute.importURL(forWebURL: threadURL))
