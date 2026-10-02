@@ -5,12 +5,17 @@ import Foundation
 /// The requests are issued one at a time on purpose: a burst of writes from a
 /// third-party client is exactly what the service rate-limits, and a check-in
 /// that silently drops half the forums is worse than one that takes a few
-/// seconds longer.
+/// seconds longer. Forums the guide already reports as signed today are skipped
+/// without a request, so a long followed list does not become a long serial run
+/// — and the run publishes its counters, because a spinner alone cannot tell a
+/// two-second run from a two-minute one.
 @MainActor
 final class ForumSignCoordinator: ObservableObject {
     @Published private(set) var isRunning = false
     @Published private(set) var lastSummary: ForumSignRunSummary?
     @Published private(set) var lastError: String?
+    /// Live counters for the run the UI is presenting, nil when nothing runs.
+    @Published private(set) var progress: ForumSignProgress?
 
     private let api: any TiebaAPIService
     private let settings: ForumSignSettingsStore
@@ -60,16 +65,85 @@ final class ForumSignCoordinator: ObservableObject {
         let runID = UUID()
         let task = Task { @MainActor [api, settings, requestSpacing] in
             var summary = ForumSignRunSummary.empty
+            let runStarted = Date()
             do {
+                var stepStarted = Date()
                 let forums = try await api.followedForums(account: account)
                 try Task.checkCancellation()
-                for (index, forum) in forums.enumerated() {
+                let listSeconds = Date().timeIntervalSince(stepStarted)
+
+                // Today's check-in only has work for the forums the guide does
+                // not already mark as signed. Sending those writes anyway costs
+                // one throttled round trip per forum to learn what the service
+                // has just said.
+                stepStarted = Date()
+                let alreadySignedToday = await signedForumIDs(account: account)
+                try Task.checkCancellation()
+                let statusSeconds = Date().timeIntervalSince(stepStarted)
+
+                let pending = forums.filter { alreadySignedToday.contains($0.id) == false }
+                summary.alreadySignedCount += forums.count - pending.count
+                var completed = forums.count - pending.count
+                publishProgress(
+                    completed: completed,
+                    total: forums.count,
+                    session: session,
+                    summary: summary
+                )
+                // The per-step timings are the only way to tell a slow list, a
+                // slow guide and a slow write apart from the exported log.
+                await AppLog.shared.record(
+                    .info,
+                    "一键签到",
+                    "关注 \(forums.count) 个，已签 \(summary.alreadySignedCount) 个，待签 \(pending.count) 个；"
+                        + "关注列表 \(Self.seconds(listSeconds))，签到状态 \(Self.seconds(statusSeconds))"
+                )
+
+                // One write token for the whole run: the login handshake that
+                // produces it costs more than the check-in write itself, and
+                // doing it per forum is what made a long list feel stuck.
+                //
+                // It is also the single most expensive step of the run, so a
+                // run with nothing to write must not pay for it: with every
+                // forum already signed the loop below is empty, and resolving
+                // the token anyway turned "nothing to do" into a spinner that
+                // sat there for the whole handshake.
+                let tbs: String
+                stepStarted = Date()
+                if pending.isEmpty {
+                    tbs = ""
+                    await AppLog.shared.record(
+                        .info,
+                        "一键签到",
+                        "无待签贴吧，跳过写令牌解析，耗时 "
+                            + "\(Self.seconds(Date().timeIntervalSince(stepStarted)))"
+                    )
+                } else {
+                    tbs = (try? await api.signingTBS(account: account)) ?? ""
+                    try Task.checkCancellation()
+                    await AppLog.shared.record(
+                        .info,
+                        "一键签到",
+                        "写令牌\(tbs.isEmpty ? "未取到，逐吧解析" : "已就绪，本轮回用")，"
+                            + "耗时 \(Self.seconds(Date().timeIntervalSince(stepStarted)))"
+                    )
+                }
+
+                let signingStarted = Date()
+                for (index, forum) in pending.enumerated() {
                     if index > 0 {
                         try await Task.sleep(for: requestSpacing)
                     }
                     do {
                         try Task.checkCancellation()
-                        let result = try await api.signForum(account: account, forum: forum)
+                        publishProgress(
+                            completed: completed,
+                            total: forums.count,
+                            currentForumName: forum.displayName,
+                            session: session,
+                            summary: summary
+                        )
+                        let result = try await api.signForum(account: account, forum: forum, tbs: tbs)
                         try Task.checkCancellation()
                         if result.wasAlreadySigned {
                             summary.alreadySignedCount += 1
@@ -80,8 +154,28 @@ final class ForumSignCoordinator: ObservableObject {
                         throw CancellationError()
                     } catch {
                         summary.failedForumNames.append(forum.displayName)
+                        await AppLog.shared.recordError(
+                            "一键签到",
+                            "\(forum.displayName) 签到失败",
+                            error: error
+                        )
                     }
+                    completed += 1
+                    publishProgress(
+                        completed: completed,
+                        total: forums.count,
+                        session: session,
+                        summary: summary
+                    )
                 }
+                let signingSeconds = Date().timeIntervalSince(signingStarted)
+                await AppLog.shared.record(
+                    .info,
+                    "一键签到",
+                    "完成：成功 \(summary.signedCount)，已签过 \(summary.alreadySignedCount)，"
+                        + "失败 \(summary.failedForumNames.count)；写请求耗时 "
+                        + "\(Self.seconds(signingSeconds))，整轮 \(Self.seconds(Date().timeIntervalSince(runStarted)))"
+                )
                 // Only a run that reached every forum counts as today's run;
                 // otherwise tomorrow's automatic attempt would be skipped after
                 // a partial failure.
@@ -193,6 +287,54 @@ final class ForumSignCoordinator: ObservableObject {
         globalInvalidationCount == 0 && sessionInvalidationCounts[session] == nil
     }
 
+    /// One line for the diagnostic log: a run's cost only makes sense as a
+    /// number, and "slow" without seconds is not something to act on.
+    private static func seconds(_ interval: TimeInterval) -> String {
+        String(format: "%.1fs", max(interval, 0))
+    }
+
+    /// Only the session the UI is showing drives the visible counters; a run for
+    /// a replaced login keeps its own state until it is drained.
+    private func publishProgress(
+        completed: Int,
+        total: Int,
+        currentForumName: String? = nil,
+        session: AccountSessionIdentity,
+        summary: ForumSignRunSummary
+    ) {
+        guard presentationSession == session else { return }
+        progress = ForumSignProgress(
+            completed: completed,
+            total: total,
+            currentForumName: currentForumName,
+            signedCount: summary.signedCount,
+            alreadySignedCount: summary.alreadySignedCount,
+            failedCount: summary.failedForumNames.count
+        )
+    }
+
+    /// Forum IDs the service already reports as signed today.
+    ///
+    /// A service without the guide listing cannot answer, and an unknown sign
+    /// state must not read as "everything is done": signing an already-signed
+    /// forum is a harmless no-op, so the run attempts every forum instead and
+    /// leaves a trace in the diagnostic log.
+    private func signedForumIDs(account: Account) async -> Set<Int64> {
+        do {
+            let statuses = try await api.followedForumStatuses(account: account)
+            return Set(statuses.filter(\.isSignedToday).map(\.forumID))
+        } catch is CancellationError {
+            return []
+        } catch {
+            await AppLog.shared.recordError(
+                "一键签到",
+                "读取今日签到状态失败，本次不跳过任何贴吧",
+                error: error
+            )
+            return []
+        }
+    }
+
     private func finishRun(
         id: UUID,
         session: AccountSessionIdentity,
@@ -202,6 +344,7 @@ final class ForumSignCoordinator: ObservableObject {
         runs[session] = nil
         isRunning = runs.isEmpty == false
         guard presentationSession == session else { return }
+        progress = nil
         if outcome.wasCancelled == false {
             lastSummary = outcome.summary
             lastError = outcome.errorMessage

@@ -132,8 +132,36 @@ private extension KeyedDecodingContainer {
 }
 
 extension TiebaAPI {
+    /// The write token a check-in run needs, resolved once so the login
+    /// handshake behind it does not repeat for every forum in the list.
+    func signingTBS(account: Account) async throws -> String {
+        try await refreshedClientTBS(for: account)
+    }
+
     func signForum(account: Account, forum: Forum) async throws -> ForumSignResult {
-        let tbs = try await refreshedClientTBS(for: account)
+        try await performSign(
+            account: account,
+            forum: forum,
+            tbs: try await refreshedClientTBS(for: account)
+        )
+    }
+
+    /// Signing with a token the caller already resolved. An empty token means
+    /// the caller could not resolve one, so this resolves it here instead of
+    /// sending a request the service would reject.
+    func signForum(account: Account, forum: Forum, tbs: String) async throws -> ForumSignResult {
+        let resolved = tbs.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard resolved.isEmpty == false else {
+            return try await signForum(account: account, forum: forum)
+        }
+        return try await performSign(account: account, forum: forum, tbs: resolved)
+    }
+
+    private func performSign(
+        account: Account,
+        forum: Forum,
+        tbs: String
+    ) async throws -> ForumSignResult {
         try Task.checkCancellation()
         let fields = try TiebaForumSignRequestFactory.signFields(
             account: account,

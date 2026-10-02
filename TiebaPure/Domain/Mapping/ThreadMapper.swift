@@ -43,7 +43,8 @@ enum ThreadMapper {
             blocks: blocks,
             isTop: proto.isTop != 0,
             isGood: proto.isGood != 0,
-            hasVideo: proto.hasVideoInfo || containsVideo(in: blocks)
+            hasVideo: proto.hasVideoInfo || containsVideo(in: blocks),
+            hotValue: proto.hasHotNum ? proto.hotNum : nil
         )
     }
 

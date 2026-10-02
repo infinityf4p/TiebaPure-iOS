@@ -31,6 +31,7 @@ import sys
 root = pathlib.Path(sys.argv[1])
 roots = [
     "Personalized.proto",
+    "HotThreadList/HotThreadList.proto",
     "FrsPage/FrsPage.proto",
     "PbPage/PbPageRequest.proto",
     "PbPage/PbPageResponse.proto",

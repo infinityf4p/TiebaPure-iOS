@@ -1823,7 +1823,7 @@ final class TiebaPureUITests: XCTestCase {
         for cycle in 1...5 {
             scrollView.swipeUp()
             scrollView.swipeUp()
-            homeTabCoordinate.tap()
+            homeTabCoordinate.press(forDuration: 1.0)
             let refreshedTitle = app.buttons["下拉刷新已更新"]
             XCTAssertTrue(refreshedTitle.waitForExistence(timeout: 5))
             XCTAssertTrue(waitForHittable(refreshedTitle, expected: true, timeout: 5), "第\(cycle)次点击首页后应回到新内容")
@@ -1832,7 +1832,16 @@ final class TiebaPureUITests: XCTestCase {
             guard let frame = waitForStableFrame(of: firstRow) else {
                 return XCTFail("刷新后的首行位置未稳定")
             }
-            XCTAssertEqual(frame.minY, app.navigationBars["首页"].frame.maxY, accuracy: 24)
+            // The feed now starts under the 推荐/热点 分页控件, not directly
+            // under the navigation bar.
+            let feedHeader = app.descendants(matching: .any)["home-feed-segment-picker"]
+            if feedHeader.exists {
+                XCTAssertEqual(frame.minY, feedHeader.frame.maxY, accuracy: 24)
+            } else {
+                let segmented = app.segmentedControls.firstMatch
+                XCTAssertTrue(segmented.waitForExistence(timeout: 5), "首页应有推荐/热点分页控件")
+                XCTAssertEqual(frame.minY, segmented.frame.maxY, accuracy: 24)
+            }
         }
     }
 
@@ -1845,8 +1854,8 @@ final class TiebaPureUITests: XCTestCase {
         XCTAssertTrue(app.scrollViews["thread-detail-scroll-view"].waitForNonExistence(timeout: 5))
         XCTAssertTrue(app.navigationBars["首页"].waitForExistence(timeout: 5), "点击首页应退出帖子详情")
         XCTAssertFalse(app.buttons["下拉刷新已更新"].waitForExistence(timeout: 2), "第一次点击只返回列表，不应同时刷新")
-        homeTabCoordinate.tap()
-        XCTAssertTrue(app.buttons["下拉刷新已更新"].waitForExistence(timeout: 5), "返回列表后再点首页应刷新")
+        homeTabCoordinate.press(forDuration: 1.0)
+        XCTAssertTrue(app.buttons["下拉刷新已更新"].waitForExistence(timeout: 5), "返回列表后再长按首页应刷新")
     }
 
     func testHomeTabReselectDuringInFlightRefreshReturnsToTop() {
@@ -1857,7 +1866,7 @@ final class TiebaPureUITests: XCTestCase {
         let firstTitle = app.buttons["确定性主帖：回复筛选与媒体布局"]
         XCTAssertTrue(firstTitle.waitForExistence(timeout: 25))
         let tabCoordinate = rootTabCoordinate("首页", in: app)
-        tabCoordinate.tap()
+        tabCoordinate.press(forDuration: 1.0)
         let indicator = app.descendants(matching: .any)["home-refresh-animation"]
         XCTAssertTrue(indicator.waitForExistence(timeout: 2))
         let scrollView = app.scrollViews["home-feed-scroll-view"]
@@ -1865,8 +1874,8 @@ final class TiebaPureUITests: XCTestCase {
         scrollView.swipeUp()
         XCTAssertFalse(firstTitle.isHittable, "应先滚离列表顶部")
         XCTAssertTrue(indicator.exists, "复现必须发生在请求仍未结束时")
-        tabCoordinate.tap()
-        XCTAssertTrue(waitForHittable(firstTitle, expected: true, timeout: 2), "刷新进行中再点首页，也应返回顶部")
+        tabCoordinate.doubleTap()
+        XCTAssertTrue(waitForHittable(firstTitle, expected: true, timeout: 2), "刷新进行中双击首页，也应返回顶部")
         XCTAssertTrue(app.buttons["下拉刷新已更新"].waitForExistence(timeout: 25))
         XCTAssertTrue(indicator.waitForNonExistence(timeout: 5))
         XCTAssertFalse(app.buttons["重复的首页刷新请求"].exists, "连续点击应共用进行中的刷新请求")
@@ -1886,7 +1895,7 @@ final class TiebaPureUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["搜索"].waitForNonExistence(timeout: 5))
         XCTAssertTrue(app.navigationBars["首页"].exists)
         XCTAssertFalse(app.buttons["下拉刷新已更新"].waitForExistence(timeout: 2))
-        homeTabCoordinate.tap()
+        homeTabCoordinate.press(forDuration: 1.0)
         XCTAssertTrue(app.buttons["下拉刷新已更新"].waitForExistence(timeout: 5))
     }
 
@@ -1912,12 +1921,12 @@ final class TiebaPureUITests: XCTestCase {
 
         app.swipeUp()
         app.swipeUp()
-        homeTabCoordinate.tap()
+        homeTabCoordinate.press(forDuration: 1.0)
 
         let refreshAnimation = app.descendants(matching: .any)["home-refresh-animation"]
         XCTAssertTrue(
             refreshAnimation.waitForExistence(timeout: 2),
-            "重复点击首页后应通过统一刷新状态机显示顶部动画"
+            "长按首页后应通过统一刷新状态机显示顶部动画"
         )
         XCTAssertTrue(app.buttons["下拉刷新已更新"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["确定性主帖：回复筛选与媒体布局"].exists)
@@ -1985,12 +1994,12 @@ final class TiebaPureUITests: XCTestCase {
         app.coordinate(withNormalizedOffset: CGVector(
             dx: homeTabFrame.midX / appFrame.width,
             dy: homeTabFrame.midY / appFrame.height
-        )).tap()
+        )).press(forDuration: 1.0)
 
         XCTAssertTrue(
             app.descendants(matching: .any)["home-refresh-animation"]
                 .waitForExistence(timeout: 2),
-            "分页中重复点击首页也必须立即进入统一刷新状态"
+            "分页中长按首页也必须立即进入统一刷新状态"
         )
         XCTAssertTrue(
             app.buttons["下拉刷新已更新"].waitForExistence(timeout: 5),

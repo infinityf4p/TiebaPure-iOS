@@ -11,8 +11,11 @@ enum TiebaEndpoint {
     case initNickname
     case webMyInfo
     case followedForums
+    case followedForumGuide
     case forumPageForm
     case personalized
+    case hotThreadList
+    case topicDetail
     case frsPage
     case pbPage
     case pbFloor
@@ -53,12 +56,26 @@ enum TiebaEndpoint {
             return Self.base.appending(path: "/mo/q/newmoindex")
         case .followedForums:
             return Self.appBase.appending(path: "/c/f/forum/getforumlist")
+        case .followedForumGuide:
+            // The web "hybrid" guide endpoint: the only followed-forum call
+            // that also reports the account's per-forum level and check-in.
+            return Self.base.appending(path: "/c/f/forum/forumGuide")
         case .forumPageForm:
             return Self.appBase.appending(path: "/c/f/frs/page")
         case .personalized:
             return Self.base
                 .appending(path: "/c/f/excellent/personalized")
                 .appending(queryItems: [.init(name: "cmd", value: "309264")])
+        case .hotThreadList:
+            // The hot-thread (热榜) listing behind the app's 热点 tab. An empty
+            // tab code asks for the default tab plus the tab list itself.
+            return Self.base
+                .appending(path: "/c/f/forum/hotThreadList")
+                .appending(queryItems: [.init(name: "cmd", value: "309661")])
+        case .topicDetail:
+            // 话题详情: the web JSON endpoint behind one 话题榜 row. It pages by
+            // cursor (`last_id`), which is why the API layer carries one.
+            return Self.base.appending(path: "/mo/q/newtopic/topicDetail")
         case .frsPage:
             return Self.base
                 .appending(path: "/c/f/frs/page")

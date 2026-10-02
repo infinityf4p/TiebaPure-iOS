@@ -194,6 +194,33 @@ final class ForumSignTests: XCTestCase {
         )
     }
 
+    func testProgressTextReportsTheCounterAndTheForumInFlight() {
+        let running = ForumSignProgress(
+            completed: 3,
+            total: 12,
+            currentForumName: "壁纸吧",
+            signedCount: 2,
+            alreadySignedCount: 1,
+            failedCount: 0
+        )
+
+        XCTAssertEqual(ForumSignProgressText.counter(for: running), "3/12")
+        XCTAssertEqual(ForumSignProgressText.currentForum(for: running), "正在签到：壁纸吧")
+        XCTAssertFalse(running.isFinished)
+
+        var idle = running
+        idle.currentForumName = nil
+        XCTAssertNil(ForumSignProgressText.currentForum(for: idle), "没有在签的吧时不显示这一行")
+
+        var blank = running
+        blank.currentForumName = "   "
+        XCTAssertNil(ForumSignProgressText.currentForum(for: blank), "空白吧名同样不显示")
+
+        var done = running
+        done.completed = 12
+        XCTAssertTrue(done.isFinished)
+    }
+
     @MainActor
     func testCoordinatorSignsEveryFollowedForumAndRecordsTheDay() async throws {
         let defaults = try makeScratchDefaults()
@@ -217,6 +244,100 @@ final class ForumSignTests: XCTestCase {
         let repeated = await coordinator.signAllFollowedForums(account: account)
         XCTAssertEqual(repeated.signedCount, 0)
         XCTAssertEqual(repeated.alreadySignedCount, 2)
+    }
+
+    @MainActor
+    func testRunSkipsForumsTheGuideAlreadyReportsAsSignedToday() async throws {
+        let defaults = try makeScratchDefaults()
+        let settings = ForumSignSettingsStore(defaults: defaults)
+        let coordinator = ForumSignCoordinator(
+            api: FixtureTiebaAPI(scenario: .signAlreadyDone),
+            settings: settings,
+            requestSpacing: .zero
+        )
+
+        let summary = await coordinator.signAllFollowedForums(account: account)
+
+        XCTAssertEqual(summary.signedCount, 1, "只有今天未签到的那个吧才发请求")
+        XCTAssertEqual(summary.alreadySignedCount, 1, "已签到的吧直接计入已签过")
+        XCTAssertTrue(summary.failedForumNames.isEmpty)
+        XCTAssertTrue(
+            settings.hasRunToday(accountID: account.id),
+            "全部已签到时也算今天跑过，否则明天之前会反复自动重试"
+        )
+    }
+
+    @MainActor
+    func testRunWithNothingToSignDoesNotResolveAWriteToken() async throws {
+        let defaults = try makeScratchDefaults()
+        let settings = ForumSignSettingsStore(defaults: defaults)
+        let api = FixtureTiebaAPI(scenario: .signAllDone)
+        let coordinator = ForumSignCoordinator(
+            api: api,
+            settings: settings,
+            requestSpacing: .zero
+        )
+
+        let summary = await coordinator.signAllFollowedForums(account: account)
+        let tokenRequests = await api.signingTBSRequestCount()
+
+        XCTAssertEqual(summary.signedCount, 0)
+        XCTAssertEqual(summary.alreadySignedCount, 2, "两个吧都已签到，整轮没有写请求")
+        XCTAssertTrue(summary.failedForumNames.isEmpty)
+        XCTAssertEqual(
+            tokenRequests,
+            0,
+            "没有待签贴吧时不应解析写令牌：那一步是登录握手，会让「无需签到」也卡住整轮"
+        )
+        XCTAssertTrue(
+            settings.hasRunToday(accountID: account.id),
+            "全部已签到时也算今天跑过，否则明天之前会反复自动重试"
+        )
+    }
+
+    @MainActor
+    func testRunResolvesTheWriteTokenOnceForTheWholeList() async throws {
+        let defaults = try makeScratchDefaults()
+        let api = FixtureTiebaAPI(scenario: .success)
+        let coordinator = ForumSignCoordinator(
+            api: api,
+            settings: ForumSignSettingsStore(defaults: defaults),
+            requestSpacing: .zero
+        )
+
+        let summary = await coordinator.signAllFollowedForums(account: account)
+        let tokenRequests = await api.signingTBSRequestCount()
+
+        XCTAssertEqual(summary.signedCount, 2)
+        XCTAssertEqual(tokenRequests, 1, "整轮只应握手一次，而不是每个吧一次")
+    }
+
+    @MainActor
+    func testRunPublishesProgressWhileSigningAndClearsItAfterwards() async throws {
+        let defaults = try makeScratchDefaults()
+        let coordinator = ForumSignCoordinator(
+            api: FixtureTiebaAPI(scenario: .success, delayMilliseconds: 60),
+            settings: ForumSignSettingsStore(defaults: defaults),
+            requestSpacing: .zero
+        )
+
+        let run = Task { @MainActor in
+            await coordinator.signAllFollowedForums(account: account)
+        }
+
+        var observed: ForumSignProgress?
+        for _ in 0..<400 where observed == nil {
+            try await Task.sleep(nanoseconds: 1_000_000)
+            observed = coordinator.progress
+        }
+
+        let progress = try XCTUnwrap(observed, "签到过程中应能读到进度")
+        XCTAssertEqual(progress.total, 2)
+        XCTAssertFalse(progress.isFinished, "总数 2 时中途不可能已经结束")
+
+        _ = await run.value
+        XCTAssertNil(coordinator.progress, "结束后进度清空，不再显示上一次的数字")
+        XCTAssertFalse(coordinator.isRunning)
     }
 
     @MainActor

@@ -12,6 +12,10 @@ struct SettingsView: View {
     @State private var confirmsLogout = false
     @State private var isLoggingOut = false
     @State private var logoutErrorMessage: String?
+    /// Mirrored into view state so the footer text follows the switch: a custom
+    /// `Binding` writing straight to `UserDefaults` would leave the rest of the
+    /// form showing the old value.
+    @State private var isDiagnosticLogEnabled = DiagnosticLogSettings().isEnabled
 
     var body: some View {
         Form {
@@ -92,6 +96,26 @@ struct SettingsView: View {
                 Text("内容")
             } footer: {
                 Text("发帖和回帖使用非官方实验接口。开启并使用后，可能触发贴吧风控，造成内容被隐藏或删除、账号功能受限；极端情况下账号可能被冻结。请确认能够承担风险后再使用。关闭点赞后仍会显示点赞数量；设置和屏蔽规则仅保存在本机。")
+            }
+
+            Section {
+                Toggle(isOn: diagnosticLogSelection) {
+                    Label("记录诊断日志", systemImage: "record.circle")
+                }
+                .accessibilityHint("关闭后完全不记录任何诊断信息，已经记录的内容不受影响")
+                .accessibilityIdentifier("settings-diagnostics-logging-toggle")
+
+                NavigationLink {
+                    DiagnosticsLogView()
+                } label: {
+                    Label("诊断日志", systemImage: "doc.text.magnifyingglass")
+                }
+                .accessibilityHint("查看并导出首页推荐、热点和进吧等级的接口返回记录")
+                .accessibilityIdentifier("settings-diagnostics-entry")
+            } header: {
+                Text("诊断")
+            } footer: {
+                Text(diagnosticLogFooterText)
             }
 
             if let account {
@@ -211,11 +235,29 @@ struct SettingsView: View {
         )
     }
 
+    private var diagnosticLogSelection: Binding<Bool> {
+        Binding(
+            get: { isDiagnosticLogEnabled },
+            set: { enabled in
+                DiagnosticLogSettings().setEnabled(enabled)
+                isDiagnosticLogEnabled = enabled
+            }
+        )
+    }
+
+    private var diagnosticLogFooterText: String {
+        if isDiagnosticLogEnabled {
+            return "记录接口返回和耗时，用于排查「内容不对」「等级不显示」「签到慢」这类问题。"
+                + "只保存在本机内存，退出应用即清空；导出的内容已自动去掉凭据。"
+        }
+        return "已关闭，不再记录任何诊断信息；已经记录的内容仍可在诊断日志里查看、导出或清空。"
+    }
+
     private var signFooterText: String {
         if let message = signStatusMessage {
             return message
         }
-        return "签到会按关注列表逐个请求，需要几秒到几十秒；同一天只会自动执行一次。"
+        return "今天已签到的贴吧会直接跳过，只对还没签的吧逐个请求；同一天只会自动执行一次。"
     }
 
     private var signStatusMessage: String? {

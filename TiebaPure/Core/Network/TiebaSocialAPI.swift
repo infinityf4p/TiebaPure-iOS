@@ -64,6 +64,24 @@ enum TiebaSocialRequestFactory {
         ]
     }
 
+    static func followedForumGuideFields(
+        tbs: String,
+        page: Int,
+        pageSize: Int = FollowedForumGuidePolicy.pageSize
+    ) throws -> [String: String] {
+        let resolvedTBS = tbs.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard resolvedTBS.isEmpty == false else { throw TiebaMutationError.missingTBS }
+        // Credentials travel as cookies on this web endpoint, so the factory
+        // deliberately carries neither BDUSS nor stoken as form fields.
+        return [
+            "tbs": resolvedTBS,
+            "sort_type": "3",
+            "call_from": "3",
+            "page_no": "\(max(page, 1))",
+            "res_num": "\(max(pageSize, 1))"
+        ]
+    }
+
     static func likeFields(
         account: Account,
         tbs: String,
@@ -329,7 +347,181 @@ struct ForumMembershipResponseDTO: Decodable {
     }
 }
 
+struct FollowedForumGuideResponseDTO: Decodable {
+    struct ForumDTO: Decodable {
+        var forumID: Int64
+        var level: Int
+        var isSignedToday: Bool
+
+        enum CodingKeys: String, CodingKey {
+            case forumID = "forum_id"
+            case level = "level_id"
+            case isSignedToday = "is_sign"
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            forumID = container.flexibleInt64(forKey: .forumID)
+            level = container.flexibleInt(forKey: .level)
+            isSignedToday = container.flexibleBool(forKey: .isSignedToday)
+        }
+    }
+
+    /// The guide payload is flat: the list and its paging flag sit next to the
+    /// error code, not inside a `data` wrapper. Decoding a nested `data` read
+    /// `nil` on every successful response, which the caller then reported as
+    /// "the service answered with empty data" — the exact 39KB-then-failure
+    /// pair the diagnostic log recorded.
+    var forums: [ForumDTO]
+    var hasMore: Bool
+    var errorCode: Int
+    var errorMessage: String
+
+    enum CodingKeys: String, CodingKey {
+        case forums = "like_forum"
+        case hasMore = "like_forum_has_more"
+        case errorCode = "error_code"
+        case errorMessage = "error_msg"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        forums = try container.decodeIfPresent([ForumDTO].self, forKey: .forums) ?? []
+        hasMore = container.flexibleBool(forKey: .hasMore)
+        errorCode = container.flexibleInt(forKey: .errorCode)
+        errorMessage = container.decodeStringIfPresent(forKey: .errorMessage) ?? ""
+    }
+}
+
+/// Bounds the followed-forum guide pagination. A page of 200 is the largest the
+/// endpoint serves, so five pages cover 1000 followed forums — far past any real
+/// account — while a malformed `like_forum_has_more` cannot loop forever.
+enum FollowedForumGuidePolicy {
+    static let pageSize = 200
+    static let maximumPages = 5
+}
+
 extension TiebaAPI {
+    /// One followed-forum listing with the account's level and today's check-in
+    /// state per forum.
+    ///
+    /// The level-info endpoint needs one request per forum and never reports
+    /// whether the check-in is already done, so the hub reads both values from
+    /// this guide listing instead.
+    func followedForumStatuses(account: Account) async throws -> [FollowedForumStatus] {
+        var statuses: [FollowedForumStatus] = []
+        var page = 1
+
+        while page <= FollowedForumGuidePolicy.maximumPages {
+            let response = try await followedForumGuidePage(account: account, page: page)
+            try TiebaResponseValidator.validate(code: response.errorCode, message: response.errorMessage)
+
+            let decoded = response.forums.compactMap { forum -> FollowedForumStatus? in
+                guard forum.forumID > 0 else { return nil }
+                return FollowedForumStatus(
+                    forumID: forum.forumID,
+                    level: max(forum.level, 0),
+                    isSignedToday: forum.isSignedToday
+                )
+            }
+
+            await AppLog.shared.record(
+                .info,
+                "进吧等级",
+                "第\(page)页 error_code=\(response.errorCode) has_more=\(response.hasMore) "
+                    + "原始\(response.forums.count)条 有效\(decoded.count)条 "
+                    + "等级分布=\(Self.levelHistogram(decoded))"
+            )
+
+            // A first page without the list is either an account with no
+            // followed forums or a field-name miss — the line above carries the
+            // raw key list, which is the only thing that tells them apart.
+            if page == 1, response.forums.isEmpty {
+                await AppLog.shared.record(
+                    .error,
+                    "进吧等级",
+                    "第1页没有 like_forum 条目：要么该吧关注数为0，要么字段名对不上；键列表见上一行"
+                )
+                break
+            }
+
+            statuses.append(contentsOf: decoded)
+
+            // An empty page with a sticky "has more" flag would otherwise spin.
+            guard response.hasMore, response.forums.isEmpty == false else { break }
+            page += 1
+        }
+
+        await AppLog.shared.record(
+            .info,
+            "进吧等级",
+            "汇总 \(statuses.count) 个贴吧，等级>0 的 \(statuses.filter { $0.level > 0 }.count) 个，"
+                + "已签到 \(statuses.filter(\.isSignedToday).count) 个"
+        )
+        return statuses
+    }
+
+    /// Level values that never arrive are the difference between "not signed in"
+    /// and "wrong field name", and a histogram shows both at a glance.
+    private static func levelHistogram(_ statuses: [FollowedForumStatus]) -> String {
+        var buckets: [Int: Int] = [:]
+        for status in statuses {
+            buckets[status.level, default: 0] += 1
+        }
+        return buckets
+            .sorted { $0.key < $1.key }
+            .map { "Lv\($0.key)×\($0.value)" }
+            .joined(separator: " ")
+    }
+
+    private func followedForumGuidePage(
+        account: Account,
+        page: Int
+    ) async throws -> FollowedForumGuideResponseDTO {
+        let tbs = try await resolvedClientTBS(for: account)
+        let fields = try TiebaSocialRequestFactory.followedForumGuideFields(
+            tbs: tbs,
+            page: page
+        )
+        let data = try await client.postFormData(
+            .followedForumGuide,
+            fields: fields,
+            headers: [
+                "Cookie": account.minimalCookieHeader,
+                "Subapp-Type": "hybrid"
+            ]
+        )
+
+        // The guide payload is the least documented response in the app: the
+        // forum list key, the level key and the check-in key all come from
+        // observation, so the raw skeleton is recorded before decoding rather
+        // than after, where a mismatch would already be a silent empty list.
+        // Building that skeleton walks the whole 39 KB payload, so it is skipped
+        // outright when the log is switched off.
+        if AppLog.isEnabled {
+            await AppLog.shared.record(
+                .info,
+                "进吧等级",
+                "第\(page)页 原始\(data.count)字节 结构=\(DiagnosticJSON.skeleton(data))"
+            )
+        }
+
+        do {
+            return try JSONDecoder().decode(FollowedForumGuideResponseDTO.self, from: data)
+        } catch {
+            await AppLog.shared.recordError("进吧等级", "第\(page)页解码失败", error: error)
+            throw error
+        }
+    }
+
+    /// Reading the guide needs a valid TBS, but a login normally stores one:
+    /// refresh only when the stored value is missing.
+    private func resolvedClientTBS(for account: Account) async throws -> String {
+        let stored = account.tbs.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard stored.isEmpty else { return stored }
+        return try await refreshedClientTBS(for: account)
+    }
+
     func refreshedClientTBS(for account: Account) async throws -> String {
         try await refreshedClientTBS(for: account, allowsStoredFallback: true)
     }
@@ -344,6 +536,7 @@ extension TiebaAPI {
     ) async throws -> String {
         var clientError: Error?
         var webError: Error?
+        let clientAttemptStarted = Date()
 
         do {
             let response = try await login(
@@ -351,6 +544,7 @@ extension TiebaAPI {
                 stoken: account.stoken,
                 baiduID: account.baiduID ?? ""
             )
+            await logSlowTokenHop("客户端登录", startedAt: clientAttemptStarted)
             try Task.checkCancellation()
             let code = Int(response.errorCode ?? "0") ?? 0
             if code == 0 {
@@ -374,17 +568,20 @@ extension TiebaAPI {
         } catch is CancellationError {
             throw CancellationError()
         } catch {
+            await logSlowTokenHop("客户端登录", startedAt: clientAttemptStarted, failure: error)
             clientError = error
         }
 
         try Task.checkCancellation()
 
+        let webAttemptStarted = Date()
         do {
             let webInfo = try await webMyInfo(cookies: BaiduCookies(
                 bduss: account.bduss,
                 stoken: account.stoken,
                 baiduID: account.baiduID
             ))
+            await logSlowTokenHop("网页兜底", startedAt: webAttemptStarted)
             try Task.checkCancellation()
 
             if webInfo.data?.isLogin == false {
@@ -406,11 +603,13 @@ extension TiebaAPI {
         } catch is CancellationError {
             throw CancellationError()
         } catch let apiError as TiebaAPIError {
+            await logSlowTokenHop("网页兜底", startedAt: webAttemptStarted, failure: apiError)
             if case .sessionExpired = apiError {
                 throw apiError
             }
             webError = apiError
         } catch {
+            await logSlowTokenHop("网页兜底", startedAt: webAttemptStarted, failure: error)
             webError = error
         }
 
@@ -428,6 +627,26 @@ extension TiebaAPI {
         }
         throw TiebaMutationError.missingTBS
     }
+
+    /// A write token normally resolves in a few hundred milliseconds, but each
+    /// of the two hops behind it can stall on its own, and a twenty-second
+    /// check-in cannot be told from a slow write without knowing which hop ate
+    /// the time. Only the slow hops are recorded, so a like or a collection
+    /// does not add a line per tap.
+    private func logSlowTokenHop(
+        _ name: String,
+        startedAt: Date,
+        failure: Error? = nil
+    ) async {
+        let seconds = Date().timeIntervalSince(startedAt)
+        guard seconds >= Self.slowTokenHopSeconds else { return }
+        let cost = String(format: "%.1fs", seconds)
+        let outcome = failure.map { "失败：\(ReaderErrorMessage.message(for: $0))" } ?? "成功"
+        await AppLog.shared.record(.warning, "写令牌", "\(name) 耗时 \(cost) \(outcome)")
+    }
+
+    /// Below this a hop is fast enough not to be worth a log line.
+    private static let slowTokenHopSeconds: TimeInterval = 3
 
     func setPostLiked(
         account: Account,
@@ -635,5 +854,14 @@ private extension KeyedDecodingContainer {
         if let value = try? decode(Int.self, forKey: key) { return Int64(value) }
         if let value = try? decode(String.self, forKey: key) { return Int64(value) ?? 0 }
         return 0
+    }
+
+    func flexibleBool(forKey key: Key) -> Bool {
+        if let value = try? decode(Bool.self, forKey: key) { return value }
+        if let value = try? decode(Int.self, forKey: key) { return value != 0 }
+        if let value = try? decode(String.self, forKey: key) {
+            return value == "1" || value.lowercased() == "true"
+        }
+        return false
     }
 }

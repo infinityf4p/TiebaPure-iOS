@@ -8,6 +8,27 @@ enum TiebaClientVersion: String {
     case mini = "7.2.0.0"
 }
 
+/// Cookie header for the protobuf feed endpoints.
+///
+/// `ka=open` alone marks the request as anonymous, and an anonymous feed is a
+/// generic ranking rather than the followed-forum mix the official app shows.
+/// The endpoints are same-origin with the tieba domain, so the signed-in
+/// credentials belong in the cookie next to `ka=open` — the same pairing the
+/// posting layer already uses.
+enum TiebaFeedCookie {
+    static func value(for account: Account?) -> String {
+        guard let account else { return "ka=open" }
+        var parts = ["ka=open"]
+        if account.bduss.isEmpty == false {
+            parts.append("BDUSS=\(account.bduss)")
+        }
+        if account.stoken.isEmpty == false {
+            parts.append("STOKEN=\(account.stoken)")
+        }
+        return parts.joined(separator: "; ")
+    }
+}
+
 struct TiebaRequestBuilder {
     static let boundary = "--------7da3d81520810*"
 

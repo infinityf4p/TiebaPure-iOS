@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package tieba.hotThreadList;
+
+import "CommonRequest.proto";
+import "Error.proto";
+import "ThreadInfo.proto";
+
+// Project-maintained projection of the hot-thread (热榜) endpoint. Field numbers
+// are wire identifiers and must only change with a matching fixture update.
+// Only the fields TiebaPure reads are declared; the inner-tab and per-topic
+// fields the endpoint also returns are skipped by Protobuf as unknown fields.
+
+message FrsTabInfo {
+  string tab_name = 3;
+  string tab_code = 8;
+}
+
+// One 话题榜 (hot-topic) entry. Every response carries the same list — the
+// default request included — so the section needs no extra call.
+message RecomTopicList {
+  uint64 topic_id = 1;
+  string topic_name = 2;
+  uint64 discuss_num = 4;
+}
+
+// Request semantics, measured against the service itself (2026-10-02):
+// tab_id is always "1", and the tab list carries only the four category
+// sub-tabs (视频/长更/游戏/数码) — never a whole-list entry. There is no 全部
+// code at all: an empty tab_code, "all" and "0" return the byte-identical
+// default response (7 topics + 4 threads), so the client builds the 全部
+// listing by merging the category listings (see HotTab.allCode).
+message HotThreadListRequestData {
+  tieba.CommonRequest common = 1;
+  string tab_id = 2;
+  string tab_code = 3;
+}
+
+message HotThreadListRequest {
+  HotThreadListRequestData data = 1;
+}
+
+message HotThreadListResponseData {
+  repeated RecomTopicList topic_list = 1;
+  repeated tieba.ThreadInfo thread_info = 2;
+  repeated FrsTabInfo hot_thread_tab_info = 3;
+}
+
+message HotThreadListResponse {
+  tieba.Error error = 1;
+  HotThreadListResponseData data = 2;
+}

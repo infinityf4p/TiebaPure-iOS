@@ -25,6 +25,8 @@ enum FixtureScenario: String {
     case forumCategoryRace
     case voicePlayback
     case signFailure
+    case signAlreadyDone
+    case signAllDone
     case readingPosition
     case scrollPerformance
     case layoutPreview
@@ -594,6 +596,41 @@ struct FixtureTiebaAPI: TiebaAPIService {
             continuousDays: wasAlreadySigned ? 3 : 4,
             rank: 12
         )
+    }
+
+    /// The write token a check-in run resolves once for the whole list. It is
+    /// counted rather than stubbed away because "how many handshakes did this
+    /// run cost" is the property the coordinator is judged on, and it is
+    /// invisible from the outside otherwise.
+    func signingTBS(account: Account) async throws -> String {
+        _ = account
+        try await prepare()
+        _ = await state.nextSigningTBSRequest()
+        return "fixture-tbs"
+    }
+
+    func signingTBSRequestCount() async -> Int {
+        await state.signingTBSRequests()
+    }
+
+    /// The guide listing the check-in coordinator reads to skip forums that are
+    /// already signed today. Services without that listing reject the call, so
+    /// only the dedicated scenarios answer it: `signAlreadyDone` leaves the
+    /// second forum to sign, `signAllDone` leaves nothing to do at all.
+    func followedForumStatuses(account: Account) async throws -> [FollowedForumStatus] {
+        try await prepare()
+        guard scenario == .signAlreadyDone || scenario == .signAllDone else {
+            throw UserProfileMutationError.unsupportedByService
+        }
+        let everythingSigned = scenario == .signAllDone
+        return [
+            FollowedForumStatus(forumID: Self.forum.id, level: 7, isSignedToday: true),
+            FollowedForumStatus(
+                forumID: Self.forumTwo.id,
+                level: 3,
+                isSignedToday: everythingSigned
+            )
+        ]
     }
 
     func accountThreadFavorites(account: Account, page: Int) async throws -> AccountThreadFavoritesPage {
@@ -1231,6 +1268,7 @@ private actor FixtureRequestState {
     private var userFollowStates: [String: Bool] = [:]
     private var forumFollowStates: [String: Bool] = [:]
     private var signedForums: Set<String> = []
+    private var signingTBSRequestCount = 0
     private var threadCollectStates: [String: Bool] = [:]
     private var submittedThreadValues: [Int64: ThreadSummary] = [:]
     private var submittedMainPostValues: [Int64: Post] = [:]
@@ -1315,6 +1353,15 @@ private actor FixtureRequestState {
     /// fixture can exercise both the fresh check-in and the repeat.
     func markForumSigned(accountID: String, forumID: Int64) -> Bool {
         signedForums.insert("\(accountID)|\(forumID)").inserted
+    }
+
+    func nextSigningTBSRequest() -> Int {
+        signingTBSRequestCount += 1
+        return signingTBSRequestCount
+    }
+
+    func signingTBSRequests() -> Int {
+        signingTBSRequestCount
     }
 
     func setForumFollowed(_ followed: Bool, accountID: String, forumID: Int64) {

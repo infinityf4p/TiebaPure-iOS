@@ -50,6 +50,22 @@ protocol TiebaAPIService {
     func forumMembership(account: Account, forum: Forum) async throws -> ForumMembership
     func setForumFollowed(account: Account, forum: Forum, followed: Bool) async throws -> ForumMembership
     func signForum(account: Account, forum: Forum) async throws -> ForumSignResult
+    /// One check-in run signs many forums, and the write token the service wants
+    /// comes out of a login handshake. Resolving it once per run keeps that
+    /// handshake out of the per-forum path.
+    func signingTBS(account: Account) async throws -> String
+    func signForum(account: Account, forum: Forum, tbs: String) async throws -> ForumSignResult
+    func followedForumStatuses(account: Account) async throws -> [FollowedForumStatus]
+    func hotThreads(account: Account?, tabCode: String) async throws -> HotFeed
+    /// 话题 (topic) threads behind the 话题榜 rows on the hot page.
+    func topicThreads(
+        account: Account?,
+        topicID: Int64,
+        topicName: String,
+        cursor: String,
+        page: Int,
+        pageSize: Int
+    ) async throws -> TopicThreadPage
     func accountThreadFavorites(account: Account, page: Int) async throws -> AccountThreadFavoritesPage
     func setAccountThreadFavorite(
         account: Account,
@@ -76,6 +92,42 @@ extension TiebaAPIService {
     /// implement check-in (test doubles, offline stubs) reject it rather than
     /// having to carry a stub.
     func signForum(account: Account, forum: Forum) async throws -> ForumSignResult {
+        throw UserProfileMutationError.unsupportedByService
+    }
+
+    /// Services without check-in have no write token to hand out either.
+    func signingTBS(account: Account) async throws -> String {
+        throw UserProfileMutationError.unsupportedByService
+    }
+
+    /// A service that cannot pre-resolve the token still signs: this falls back
+    /// to the per-forum path, which resolves the token itself.
+    func signForum(account: Account, forum: Forum, tbs: String) async throws -> ForumSignResult {
+        try await signForum(account: account, forum: forum)
+    }
+
+    /// The topic page is optional too: services without it reject the call so
+    /// the row can stay a plain label instead of opening an empty screen.
+    func topicThreads(
+        account: Account?,
+        topicID: Int64,
+        topicName: String,
+        cursor: String,
+        page: Int,
+        pageSize: Int
+    ) async throws -> TopicThreadPage {
+        throw UserProfileMutationError.unsupportedByService
+    }
+
+    /// Level and check-in state per followed forum is optional: services without
+    /// the guide listing reject it rather than reporting a wrong level.
+    func followedForumStatuses(account: Account) async throws -> [FollowedForumStatus] {
+        throw UserProfileMutationError.unsupportedByService
+    }
+
+    /// The hot-thread tab is optional: services without that endpoint reject it
+    /// so the tab can show an unavailable state instead of an empty list.
+    func hotThreads(account: Account?, tabCode: String) async throws -> HotFeed {
         throw UserProfileMutationError.unsupportedByService
     }
 

@@ -289,6 +289,8 @@ private struct ExternalRouteView: View {
 private struct MainTabView: View {
     let account: Account?
     @State private var selectedTab: RootTab = .home
+    @State private var homeReturnToRootToken = 0
+    @State private var homeScrollToTopToken = 0
     @State private var homeRefreshToken = 0
 
     var body: some View {
@@ -300,9 +302,19 @@ private struct MainTabView: View {
             }
         }
         .background(
-            TabSelectionObserver {
-                homeRefreshToken += 1
-            }
+            TabSelectionObserver(
+                onHomeSingleTap: {
+                    homeReturnToRootToken &+= 1
+                },
+                onHomeDoubleTap: {
+                    homeReturnToRootToken &+= 1
+                    homeScrollToTopToken &+= 1
+                },
+                onHomeLongPress: {
+                    homeReturnToRootToken &+= 1
+                    homeRefreshToken &+= 1
+                }
+            )
         )
     }
 
@@ -310,7 +322,12 @@ private struct MainTabView: View {
     private var modernTabView: some View {
         TabView(selection: tabSelection) {
             Tab("首页", systemImage: "house", value: RootTab.home) {
-                HomeView(account: account, refreshToken: homeRefreshToken)
+                HomeView(
+                    account: account,
+                    returnToRootToken: homeReturnToRootToken,
+                    scrollToTopToken: homeScrollToTopToken,
+                    refreshToken: homeRefreshToken
+                )
             }
 
             Tab("进吧", systemImage: "square.grid.2x2", value: RootTab.forums) {
@@ -325,7 +342,12 @@ private struct MainTabView: View {
 
     private var legacyTabView: some View {
         TabView(selection: tabSelection) {
-            HomeView(account: account, refreshToken: homeRefreshToken)
+            HomeView(
+                account: account,
+                returnToRootToken: homeReturnToRootToken,
+                scrollToTopToken: homeScrollToTopToken,
+                refreshToken: homeRefreshToken
+            )
                 .tabItem {
                     Label("首页", systemImage: "house")
                 }
@@ -362,10 +384,16 @@ enum RootTab: Hashable {
 }
 
 struct TabSelectionObserver: UIViewControllerRepresentable {
-    let onReselectHome: () -> Void
+    let onHomeSingleTap: () -> Void
+    let onHomeDoubleTap: () -> Void
+    let onHomeLongPress: () -> Void
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(onReselectHome: onReselectHome)
+        Coordinator(
+            onHomeSingleTap: onHomeSingleTap,
+            onHomeDoubleTap: onHomeDoubleTap,
+            onHomeLongPress: onHomeLongPress
+        )
     }
 
     func makeUIViewController(context: Context) -> Controller {
@@ -373,7 +401,9 @@ struct TabSelectionObserver: UIViewControllerRepresentable {
     }
 
     func updateUIViewController(_ controller: Controller, context: Context) {
-        context.coordinator.onReselectHome = onReselectHome
+        context.coordinator.onHomeSingleTap = onHomeSingleTap
+        context.coordinator.onHomeDoubleTap = onHomeDoubleTap
+        context.coordinator.onHomeLongPress = onHomeLongPress
         controller.coordinator = context.coordinator
         controller.isObservationActive = true
         controller.attachToTabBarController()
@@ -447,31 +477,134 @@ struct TabSelectionObserver: UIViewControllerRepresentable {
         }
     }
 
-    final class Coordinator: NSObject, UITabBarControllerDelegate {
-        var onReselectHome: () -> Void
+    final class Coordinator: NSObject, UITabBarControllerDelegate, UIGestureRecognizerDelegate {
+        var onHomeSingleTap: () -> Void
+        var onHomeDoubleTap: () -> Void
+        var onHomeLongPress: () -> Void
         private weak var observedController: UITabBarController?
         private weak var previousDelegate: UITabBarControllerDelegate?
+        private var singleTap: UITapGestureRecognizer?
+        private var doubleTap: UITapGestureRecognizer?
+        private var longPress: UILongPressGestureRecognizer?
 
-        init(onReselectHome: @escaping () -> Void) {
-            self.onReselectHome = onReselectHome
+        init(
+            onHomeSingleTap: @escaping () -> Void,
+            onHomeDoubleTap: @escaping () -> Void,
+            onHomeLongPress: @escaping () -> Void
+        ) {
+            self.onHomeSingleTap = onHomeSingleTap
+            self.onHomeDoubleTap = onHomeDoubleTap
+            self.onHomeLongPress = onHomeLongPress
         }
 
         func attach(to tabBarController: UITabBarController) {
-            guard observedController !== tabBarController || tabBarController.delegate !== self else {
-                return
+            if observedController !== tabBarController || tabBarController.delegate !== self {
+                detach()
+                previousDelegate = tabBarController.delegate
+                observedController = tabBarController
+                tabBarController.delegate = self
             }
-            detach()
-            previousDelegate = tabBarController.delegate
-            observedController = tabBarController
-            tabBarController.delegate = self
+            installGestureRecognizers(on: tabBarController)
         }
 
         func detach() {
+            removeGestureRecognizers()
             if let observedController, observedController.delegate === self {
                 observedController.delegate = previousDelegate
             }
             observedController = nil
             previousDelegate = nil
+        }
+
+        private func installGestureRecognizers(on tabBarController: UITabBarController) {
+            let tabBar = tabBarController.tabBar
+            // Idempotent: a later re-attach must not duplicate recognizers.
+            if singleTap != nil && singleTap?.view === tabBar { return }
+            removeGestureRecognizers()
+
+            let doubleTap = UITapGestureRecognizer(target: self, action: #selector(handleDoubleTap(_:)))
+            doubleTap.numberOfTapsRequired = 2
+            doubleTap.cancelsTouchesInView = false
+
+            let longPress = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress(_:)))
+            longPress.minimumPressDuration = 0.5
+            longPress.cancelsTouchesInView = false
+
+            let singleTap = UITapGestureRecognizer(target: self, action: #selector(handleSingleTap(_:)))
+            singleTap.numberOfTapsRequired = 1
+            singleTap.cancelsTouchesInView = false
+            singleTap.require(toFail: doubleTap)
+            singleTap.require(toFail: longPress)
+
+            self.doubleTap = doubleTap
+            self.singleTap = singleTap
+            self.longPress = longPress
+            for recognizer in [singleTap, doubleTap, longPress] {
+                recognizer.delegate = self
+                tabBar.addGestureRecognizer(recognizer)
+            }
+        }
+
+        private func removeGestureRecognizers() {
+            guard let tabBar = observedController?.tabBar else {
+                singleTap = nil
+                doubleTap = nil
+                longPress = nil
+                return
+            }
+            for recognizer in [singleTap, doubleTap, longPress] {
+                if let recognizer {
+                    tabBar.removeGestureRecognizer(recognizer)
+                }
+            }
+            singleTap = nil
+            doubleTap = nil
+            longPress = nil
+        }
+
+        @objc private func handleSingleTap(_ gesture: UITapGestureRecognizer) {
+            onHomeSingleTap()
+        }
+
+        @objc private func handleDoubleTap(_ gesture: UITapGestureRecognizer) {
+            onHomeDoubleTap()
+        }
+
+        @objc private func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
+            guard gesture.state == .began else { return }
+            onHomeLongPress()
+        }
+
+        /// Restrict the recognizers to the Home tab's button so taps on the
+        /// other tabs keep their normal UIKit selection behavior.
+        func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            guard let tabBar = observedController?.tabBar else { return false }
+            let point = gestureRecognizer.location(in: tabBar)
+            return homeItemFrame(in: tabBar).contains(point)
+        }
+
+        func gestureRecognizer(
+            _ gestureRecognizer: UIGestureRecognizer,
+            shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+        ) -> Bool {
+            true
+        }
+
+        private func homeItemFrame(in tabBar: UITabBar) -> CGRect {
+            let buttons = tabBar.subviews
+                .filter { $0.frame.width > 0 && $0.frame.height > 0 }
+                .compactMap { $0 as? UIControl }
+                .sorted { $0.frame.minX < $1.frame.minX }
+            if let first = buttons.first, first.frame.minX >= tabBar.bounds.minX {
+                return first.frame
+            }
+            let count = CGFloat(max(tabBar.items?.count ?? 1, 1))
+            return CGRect(
+                x: 0,
+                y: 0,
+                width: tabBar.bounds.width / max(count, 1),
+                height: tabBar.bounds.height
+            )
         }
 
         func tabBarController(
@@ -480,10 +613,9 @@ struct TabSelectionObserver: UIViewControllerRepresentable {
         ) -> Bool {
             if tabBarController.selectedViewController === viewController,
                tabBarController.viewControllers?.first === viewController {
-                // Home owns both returning to its root and refreshing. Letting
-                // UIKit reselect first can pop the navigation path before the
-                // SwiftUI callback decides which action the user requested.
-                onReselectHome()
+                // Home's own gestures drive what a reselect tap does. Reject the
+                // native reselect so UIKit does not also pop or scroll behind
+                // the SwiftUI callback.
                 return false
             }
             return previousDelegate?.tabBarController?(

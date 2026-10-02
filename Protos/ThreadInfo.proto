@@ -42,4 +42,7 @@ message ThreadInfo {
   repeated PbContent firstPostContent = 142;
   SimpleForum forumInfo = 155;
   int32 isDeleted = 181;
+  // 热度值, only the hot-thread (热榜) endpoint sends it, and each listing
+  // arrives sorted by it. Used to order the merged 全部 listing.
+  optional int64 hot_num = 182;
 }

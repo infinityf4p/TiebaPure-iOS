@@ -9,6 +9,7 @@ struct ForumHubView: View {
     @ObservedObject private var recentStore = RecentForumStore.shared
     @ObservedObject private var blocklistStore = BlocklistStore.shared
     @State private var followedForums: [Forum] = []
+    @State private var followedStatuses: [Int64: FollowedForumStatus] = [:]
     @State private var isLoadingFollowed = false
     @State private var didLoadFollowed = false
     @State private var followedError: String?
@@ -17,6 +18,7 @@ struct ForumHubView: View {
     @State private var splitDetailPath: [ReaderSplitThreadRoute] = []
     @State private var requestGeneration = 0
     @State private var loadTask: Task<[Forum], Error>?
+    @State private var statusTask: Task<[FollowedForumStatus], Error>?
     @State private var isManagingRecentForums = false
     @State private var showsClearRecentConfirmation = false
     @State private var showsRecentStorageError = false
@@ -146,7 +148,9 @@ struct ForumHubView: View {
                                     id: "\(forum.id)-\(forum.name)",
                                     title: forum.displayName,
                                     avatarURL: forum.avatarURL,
-                                    forum: forum
+                                    forum: forum,
+                                    level: followedStatuses[forum.id]?.level ?? 0,
+                                    isSignedToday: followedStatuses[forum.id]?.isSignedToday ?? false
                                 )
                             },
                             isManaging: false,
@@ -164,9 +168,25 @@ struct ForumHubView: View {
                     Spacer(minLength: TiebaPureTheme.Spacing.sm)
                     if account != nil, visibleFollowedForums.isEmpty == false {
                         if signCoordinator.isRunning {
-                            ProgressView()
-                                .controlSize(.small)
-                                .accessibilityLabel("正在签到")
+                            HStack(spacing: TiebaPureTheme.Spacing.xs) {
+                                ProgressView()
+                                    .controlSize(.small)
+                                    .accessibilityLabel("正在签到")
+                                if let progress = signCoordinator.progress {
+                                    Text(ForumSignProgressText.counter(for: progress))
+                                        .font(.footnote)
+                                        .monospacedDigit()
+                                        .foregroundStyle(.secondary)
+                                        .accessibilityIdentifier("forum-hub-sign-progress")
+                                }
+                                Button("取消") {
+                                    signCoordinator.cancel()
+                                }
+                                .font(.footnote)
+                                .textCase(nil)
+                                .accessibilityLabel("取消签到")
+                                .accessibilityIdentifier("forum-hub-sign-cancel")
+                            }
                         } else {
                             Button("一键签到") {
                                 startSignAllFollowedForums()
@@ -177,6 +197,13 @@ struct ForumHubView: View {
                             .accessibilityIdentifier("forum-hub-sign-all")
                         }
                     }
+                }
+            } footer: {
+                if let progress = signCoordinator.progress,
+                   let currentForum = ForumSignProgressText.currentForum(for: progress) {
+                    Text(currentForum)
+                        .font(.footnote)
+                        .accessibilityIdentifier("forum-hub-sign-current-forum")
                 }
             }
         }
@@ -223,7 +250,9 @@ struct ForumHubView: View {
         .onChange(of: account?.sessionIdentity) { _ in
             requestGeneration += 1
             loadTask?.cancel()
+            statusTask?.cancel()
             followedForums = []
+            followedStatuses = [:]
             followedError = nil
             didLoadFollowed = false
             isLoadingFollowed = false
@@ -238,6 +267,7 @@ struct ForumHubView: View {
         }
         .onDisappear {
             loadTask?.cancel()
+            statusTask?.cancel()
             requestGeneration += 1
             isLoadingFollowed = false
         }
@@ -406,6 +436,7 @@ struct ForumHubView: View {
 
     private func loadFollowed(account: Account) async {
         loadTask?.cancel()
+        statusTask?.cancel()
         requestGeneration += 1
         let generation = requestGeneration
         let accountID = account.id
@@ -416,6 +447,10 @@ struct ForumHubView: View {
         do {
             let task = Task { try await environment.api.followedForums(account: account) }
             loadTask = task
+            // Level and check-in come from a second listing. Start it right
+            // away so both requests overlap instead of serializing.
+            let statuses = Task { try await environment.api.followedForumStatuses(account: account) }
+            statusTask = statuses
             let loaded = try await task.value
             guard generation == requestGeneration,
                   requestedSession == self.account?.sessionIdentity else { return }
@@ -427,10 +462,28 @@ struct ForumHubView: View {
                 accountID: accountID,
                 forums: followedForums
             )
+            // A forum list without a level is still a usable forum list, so a
+            // failed status read leaves the tiles unadorned instead of empty.
+            // The reason still reaches the diagnostic log, otherwise "no badge"
+            // and "wrong field name" look identical from the outside.
+            do {
+                let reported = try await statuses.value
+                guard generation == requestGeneration,
+                      requestedSession == self.account?.sessionIdentity else { return }
+                followedStatuses = Dictionary(
+                    reported.map { ($0.forumID, $0) },
+                    uniquingKeysWith: { _, latest in latest }
+                )
+            } catch is CancellationError {
+                return
+            } catch {
+                await AppLog.shared.recordError("进吧等级", "读取失败，等级与签到不显示", error: error)
+            }
         } catch is CancellationError {
             guard generation == requestGeneration,
                   requestedSession == self.account?.sessionIdentity else { return }
             loadTask = nil
+            statusTask = nil
             isLoadingFollowed = false
             return
         } catch {
@@ -441,6 +494,7 @@ struct ForumHubView: View {
         guard generation == requestGeneration,
               requestedSession == self.account?.sessionIdentity else { return }
         loadTask = nil
+        statusTask = nil
         isLoadingFollowed = false
         didLoadFollowed = true
     }
@@ -632,11 +686,36 @@ enum ForumHubTapPolicy {
     }
 }
 
+/// The tile's level and check-in state are visual ornaments, so they reach
+/// assistive tech as one readable label rather than three loose fragments.
+enum ForumTileAccessibilityPolicy {
+    static func label(
+        title: String,
+        level: Int,
+        isSignedToday: Bool,
+        isManaging: Bool
+    ) -> String {
+        guard isManaging == false else { return title }
+        var parts = ["进入\(title)"]
+        if level > 0 {
+            parts.append("等级\(level)")
+        }
+        if isSignedToday {
+            parts.append("今日已签到")
+        }
+        return parts.joined(separator: "，")
+    }
+}
+
 struct ForumTile: Identifiable, Equatable {
     let id: String
     let title: String
     let avatarURL: URL?
     let forum: Forum
+    /// The account's level in this forum; 0 when the status read did not report
+    /// one, in which case no level is shown.
+    var level: Int = 0
+    var isSignedToday: Bool = false
 }
 
 /// Forums read as a wall of small squares rather than a list of rows: the name
@@ -679,6 +758,17 @@ private struct ForumTileButton: View {
     let onOpen: () -> Void
     let onDelete: (() -> Void)?
 
+    /// One spoken label instead of three loose fragments: the level and the
+    /// check-in mark are only useful to assistive tech as part of this row.
+    private var accessibilityLabel: String {
+        ForumTileAccessibilityPolicy.label(
+            title: tile.title,
+            level: tile.level,
+            isSignedToday: tile.isSignedToday,
+            isManaging: isManaging
+        )
+    }
+
     var body: some View {
         Button {
             // Managing is a separate mode: a tap there is almost always aimed
@@ -688,18 +778,44 @@ private struct ForumTileButton: View {
         } label: {
             VStack(spacing: TiebaPureTheme.Spacing.xs) {
                 AvatarView(url: tile.avatarURL, title: tile.title, size: 52)
+                    // The row already announces the forum name; letting the
+                    // avatar add its own would read the name twice.
+                    .accessibilityHidden(true)
+                    .overlay(alignment: .bottomTrailing) {
+                        if tile.isSignedToday {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 16, weight: .semibold))
+                                .symbolRenderingMode(.palette)
+                                .foregroundStyle(Color.white, Color(uiColor: .systemGreen))
+                                .accessibilityHidden(true)
+                        }
+                    }
 
                 Text(tile.title)
                     .font(.caption)
                     .foregroundStyle(.primary)
                     .lineLimit(1)
                     .truncationMode(.tail)
+
+                if tile.level > 0 {
+                    Text("Lv.\(tile.level)")
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .padding(.horizontal, TiebaPureTheme.Spacing.xxs)
+                        .padding(.vertical, 2)
+                        .background(
+                            RoundedRectangle(cornerRadius: TiebaPureTheme.Radius.chip, style: .continuous)
+                                .fill(TiebaPureTheme.ColorToken.readerSecondarySurface)
+                        )
+                        .accessibilityHidden(true)
+                }
             }
             .frame(maxWidth: .infinity)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(isManaging ? tile.title : "进入\(tile.title)")
+        .accessibilityLabel(accessibilityLabel)
         .accessibilityIdentifier("forum-hub-forum-row")
         .overlay(alignment: .topTrailing) {
             if isManaging, let onDelete {

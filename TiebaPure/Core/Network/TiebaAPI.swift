@@ -341,23 +341,50 @@ extension TiebaAPI {
         request.data = requestData
 
         let multipart = try requestBuilder.multipart(protobuf: request, account: account, includeSToken: false)
-        let response = try await client.postProtobuf(
-            .personalized,
-            body: multipart.body,
-            contentType: multipart.contentType,
-            headers: [
-                "X-BD-DATA-TYPE": "protobuf",
-                "Cookie": "ka=open"
-            ],
-            as: Tieba_PersonalizedResponse.self
-        )
+        do {
+            let response = try await client.postProtobuf(
+                .personalized,
+                body: multipart.body,
+                contentType: multipart.contentType,
+                headers: [
+                    "X-BD-DATA-TYPE": "protobuf",
+                    "Cookie": TiebaFeedCookie.value(for: account)
+                ],
+                as: Tieba_PersonalizedResponse.self
+            )
 
-        try validateTiebaError(response.error)
-        guard response.hasData else { throw TiebaAPIError.emptyResponse }
+            try validateTiebaError(response.error)
+            guard response.hasData else { throw TiebaAPIError.emptyResponse }
 
-        return response.data.threadList
-            .filter(TiebaContentFilter.shouldMap(thread:))
-            .map { ThreadMapper.fromThreadInfo($0, usersByID: [:]) }
+            let threads = response.data.threadList
+                .filter(TiebaContentFilter.shouldMap(thread:))
+                .map { ThreadMapper.fromThreadInfo($0, usersByID: [:]) }
+            await AppLog.shared.record(
+                .info,
+                "首页推荐",
+                "第\(requestPage)页 loadType=\(loadType) 已登录=\(account != nil) "
+                    + "原始\(response.data.threadList.count)条 保留\(threads.count)条 "
+                    + "来源吧=\(Self.feedForumNames(threads))"
+            )
+            return threads
+        } catch {
+            await AppLog.shared.recordError(
+                "首页推荐",
+                "第\(requestPage)页 loadType=\(loadType) 失败",
+                error: error
+            )
+            throw error
+        }
+    }
+
+    /// The official app's recommendation is built from followed forums, so the
+    /// forum mix is the evidence for whether personalization actually applied.
+    private static func feedForumNames(_ threads: [ThreadSummary]) -> String {
+        let names = threads
+            .prefix(8)
+            .compactMap { $0.forumName?.isEmpty == false ? $0.forumName : nil }
+        guard names.isEmpty == false else { return "(帖子未带吧名)" }
+        return names.joined(separator: "、")
     }
 
     func followedForums(account: Account) async throws -> [Forum] {
@@ -620,7 +647,7 @@ extension TiebaAPI {
             || TiebaProtobufErrorClassifier.isDecodeFailure(error)
     }
 
-    private func validateTiebaError(_ error: Tieba_Error) throws {
+    func validateTiebaError(_ error: Tieba_Error) throws {
         try validateResponseCode(
             Int(error.errorCode),
             message: error.userMsg.isEmpty ? error.errorMsg : error.userMsg

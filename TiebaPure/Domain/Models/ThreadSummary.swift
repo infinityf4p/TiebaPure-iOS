@@ -18,6 +18,10 @@ struct ThreadSummary: Identifiable, Equatable, Codable, Sendable {
     var isTop: Bool
     var isGood: Bool
     var hasVideo: Bool
+    /// 热度 as the hot-thread endpoint reports it; nil for every other listing.
+    /// Optional on purpose: saved threads written before this field existed must
+    /// keep decoding.
+    var hotValue: Int64?
 
     init(
         id: Int64,
@@ -36,7 +40,8 @@ struct ThreadSummary: Identifiable, Equatable, Codable, Sendable {
         blocks: [ContentBlock],
         isTop: Bool = false,
         isGood: Bool = false,
-        hasVideo: Bool = false
+        hasVideo: Bool = false,
+        hotValue: Int64? = nil
     ) {
         self.id = id
         self.forumID = forumID
@@ -55,7 +60,12 @@ struct ThreadSummary: Identifiable, Equatable, Codable, Sendable {
         self.isTop = isTop
         self.isGood = isGood
         self.hasVideo = hasVideo
+        self.hotValue = hotValue
     }
+
+    /// Ordering key for the merged 全部 listing; 0 means the endpoint did not
+    /// report a 热度 value.
+    var hotScore: Int64 { hotValue ?? 0 }
 
     var textPreview: String {
         blocks.compactMap(\.plainText).joined()

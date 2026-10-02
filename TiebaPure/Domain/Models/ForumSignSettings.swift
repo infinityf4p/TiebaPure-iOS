@@ -97,6 +97,41 @@ struct ForumSignRunSummary: Equatable, Sendable {
     )
 }
 
+/// Live state of a check-in run.
+///
+/// The run issues one throttled write per forum, so a followed list of any size
+/// spends a long time with nothing on screen but a spinner. `completed` counts
+/// forums the run is done with — including the ones skipped because today's
+/// check-in already happened — so the number matches the followed list the user
+/// is looking at.
+struct ForumSignProgress: Equatable, Sendable {
+    var completed: Int
+    var total: Int
+    var currentForumName: String?
+    var signedCount: Int
+    var alreadySignedCount: Int
+    var failedCount: Int
+
+    var isFinished: Bool { completed >= total }
+}
+
+enum ForumSignProgressText {
+    /// One line for the section header: the counter is what changes while the
+    /// run works through the list.
+    static func counter(for progress: ForumSignProgress) -> String {
+        "\(progress.completed)/\(progress.total)"
+    }
+
+    /// The forum currently being signed, or nil when nothing is in flight.
+    static func currentForum(for progress: ForumSignProgress) -> String? {
+        guard let name = progress.currentForumName,
+              name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false else {
+            return nil
+        }
+        return "正在签到：\(name)"
+    }
+}
+
 enum ForumSignSummaryText {
     static func message(for summary: ForumSignRunSummary) -> String {
         guard summary.isEmpty == false else {

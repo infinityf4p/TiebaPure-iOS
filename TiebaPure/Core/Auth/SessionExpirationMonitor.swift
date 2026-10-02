@@ -215,6 +215,55 @@ struct SessionMonitoringTiebaAPI: TiebaAPIService {
         }
     }
 
+    /// Forwarded on purpose: the protocol default would reject the call, and a
+    /// check-in run would silently fall back to resolving a token per forum —
+    /// the very cost this token reuse exists to remove.
+    func signingTBS(account: Account) async throws -> String {
+        try await monitored(account: account) {
+            try await base.signingTBS(account: account)
+        }
+    }
+
+    func signForum(account: Account, forum: Forum, tbs: String) async throws -> ForumSignResult {
+        try await monitored(account: account) {
+            try await base.signForum(account: account, forum: forum, tbs: tbs)
+        }
+    }
+
+    func followedForumStatuses(account: Account) async throws -> [FollowedForumStatus] {
+        try await monitored(account: account) {
+            try await base.followedForumStatuses(account: account)
+        }
+    }
+
+    func hotThreads(account: Account?, tabCode: String) async throws -> HotFeed {
+        try await monitored(account: account) {
+            try await base.hotThreads(account: account, tabCode: tabCode)
+        }
+    }
+
+    /// Forwarded on purpose: without it the topic page would only ever see the
+    /// protocol's "unsupported" default.
+    func topicThreads(
+        account: Account?,
+        topicID: Int64,
+        topicName: String,
+        cursor: String,
+        page: Int,
+        pageSize: Int
+    ) async throws -> TopicThreadPage {
+        try await monitored(account: account) {
+            try await base.topicThreads(
+                account: account,
+                topicID: topicID,
+                topicName: topicName,
+                cursor: cursor,
+                page: page,
+                pageSize: pageSize
+            )
+        }
+    }
+
     func accountThreadFavorites(
         account: Account,
         page: Int
